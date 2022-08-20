@@ -1,25 +1,38 @@
-import { useState, useEffect } from 'react';
-import { Button, Container, FormControl, InputLabel, Select, MenuItem, Box } from '@mui/material';
-import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import {useState, useEffect} from 'react';
+import {Button, Container, FormControl, InputLabel, Select, MenuItem, Box} from '@mui/material';
+import {DataGrid, GridColDef} from '@mui/x-data-grid';
 
 import API from './API';
+
+enum TrafficType {
+    Incoming = 1,
+    Outgoing
+}
 
 class Packet {
     id: number;
     sourceMAC: string;
     destinationMAC: string;
+    sourceIP: string;
+    destinationIP: string;
+    protocol: string;
+    trafficType: TrafficType;
 
-    constructor(id: number, sourceMAC: string, destinationMAC: string) {
+    constructor(id: number, sourceMAC: string, destinationMAC: string, sourceIP: string, destinationIP: string, protocol: string, trafficType: TrafficType) {
         this.id = id;
         this.sourceMAC = sourceMAC;
         this.destinationMAC = destinationMAC;
+        this.sourceIP = sourceIP;
+        this.destinationIP = destinationIP;
+        this.protocol = protocol;
+        this.trafficType = trafficType;
     }
 }
 
 const columns: GridColDef[] = [
-    { field: 'id', headerName: '#', width: 90 },
-    { field: 'sourceMAC', headerName: 'Source MAC', width: 150 },
-    { field: 'destinationMAC', headerName: 'Destination MAC', width: 150 }
+    {field: 'id', headerName: '#', width: 90},
+    {field: 'sourceMAC', headerName: 'Source MAC', width: 150},
+    {field: 'destinationMAC', headerName: 'Destination MAC', width: 150}
 ];
 
 function App() {
@@ -36,7 +49,8 @@ function App() {
             window.AwesomeEvent.listen("packet_received", (data: string) => {
                 let packet: string[] = JSON.parse(data);
                 setCapturedPackets(packets => {
-                    return [...packets, new Packet(packets.length, packet[0], packet[1])];
+                    // TODO: Fill last 4 properties of Packet with real values
+                    return [...packets, new Packet(packets.length, packet[0], packet[1], "", "", "", TrafficType.Incoming)];
                 });
             });
         };
@@ -67,19 +81,31 @@ function App() {
     }
 
     return (
-        <Container style={{ paddingTop: "15px", height: 300 }} maxWidth={false}>
+        <Container style={{paddingTop: "15px", height: 300}} maxWidth={false}>
+
+            {/* Interface selection */}
+            {/* Interface selection */}
+            {/* Interface selection */}
+
+            {/* Interface selection */}
+
             <FormControl fullWidth={true}>
                 <InputLabel>Interface</InputLabel>
-                <Select value={currentInterface} label="Interface" defaultValue={null} onChange={(e) => selectInterface(e.target.value as string)}>
+                <Select value={currentInterface} label="Interface" defaultValue={null}
+                        onChange={(e) => selectInterface(e.target.value as string)}>
                     {
                         interfaces?.map((i) => <MenuItem key={i} value={i}>{i}</MenuItem>)
                     }
                 </Select>
             </FormControl>
-            <Button variant="contained" onClick={switchSniffing} fullWidth={true} style={{ marginTop: "5px" }} disabled={currentInterface === "" ? true : false}>
+
+            {/* Sniffing Results */}
+
+            <Button variant="contained" onClick={switchSniffing} fullWidth={true} style={{marginTop: "5px"}}
+                    disabled={currentInterface === "" ? true : false}>
                 {!sniffing ? "Start Sniffing!" : "Stop Sniffing"}
             </Button>
-            <DataGrid style={{ marginTop: "10px", height: "400px" }}  rows={capturedPackets} columns={columns} />
+            <DataGrid style={{marginTop: "10px", height: "400px"}} rows={capturedPackets} columns={columns}/>
         </Container>
     );
 }
