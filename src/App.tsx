@@ -1,33 +1,22 @@
+import {ThemeProvider, createTheme} from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
 import {useState, useEffect} from 'react';
-import {Button, Container, FormControl, InputLabel, Select, MenuItem, Box} from '@mui/material';
+import {Alert, FormControl, Grid, Snackbar} from '@mui/material';
+import {PlayArrow, Stop, Pause, RestartAlt} from '@mui/icons-material';
 import {DataGrid, GridColDef} from '@mui/x-data-grid';
-
+import './index.css';
 import API from './API';
+import {Packet, TrafficType, SniffingStatus} from "./types/sniffing";
+import InterfaceInput from './components/InterfaceInput';
+import TimeIntervalInput from './components/TimeIntervalInput';
+import ReportNameInput from "./components/ReportNameInput";
+import ToggleButton from "./components/ToggleButton";
 
-enum TrafficType {
-    Incoming = 1,
-    Outgoing
-}
-
-class Packet {
-    id: number;
-    sourceMAC: string;
-    destinationMAC: string;
-    sourceIP: string;
-    destinationIP: string;
-    protocol: string;
-    trafficType: TrafficType;
-
-    constructor(id: number, sourceMAC: string, destinationMAC: string, sourceIP: string, destinationIP: string, protocol: string, trafficType: TrafficType) {
-        this.id = id;
-        this.sourceMAC = sourceMAC;
-        this.destinationMAC = destinationMAC;
-        this.sourceIP = sourceIP;
-        this.destinationIP = destinationIP;
-        this.protocol = protocol;
-        this.trafficType = trafficType;
-    }
-}
+const darkTheme = createTheme({
+    palette: {
+        mode: 'dark',
+    },
+});
 
 const columns: GridColDef[] = [
     {field: 'id', headerName: '#', width: 90},
@@ -36,16 +25,28 @@ const columns: GridColDef[] = [
 ];
 
 function App() {
+
     let [interfaces, setInterfaces] = useState<string[] | null>(null);
     let [currentInterface, setCurrentInterface] = useState<string>("");
-    let [sniffing, setSniffing] = useState<boolean>(false);
+    let [sniffingStatus, setSniffingStatus] = useState<SniffingStatus>(SniffingStatus.Inactive);
     let [capturedPackets, setCapturedPackets] = useState<Packet[]>([]);
+    let [reportUpdateTime, setReportUpdateTime] = useState<number>(30);
+    let [reportFileName, setReportFileName] = useState<string>("report");
+    let [errorMessage, setErrorMessage] = useState<string>("");
 
     useEffect(() => {
         const setup = async () => {
-            const interfaces = await API.getInterfacesList();
-            setInterfaces(interfaces);
 
+            /* Interfaces initialization */
+            try {
+                const interfaces = await API.getInterfacesList();
+                setInterfaces(interfaces);
+            } catch (exception) {
+                setErrorMessage("Unable to retrieve interfaces, try running this App as administrator");
+                console.log(exception);
+            }
+
+            /* Packet reception event */
             window.AwesomeEvent.listen("packet_received", (data: string) => {
                 let packet: string[] = JSON.parse(data);
                 setCapturedPackets(packets => {
@@ -65,48 +66,104 @@ function App() {
 
     const stopSniffing = async () => {
         await API.stopSniffing();
-        setSniffing(false);
+        setSniffingStatus(SniffingStatus.Inactive);
     }
 
     const startSniffing = async () => {
         if (currentInterface === null) return;
 
         await API.startSniffing();
-        setSniffing(true);
+        setSniffingStatus(SniffingStatus.Active);
     }
 
-    const switchSniffing = async () => {
-        if (!sniffing) await startSniffing();
-        else await stopSniffing();
+    const pauseSniffing = async () => {
+        // TODO: PAUSE
+        await API.stopSniffing();
+        setSniffingStatus(SniffingStatus.Paused);
+    }
+
+    const resumeSniffing = async () => {
+        // TODO: RESUME
+        if (currentInterface === null) return;
+
+        await API.startSniffing();
+        setSniffingStatus(SniffingStatus.Active);
+    }
+
+    const startStopSniffing = async () => {
+        if (sniffingStatus === SniffingStatus.Inactive) await startSniffing();
+        else if (sniffingStatus === SniffingStatus.Active) await stopSniffing();
+    }
+
+    const pauseResumeSniffing = async () => {
+        if (sniffingStatus === SniffingStatus.Paused) await resumeSniffing();
+        else if (sniffingStatus === SniffingStatus.Active) await pauseSniffing();
     }
 
     return (
-        <Container style={{paddingTop: "15px", height: 300}} maxWidth={false}>
+        <ThemeProvider theme={darkTheme}>
+            <CssBaseline/>
+            <Grid container spacing={2} className={"container-main"}>
 
-            {/* Interface selection */}
-            {/* Interface selection */}
-            {/* Interface selection */}
+                {/* Interface selection */}
 
-            {/* Interface selection */}
+                <Grid xs={12} item={true}>
+                    <InterfaceInput currentInterface={currentInterface} interfaces={interfaces}
+                                    selectInterface={selectInterface} sniffingStatus={sniffingStatus}/>
+                </Grid>
 
-            <FormControl fullWidth={true}>
-                <InputLabel>Interface</InputLabel>
-                <Select value={currentInterface} label="Interface" defaultValue={null}
-                        onChange={(e) => selectInterface(e.target.value as string)}>
-                    {
-                        interfaces?.map((i) => <MenuItem key={i} value={i}>{i}</MenuItem>)
-                    }
-                </Select>
-            </FormControl>
+                {/* Time interval selection */}
 
-            {/* Sniffing Results */}
+                <Grid xs={6} item={true}>
+                    <TimeIntervalInput reportUpdateTime={reportUpdateTime} sniffingStatus={sniffingStatus}
+                                       setReportUpdateTime={setReportUpdateTime}/>
+                </Grid>
 
-            <Button variant="contained" onClick={switchSniffing} fullWidth={true} style={{marginTop: "5px"}}
-                    disabled={currentInterface === "" ? true : false}>
-                {!sniffing ? "Start Sniffing!" : "Stop Sniffing"}
-            </Button>
-            <DataGrid style={{marginTop: "10px", height: "400px"}} rows={capturedPackets} columns={columns}/>
-        </Container>
+                {/* Output file selection */}
+
+                <Grid xs={6} item={true}>
+                    <ReportNameInput setReportFileName={setReportFileName} sniffingStatus={sniffingStatus}
+                                     reportFileName={reportFileName}/>
+                </Grid>
+
+                {/* Sniffing Controls */}
+
+                <Grid xs={12} item={true}>
+                    <FormControl className={"container-center"}>
+                        {
+                            sniffingStatus !== SniffingStatus.Paused &&
+                            <ToggleButton toggleFunction={startStopSniffing} disabled={currentInterface === ""}
+                                          condition={sniffingStatus === SniffingStatus.Active}
+                                          textTrue={"Stop Sniffing"} textFalse={"Start Sniffing"}
+                                          iconTrue={<Stop/>} iconFalse={<PlayArrow/>}
+                            />
+                        }
+                        {
+                            sniffingStatus !== SniffingStatus.Inactive &&
+                            <ToggleButton toggleFunction={pauseResumeSniffing} disabled={currentInterface === ""}
+                                          condition={sniffingStatus === SniffingStatus.Active}
+                                          textTrue={"Pause Sniffing"} textFalse={"Resume Sniffing"}
+                                          iconTrue={<Pause/>} iconFalse={<RestartAlt/>}
+                            />
+                        }
+                    </FormControl>
+                </Grid>
+
+                {/* Sniffing Results */}
+
+                <Grid xs={12} item={true}>
+                    <DataGrid style={{marginTop: "15px", minHeight: "250px"}} rows={capturedPackets} columns={columns}/>
+                </Grid>
+
+                <Snackbar anchorOrigin={{vertical: "bottom", horizontal: "right"}} open={errorMessage.length > 0}
+                          key={errorMessage} onClick={() => setErrorMessage("")}>
+                    <Alert severity="error">
+                        {errorMessage}
+                    </Alert>
+                </Snackbar>
+
+            </Grid>
+        </ThemeProvider>
     );
 }
 

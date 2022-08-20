@@ -32,6 +32,7 @@ impl SniffingState {
 
 #[tauri::command]
 fn get_interfaces_list() -> Vec<String> {
+    println!("Interface retrieval started");
     let interfaces = datalink::interfaces()
         .into_iter()
         .map(|i| i.description)

@@ -1,13 +1,60 @@
 body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+div.container-center {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    flex-direction: row;
+}
+
+div.container-main {
+    padding: 16px 36px 16px 20px;
+    margin: 0;
+    width: 100%;
+}
+
+button.button-command:disabled {
+    cursor: not-allowed;
+}
+
+button.button-command:disabled,
+button.button-command {
+    margin: 20px 5px 5px 5px;
+    display: inline-block;
+    max-width: 220px;
+}
+
+.button-command > * {
+    vertical-align: middle;
+}
+
+input[type="number"] {
+    padding-right: 10px;
+    text-align: right;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.MuiInputBase-root.MuiOutlinedInput-root {
+    overflow: hidden;
+}
+
+input.filename-input {
+    text-align: right;
+    padding-top: 15px;
+    padding-bottom: 18px;
 }
