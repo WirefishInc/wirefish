@@ -1,6 +1,6 @@
 #![cfg_attr(
-    all(not(debug_assertions), target_os = "windows"),
-    windows_subsystem = "windows"
+all(not(debug_assertions), target_os = "windows"),
+windows_subsystem = "windows"
 )]
 
 extern crate pnet;
@@ -9,6 +9,7 @@ use pnet::datalink::Channel::Ethernet;
 use pnet::datalink::{self, DataLinkReceiver, DataLinkSender, NetworkInterface};
 use pnet::packet::ethernet::{EthernetPacket, MutableEthernetPacket};
 use pnet::packet::{MutablePacket, Packet};
+use pnet::packet::ethernet::EtherTypes::{Ipv4, Ipv6};
 
 use serde_json::json;
 use std::fmt::{Display, Formatter};
@@ -75,7 +76,7 @@ fn select_interface(state: tauri::State<SniffingState>, interface_name: String) 
 fn start_sniffing(state: tauri::State<SniffingState>, window: Window<Wry>) {
     // Set sniffing to true
     state.interface_channel.lock().expect("Poisoned lock").as_mut().unwrap().0 = true;
-    
+
     let channel = Arc::clone(&state.interface_channel);
     std::thread::spawn(move || {
         let mut buf: [u8; 64_000] = [0u8; 64_000];
@@ -92,6 +93,14 @@ fn start_sniffing(state: tauri::State<SniffingState>, window: Window<Wry>) {
                     // Create a clone of the original packet
                     new_packet.clone_from(&packet);
 
+                    let ethernet_encapsulated_protocol = new_packet.get_ethertype();
+
+                    match ethernet_encapsulated_protocol {
+                        Ipv4 => println!("IPv4"), // IPv4
+                        Ipv6 => println!("IPv6"), // IPv6
+                        _ => println!("UNSUPPORTED") // Unsupported protocol
+                    }
+
                     window.state::<AwesomeEmit>().emit(
                         "main",
                         "packet_received",
@@ -99,7 +108,7 @@ fn start_sniffing(state: tauri::State<SniffingState>, window: Window<Wry>) {
                             new_packet.get_source(),
                             new_packet.get_destination(),
                         ))
-                        .unwrap(),
+                            .unwrap(),
                     )
                 }
                 Err(e) => {
