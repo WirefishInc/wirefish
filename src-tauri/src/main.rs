@@ -8,8 +8,10 @@ extern crate pnet;
 use pnet::datalink::Channel::Ethernet;
 use pnet::datalink::{self, DataLinkReceiver, DataLinkSender, NetworkInterface};
 use pnet::packet::ethernet::{EthernetPacket, MutableEthernetPacket};
-use pnet::packet::{MutablePacket, Packet};
 use pnet::packet::ethernet::EtherTypes::{Ipv4, Ipv6};
+use pnet::packet::{MutablePacket, Packet};
+use pnet::packet::ipv4::Ipv4Packet;
+use pnet::packet::ipv6::Ipv6Packet;
 
 use serde_json::json;
 use std::fmt::{Display, Formatter};
@@ -87,26 +89,49 @@ fn start_sniffing(state: tauri::State<SniffingState>, window: Window<Wry>) {
 
             match channel.as_mut().unwrap().1.next() {
                 Ok(packet) => {
-                    let packet = EthernetPacket::new(packet).unwrap();
-                    let mut new_packet = MutableEthernetPacket::new(&mut buf[..]).unwrap();
+                    let ethernet_packet = EthernetPacket::new(packet).unwrap();
+                    // let mut new_packet = MutableEthernetPacket::new(&mut buf[..]).unwrap();
 
+                    // TODO: I've commented this to create the IP packet, let's review this together
                     // Create a clone of the original packet
-                    new_packet.clone_from(&packet);
+                    // new_packet.clone_from(&ethernet_packet);
 
-                    let ethernet_encapsulated_protocol = new_packet.get_ethertype();
+                    let ethernet_encapsulated_protocol = ethernet_packet.get_ethertype();
+                    let mut ip_source = String::new();
+                    let mut ip_destination = String::new();
+                    let mut ip_version = "";
 
                     match ethernet_encapsulated_protocol {
-                        Ipv4 => println!("IPv4"), // IPv4
-                        Ipv6 => println!("IPv6"), // IPv6
-                        _ => println!("UNSUPPORTED") // Unsupported protocol
+                        Ipv4 => {
+                            let ip_packet = Ipv4Packet::new(packet).unwrap();
+                            // TODO: Handle case ip_packet is None
+                            ip_source = ip_packet.get_source().to_string();
+                            ip_destination = ip_packet.get_destination().to_string();
+                            ip_version = "IPv4";
+                        },
+                        Ipv6 => {
+                            let ip_packet = Ipv6Packet::new(packet).unwrap();
+                            // TODO: Handle case ip_packet is None
+                            ip_source = ip_packet.get_source().to_string();
+                            ip_destination = ip_packet.get_destination().to_string();
+                            ip_version = "IPv6";
+                        },
+                        unsupported_protocol => {
+                            println!("TODO: Handle Unsupported Protocol {:?}", unsupported_protocol);
+                            ip_version = "-";
+                            // Other protocols found so far: EtherType(2054) ARP
+                        } // Unsupported protocol
                     }
 
                     window.state::<AwesomeEmit>().emit(
                         "main",
                         "packet_received",
                         serde_json::to_string(&(
-                            new_packet.get_source(),
-                            new_packet.get_destination(),
+                            ethernet_packet.get_source(),
+                            ethernet_packet.get_destination(),
+                            ip_version,
+                            ip_source,
+                            ip_destination
                         ))
                             .unwrap(),
                     )

@@ -19,9 +19,12 @@ const darkTheme = createTheme({
 });
 
 const columns: GridColDef[] = [
-    {field: 'id', headerName: '#', width: 90},
-    {field: 'sourceMAC', headerName: 'Source MAC', width: 150},
-    {field: 'destinationMAC', headerName: 'Destination MAC', width: 150}
+    {field: 'id', headerName: '#', width: 10},
+    {field: 'sourceMAC', headerName: 'Source MAC', width: 140},
+    {field: 'destinationMAC', headerName: 'Destination MAC', width: 140},
+    {field: 'ipVersion', headerName: 'IPv#', width: 30},
+    {field: 'sourceIP', headerName: 'Source IP', width: 120},
+    {field: 'destinationIP', headerName: 'Destination IP', width: 120},
 ];
 
 function App() {
@@ -50,8 +53,8 @@ function App() {
             window.AwesomeEvent.listen("packet_received", (data: string) => {
                 let packet: string[] = JSON.parse(data);
                 setCapturedPackets(packets => {
-                    // TODO: Fill last 4 properties of Packet with real values
-                    return [...packets, new Packet(packets.length, packet[0], packet[1], "", "", "", TrafficType.Incoming)];
+                    // TODO: Fill last properties of Packet with real values
+                    return [...packets, new Packet(packets.length, packet[0], packet[1], packet[2], packet[3], packet[4], "", TrafficType.Incoming)];
                 });
             });
         };
