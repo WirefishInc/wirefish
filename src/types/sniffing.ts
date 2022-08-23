@@ -11,22 +11,24 @@ export enum SniffingStatus {
 
 export class Packet {
     id: number;
+    type: string;
     sourceMAC: string;
     destinationMAC: string;
-    ipVersion: string;
     sourceIP: string;
     destinationIP: string;
-    protocol: string;
+    length: number;
+    info: string;
     trafficType: TrafficType;
 
-    constructor(id: number, sourceMAC: string, destinationMAC: string, ipVersion: string, sourceIP: string, destinationIP: string, protocol: string, trafficType: TrafficType) {
+    constructor(id: number, type: string, sourceMAC: string, destinationMAC: string, sourceIP: string, destinationIP: string, length: number, info: string, trafficType: TrafficType) {
         this.id = id;
+        this.type = type;
         this.sourceMAC = sourceMAC;
         this.destinationMAC = destinationMAC;
-        this.ipVersion = ipVersion;
         this.sourceIP = sourceIP;
         this.destinationIP = destinationIP;
-        this.protocol = protocol;
+        this.length = length;
+        this.info = info;
         this.trafficType = trafficType;
     }
 }
