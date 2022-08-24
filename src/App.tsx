@@ -52,12 +52,11 @@ function App() {
             }
 
             /* Packet reception event */
-            window.AwesomeEvent.listen("packet_received", (data: string) => {
-                let packet: string[] = JSON.parse(data);
+            window.AwesomeEvent.listen("packet_received", (packet: any) => {
                 setCapturedPackets(packets => {
                     // TODO: Fill last properties of Packet with real values
-                    return [...packets, new Packet(packets.length, packet[0], packet[1], 
-                        packet[2], packet[3], packet[4], parseInt(packet[5]), packet[6], TrafficType.Incoming)];
+                    return [...packets, new Packet(packets.length, packet.packet_type, packet.mac_source, 
+                        packet.mac_destination, packet.ip_source, packet.ip_destination, packet.length, packet.info, TrafficType.Incoming)];
                 });
             });
         };
