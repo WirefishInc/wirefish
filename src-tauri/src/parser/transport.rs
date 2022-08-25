@@ -134,7 +134,7 @@ pub fn handle_icmp_packet(
                     source,
                     destination,
                     echo_reply_packet.get_sequence_number(),
-                    echo_reply_packet.get_identifier()
+                    echo_reply_packet.get_identifier(),
                 );
 
                 return Some(GenericPacket::new(
@@ -241,5 +241,262 @@ pub fn handle_icmpv6_packet(
     } else {
         println!("[]: Malformed ICMPv6 Packet");
         return None;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::net::IpAddr;
+    use std::net::Ipv4Addr;
+
+    use pnet::packet::icmp::destination_unreachable::MutableDestinationUnreachablePacket;
+    use pnet::packet::icmp::IcmpPacket;
+    use pnet::packet::icmp::IcmpType;
+    use pnet::packet::icmpv6::Icmpv6Code;
+    use pnet::packet::icmpv6::Icmpv6Types;
+    use pnet::packet::icmpv6::MutableIcmpv6Packet;
+    use pnet::packet::icmpv6::echo_reply::Icmpv6Codes;
+    use pnet::packet::tcp::MutableTcpPacket;
+    use pnet::packet::tcp::TcpPacket;
+    use pnet::packet::udp::MutableUdpPacket;
+    use pnet::packet::udp::UdpPacket;
+    use pnet::packet::Packet;
+    use pnet::util::MacAddr;
+
+    use super::*;
+
+    #[test]
+    fn valid_udp_packet() {
+        let mut udp_buffer = [0u8; 42];
+        let mock_packet = build_test_udp_packet(&mut udp_buffer);
+
+        let new_packet = handle_udp_packet(
+            MacAddr::new(10, 10, 10, 10, 10, 10),
+            MacAddr::new(11, 11, 11, 11, 11, 11),
+            IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
+            IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),
+            mock_packet.packet(),
+        );
+
+        assert!(new_packet.is_some());
+        let new_packet = new_packet.unwrap();
+
+        assert_eq!(new_packet.packet_type, "UDP");
+        assert_eq!(new_packet.mac_source, MacAddr::new(10, 10, 10, 10, 10, 10));
+        assert_eq!(
+            new_packet.mac_destination,
+            MacAddr::new(11, 11, 11, 11, 11, 11)
+        );
+        assert_eq!(new_packet.ip_source, "10.10.10.10:4444");
+        assert_eq!(new_packet.ip_destination, "11.11.11.11:4445");
+        assert_eq!(new_packet.info, "-");
+        assert_eq!(new_packet.payload, None);
+    }
+
+    #[test]
+    fn valid_tcp_packet() {
+        let mut tcp_buffer = [0u8; 42];
+        let mock_packet = build_test_tcp_packet(&mut tcp_buffer);
+
+        let new_packet = handle_tcp_packet(
+            MacAddr::new(10, 10, 10, 10, 10, 10),
+            MacAddr::new(11, 11, 11, 11, 11, 11),
+            IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
+            IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),
+            mock_packet.packet(),
+        );
+
+        assert!(new_packet.is_some());
+        let new_packet = new_packet.unwrap();
+
+        assert_eq!(new_packet.packet_type, "TCP");
+        assert_eq!(new_packet.mac_source, MacAddr::new(10, 10, 10, 10, 10, 10));
+        assert_eq!(
+            new_packet.mac_destination,
+            MacAddr::new(11, 11, 11, 11, 11, 11)
+        );
+        assert_eq!(new_packet.ip_source, "10.10.10.10:4444");
+        assert_eq!(new_packet.ip_destination, "11.11.11.11:4445");
+        assert_eq!(new_packet.info, "-");
+        assert_eq!(new_packet.payload, None);
+    }
+
+    #[test]
+    fn valid_icmp_echo_reply_packet() {
+        let mut icmp_buffer = [0u8; 42];
+        let mock_packet = echo_reply::EchoReplyPacket::new(&mut icmp_buffer).unwrap();
+
+        println!("Reply: {:?}", mock_packet.get_icmp_type());
+
+        let new_packet = handle_icmp_packet(
+            MacAddr::new(10, 10, 10, 10, 10, 10),
+            MacAddr::new(11, 11, 11, 11, 11, 11),
+            IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
+            IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),
+            mock_packet.packet(),
+        );
+
+        assert!(new_packet.is_some());
+        let new_packet = new_packet.unwrap();
+
+        assert_eq!(new_packet.packet_type, "ICMP echo reply");
+        assert_eq!(new_packet.mac_source, MacAddr::new(10, 10, 10, 10, 10, 10));
+        assert_eq!(
+            new_packet.mac_destination,
+            MacAddr::new(11, 11, 11, 11, 11, 11)
+        );
+        assert_eq!(new_packet.ip_source, "10.10.10.10");
+        assert_eq!(new_packet.ip_destination, "11.11.11.11");
+        assert_eq!(
+            new_packet.info,
+            format!(
+                "seq={:?}, id={:?}",
+                mock_packet.get_sequence_number(),
+                mock_packet.get_identifier()
+            )
+        );
+        assert_eq!(new_packet.payload, None);
+    }
+
+    #[test]
+    fn valid_icmp_echo_request_packet() {
+        let mut icmp_buffer = [0u8; 42];
+        let mut mock_packet =
+            echo_request::MutableEchoRequestPacket::new(&mut icmp_buffer).unwrap();
+
+        mock_packet.set_icmp_type(IcmpTypes::EchoRequest);
+
+        let new_packet = handle_icmp_packet(
+            MacAddr::new(10, 10, 10, 10, 10, 10),
+            MacAddr::new(11, 11, 11, 11, 11, 11),
+            IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
+            IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),
+            mock_packet.packet(),
+        );
+
+        assert!(new_packet.is_some());
+        let new_packet = new_packet.unwrap();
+        println!("{:?}", new_packet);
+
+        assert_eq!(new_packet.packet_type, "ICMP echo request");
+        assert_eq!(new_packet.mac_source, MacAddr::new(10, 10, 10, 10, 10, 10));
+        assert_eq!(
+            new_packet.mac_destination,
+            MacAddr::new(11, 11, 11, 11, 11, 11)
+        );
+        assert_eq!(new_packet.ip_source, "10.10.10.10");
+        assert_eq!(new_packet.ip_destination, "11.11.11.11");
+        assert_eq!(
+            new_packet.info,
+            format!(
+                "seq={:?}, id={:?}",
+                mock_packet.get_sequence_number(),
+                mock_packet.get_identifier()
+            )
+        );
+        assert_eq!(new_packet.payload, None);
+    }
+
+    #[test]
+    fn unrecognized_icmp_packet() {
+        let mut icmp_buffer = [0u8; 42];
+        let mut mock_packet = MutableDestinationUnreachablePacket::new(&mut icmp_buffer).unwrap();
+
+        mock_packet.set_icmp_type(IcmpTypes::DestinationUnreachable);
+
+        let new_packet = handle_icmp_packet(
+            MacAddr::new(10, 10, 10, 10, 10, 10),
+            MacAddr::new(11, 11, 11, 11, 11, 11),
+            IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
+            IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),
+            mock_packet.packet(),
+        );
+
+        assert!(new_packet.is_some());
+        let new_packet = new_packet.unwrap();
+        println!("{:?}", new_packet);
+
+        assert_eq!(new_packet.packet_type, "ICMP");
+        assert_eq!(new_packet.mac_source, MacAddr::new(10, 10, 10, 10, 10, 10));
+        assert_eq!(
+            new_packet.mac_destination,
+            MacAddr::new(11, 11, 11, 11, 11, 11)
+        );
+        assert_eq!(new_packet.ip_source, "10.10.10.10");
+        assert_eq!(new_packet.ip_destination, "11.11.11.11");
+        assert_eq!(
+            new_packet.info,
+            format!(
+                "code={:?}, type={:?}",
+                mock_packet.get_icmp_code(),
+                mock_packet.get_icmp_type()
+            )
+        );
+        assert_eq!(new_packet.payload, None);
+    }
+
+    #[test]
+    fn valid_icmpv6_packet() {
+        let mut icmpv6_buffer = [0u8; 42];
+        let mock_packet = build_test_icmpv6_packet(&mut icmpv6_buffer);
+
+        let new_packet = handle_icmpv6_packet(
+            MacAddr::new(10, 10, 10, 10, 10, 10),
+            MacAddr::new(11, 11, 11, 11, 11, 11),
+            IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
+            IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),
+            mock_packet.packet(),
+        );
+
+        assert!(new_packet.is_some());
+        let new_packet = new_packet.unwrap();
+        println!("{:?}", new_packet);
+
+        assert_eq!(new_packet.packet_type, "ICMP-V6");
+        assert_eq!(new_packet.mac_source, MacAddr::new(10, 10, 10, 10, 10, 10));
+        assert_eq!(
+            new_packet.mac_destination,
+            MacAddr::new(11, 11, 11, 11, 11, 11)
+        );
+        assert_eq!(new_packet.ip_source, "10.10.10.10");
+        assert_eq!(new_packet.ip_destination, "11.11.11.11");
+        assert_eq!(
+            new_packet.info,
+            format!(
+                "code={:?}, type={:?}",
+                mock_packet.get_icmpv6_code(),
+                mock_packet.get_icmpv6_type()
+            )
+        );
+        assert_eq!(new_packet.payload, None);
+    }
+
+    ///////////////////// Utils
+
+    fn build_test_udp_packet<'a>(udp_buffer: &'a mut [u8]) -> UdpPacket<'a> {
+        let mut udp_packet = MutableUdpPacket::new(udp_buffer).unwrap();
+
+        udp_packet.set_source(4444);
+        udp_packet.set_destination(4445);
+
+        udp_packet.consume_to_immutable()
+    }
+
+    fn build_test_tcp_packet<'a>(tcp_buffer: &'a mut [u8]) -> TcpPacket<'a> {
+        let mut tcp_packet = MutableTcpPacket::new(tcp_buffer).unwrap();
+
+        tcp_packet.set_source(4444);
+        tcp_packet.set_destination(4445);
+
+        tcp_packet.consume_to_immutable()
+    }
+
+    fn build_test_icmpv6_packet<'a>(icmpv6_buffer: &'a mut [u8]) -> Icmpv6Packet<'a> {
+        let mut icmpv6_packet = MutableIcmpv6Packet::new(icmpv6_buffer).unwrap();
+
+        icmpv6_packet.set_icmpv6_code(Icmpv6Codes::NoCode);
+        icmpv6_packet.set_icmpv6_type(Icmpv6Types::EchoReply);
+
+        icmpv6_packet.consume_to_immutable()
     }
 }

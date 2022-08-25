@@ -18,7 +18,7 @@ use crate::parser::network::*;
 // - Additional Info
 // - (?) Payload
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct GenericPacket {
     packet_type: String,
     mac_source: MacAddr,
