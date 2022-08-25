@@ -9,3 +9,4 @@ edition = "2021"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 pnet = { version = "0.30.0", features = ["serde"] }
+log = "0.4.0"
