@@ -1,12 +1,13 @@
-pub mod network;
-pub mod transport;
+mod network;
+mod transport;
+
+pub use crate::network::*;
+pub use crate::transport::*;
 
 use pnet::packet::ethernet::{EtherTypes, EthernetPacket};
 use pnet::packet::Packet;
 use pnet::util::MacAddr;
 use serde::Serialize;
-
-use crate::parser::network::*;
 
 // JSON Packet fields:
 // - Type (TCP, UDP, ...)

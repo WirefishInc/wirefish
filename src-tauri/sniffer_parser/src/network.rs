@@ -6,7 +6,7 @@ use pnet::packet::Packet;
 use std::net::IpAddr;
 
 use super::GenericPacket;
-use crate::parser::transport::*;
+use crate::transport::*;
 
 pub fn handle_ipv4_packet(ethernet: &EthernetPacket) -> Option<GenericPacket> {
     let header = Ipv4Packet::new(ethernet.payload());

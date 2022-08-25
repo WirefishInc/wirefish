@@ -1,5 +1,5 @@
 extern crate pnet;
-mod parser;
+extern crate sniffer_parser;
 
 use pnet::datalink::Channel::Ethernet;
 use pnet::datalink::{self, DataLinkReceiver, NetworkInterface};
@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 use tauri::{Manager, Window, Wry};
 use tauri_awesome_rpc::{AwesomeEmit, AwesomeRpc};
 
-use crate::parser::*;
+use sniffer_parser::handle_ethernet_frame;
 
 struct SniffingState {
     interface_channel: Arc<Mutex<Option<(bool, Box<dyn DataLinkReceiver>)>>>,
