@@ -1,8 +1,8 @@
 extern crate pnet;
 extern crate sniffer_parser;
 
-use log::{error, info};
 use dotenv;
+use log::{error, info};
 
 use pnet::datalink::Channel::Ethernet;
 use pnet::datalink::{self, DataLinkReceiver, NetworkInterface};
@@ -70,7 +70,10 @@ fn select_interface(state: tauri::State<SniffingInfoState>, interface_name: Stri
     sniffing_state.interface_channel = Some(rx);
     sniffing_state.interface_name = Some(interface_name);
 
-    info!("[{}] Channel created", sniffing_state.interface_name.as_ref().unwrap());
+    info!(
+        "[{}] Channel created",
+        sniffing_state.interface_name.as_ref().unwrap()
+    );
 }
 
 #[tauri::command]
@@ -99,9 +102,9 @@ fn start_sniffing(state: tauri::State<SniffingInfoState>, window: Window<Wry>) {
 
             match sniffing_state.interface_channel.as_mut().unwrap().next() {
                 Ok(packet) => {
-                    let new_packet = handle_ethernet_frame(&EthernetPacket::new(packet).unwrap());
-
-                    if let Some(new_packet) = new_packet {
+                    let ethernet_packet = EthernetPacket::new(packet).unwrap();
+                    let new_packet = handle_ethernet_frame(&ethernet_packet);
+                    if !new_packet.is_empty() {
                         window
                             .state::<AwesomeEmit>()
                             .emit("main", "packet_received", new_packet);
@@ -123,7 +126,10 @@ fn start_sniffing(state: tauri::State<SniffingInfoState>, window: Window<Wry>) {
 fn stop_sniffing(state: tauri::State<SniffingInfoState>) {
     let mut sniffing_state = state.0.lock().expect("Poisoned lock");
     sniffing_state.is_sniffing = false;
-    info!("[{}] Sniffing stopped", sniffing_state.interface_name.as_ref().unwrap());
+    info!(
+        "[{}] Sniffing stopped",
+        sniffing_state.interface_name.as_ref().unwrap()
+    );
 }
 
 fn main() {
