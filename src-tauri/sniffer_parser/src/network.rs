@@ -5,13 +5,20 @@ use pnet::packet::ipv6::Ipv6Packet;
 use pnet::packet::Packet;
 use std::net::IpAddr;
 
-use super::GenericPacket;
+use super::*;
+use crate::serializable_packet::network::{
+    SerializableArpPacket, SerializableIpv4Packet, SerializableIpv6Packet,
+};
 use crate::transport::*;
 
-pub fn handle_ipv4_packet(ethernet: &EthernetPacket) -> Option<GenericPacket> {
+pub fn handle_ipv4_packet(
+    ethernet: &EthernetPacket,
+    packets: &mut Vec<Box<dyn SerializablePacket>>,
+) {
     let header = Ipv4Packet::new(ethernet.payload());
     if let Some(header) = header {
-        return handle_transport_protocol(
+        packets.push(Box::new(SerializableIpv4Packet::from(&header)));
+        handle_transport_protocol(
             ethernet.get_source(),
             ethernet.get_destination(),
             IpAddr::V4(header.get_source()),
@@ -21,14 +28,17 @@ pub fn handle_ipv4_packet(ethernet: &EthernetPacket) -> Option<GenericPacket> {
         );
     } else {
         println!("[]: Malformed IPv4 Packet");
-        return None;
     }
 }
 
-pub fn handle_ipv6_packet(ethernet: &EthernetPacket) -> Option<GenericPacket> {
+pub fn handle_ipv6_packet(
+    ethernet: &EthernetPacket,
+    packets: &mut Vec<Box<dyn SerializablePacket>>,
+) {
     let header = Ipv6Packet::new(ethernet.payload());
     if let Some(header) = header {
-        return handle_transport_protocol(
+        packets.push(Box::new(SerializableIpv6Packet::from(&header)));
+        handle_transport_protocol(
             ethernet.get_source(),
             ethernet.get_destination(),
             IpAddr::V6(header.get_source()),
@@ -38,11 +48,13 @@ pub fn handle_ipv6_packet(ethernet: &EthernetPacket) -> Option<GenericPacket> {
         );
     } else {
         println!("[]: Malformed IPv6 Packet");
-        return None;
     }
 }
 
-pub fn handle_arp_packet(ethernet: &EthernetPacket) -> Option<GenericPacket> {
+pub fn handle_arp_packet(
+    ethernet: &EthernetPacket,
+    packets: &mut Vec<Box<dyn SerializablePacket>>,
+) {
     let header = ArpPacket::new(ethernet.payload());
     if let Some(header) = header {
         println!(
@@ -54,29 +66,20 @@ pub fn handle_arp_packet(ethernet: &EthernetPacket) -> Option<GenericPacket> {
             header.get_operation()
         );
 
-        return Some(GenericPacket::new(
-            "ARP".to_owned(),
-            ethernet.get_source(),
-            ethernet.get_destination(),
-            header.get_sender_proto_addr().to_string(),
-            header.get_target_proto_addr().to_string(),
-            ethernet.payload().len(),
-            "-".to_owned(),
-            None,
-        ));
+        packets.push(Box::new(SerializableArpPacket::from(&header)));
     } else {
         println!("[]: Malformed ARP Packet");
-        return None;
     }
 }
 
+/*
 #[cfg(test)]
 mod tests {
     use std::net::Ipv4Addr;
 
+    use pnet::packet::arp::{ArpHardwareTypes, ArpOperations, MutableArpPacket};
+    use pnet::packet::ethernet::{EtherTypes, EthernetPacket, MutableEthernetPacket};
     use pnet::packet::Packet;
-    use pnet::packet::arp::{MutableArpPacket, ArpHardwareTypes, ArpOperations};
-    use pnet::packet::ethernet::{EthernetPacket, MutableEthernetPacket, EtherTypes};
     use pnet::util::MacAddr;
 
     use super::handle_arp_packet;
@@ -93,7 +96,10 @@ mod tests {
 
         assert_eq!(new_packet.packet_type, "ARP");
         assert_eq!(new_packet.mac_source, MacAddr::new(10, 10, 10, 10, 10, 10));
-        assert_eq!(new_packet.mac_destination, MacAddr::new(11, 11, 11, 11, 11, 11));
+        assert_eq!(
+            new_packet.mac_destination,
+            MacAddr::new(11, 11, 11, 11, 11, 11)
+        );
         assert_eq!(new_packet.ip_source, "10.10.10.10");
         assert_eq!(new_packet.ip_destination, "11.11.11.11");
         assert_eq!(new_packet.info, "-");
@@ -110,7 +116,7 @@ mod tests {
         let _new_packet = handle_arp_packet(&mock_packet);
 
         // TODO: Understand how to create a malformed packet... It seems impossible using the library
-        // since the correct structure is enforced at every step. Maybe this case can be triggered just 
+        // since the correct structure is enforced at every step. Maybe this case can be triggered just
         // by writing random raw bytes (or in real case)
 
         assert!(true);
@@ -142,4 +148,4 @@ mod tests {
 
         ethernet_packet.consume_to_immutable()
     }
-}
+}*/

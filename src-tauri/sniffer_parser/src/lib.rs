@@ -4,10 +4,14 @@ mod transport;
 pub use crate::network::*;
 pub use crate::transport::*;
 
+mod serializable_packet;
+
 use pnet::packet::ethernet::{EtherTypes, EthernetPacket};
 use pnet::packet::Packet;
 use pnet::util::MacAddr;
 use serde::Serialize;
+use serializable_packet::SerializableEthernetPacket;
+use serializable_packet::SerializablePacket;
 
 // JSON Packet fields:
 // - Type (TCP, UDP, ...)
@@ -55,11 +59,14 @@ impl GenericPacket {
     }
 }
 
-pub fn handle_ethernet_frame(ethernet: &EthernetPacket) -> Option<GenericPacket> {
+pub fn handle_ethernet_frame(ethernet: &EthernetPacket) -> Vec<Box<dyn SerializablePacket>> {
+    let mut packets: Vec<Box<dyn SerializablePacket>> = vec![];
+    packets.push(Box::new(SerializableEthernetPacket::from(ethernet)));
+
     match ethernet.get_ethertype() {
-        EtherTypes::Ipv4 => handle_ipv4_packet(ethernet),
-        EtherTypes::Ipv6 => handle_ipv6_packet(ethernet),
-        EtherTypes::Arp => handle_arp_packet(ethernet),
+        EtherTypes::Ipv4 => handle_ipv4_packet(ethernet, &mut packets),
+        EtherTypes::Ipv6 => handle_ipv6_packet(ethernet, &mut packets),
+        EtherTypes::Arp => handle_arp_packet(ethernet, &mut packets),
         _ => {
             println!(
                 "[]: Unknown packet: {} > {}; ethertype: {:?} length: {}",
@@ -68,8 +75,8 @@ pub fn handle_ethernet_frame(ethernet: &EthernetPacket) -> Option<GenericPacket>
                 ethernet.get_ethertype(),
                 ethernet.packet().len()
             );
-
-            None
         }
     }
+
+    packets
 }
