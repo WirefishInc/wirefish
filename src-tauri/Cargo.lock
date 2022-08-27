@@ -415,7 +415,11 @@ dependencies = [
  "iana-time-zone",
  "js-sys",
  "num-integer",
+<<<<<<< HEAD
  "num-traits 0.2.15",
+=======
+ "num-traits",
+>>>>>>> 725753a (Added structs to save Packet Exchange data)
  "time 0.1.44",
  "wasm-bindgen",
  "winapi 0.3.9",
@@ -1531,6 +1535,19 @@ dependencies = [
  "typeable",
  "unicase 1.4.2",
  "url 1.7.2",
+]
+
+[[package]]
+name = "iana-time-zone"
+version = "0.1.46"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ad2bfd338099682614d3ee3fe0cd72e0b6a41ca6a87f6a74a3bd593c91650501"
+dependencies = [
+ "android_system_properties",
+ "core-foundation-sys",
+ "js-sys",
+ "wasm-bindgen",
+ "winapi 0.3.9",
 ]
 
 [[package]]

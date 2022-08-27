@@ -84,7 +84,6 @@ pub mod data {
         fn to_string(&self) -> String {
             const MAX_IP_LEN: usize = 39;
             let extra_tabs = |text_len: usize| { "\t".repeat((MAX_IP_LEN - text_len) / 4) };
-
             [
                 self.ip_source.clone() + &extra_tabs(self.ip_source.len()),
                 self.ip_destination.clone() + &extra_tabs(self.ip_destination.len()),
