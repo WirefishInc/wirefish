@@ -22,7 +22,7 @@ const TimeIntervalInput = ({
                 error={reportUpdateTime < 1}
                 onChange={(e) => setReportUpdateTime(Number(e.target.value))}
                 InputProps={{
-                    inputProps: {min: 1},
+                    inputProps: {min: 5},
                     endAdornment: <InputAdornment position="end">seconds</InputAdornment>,
                 }}
             />

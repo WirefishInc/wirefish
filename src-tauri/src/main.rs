@@ -5,6 +5,8 @@ windows_subsystem = "windows"
 
 extern crate pnet;
 
+mod report;
+
 use pnet::datalink::Channel::Ethernet;
 use pnet::datalink::{self, DataLinkReceiver, DataLinkSender, NetworkInterface};
 use pnet::packet::ethernet::{EthernetPacket, MutableEthernetPacket};
@@ -12,6 +14,12 @@ use pnet::packet::ethernet::EtherTypes::{Ipv4, Ipv6};
 use pnet::packet::{MutablePacket, Packet};
 use pnet::packet::ipv4::Ipv4Packet;
 use pnet::packet::ipv6::Ipv6Packet;
+use crate::pnet::packet::PacketSize;
+use crate::report::report::write_report;
+use report::report::data::{SourceDestination, PacketExchange};
+use std::collections::HashMap;
+use chrono::{Local};
+use std::fs;
 
 use serde_json::json;
 use std::fmt::{Display, Formatter};
@@ -75,13 +83,17 @@ fn select_interface(state: tauri::State<SniffingState>, interface_name: String) 
 }
 
 #[tauri::command]
-fn start_sniffing(state: tauri::State<SniffingState>, window: Window<Wry>) {
+fn start_sniffing(state: tauri::State<SniffingState>, report_path: String, report_interval: usize, window: Window<Wry>) {
     // Set sniffing to true
     state.interface_channel.lock().expect("Poisoned lock").as_mut().unwrap().0 = true;
+
+    // Remove old report file
+    fs::remove_file(&report_path);
 
     let channel = Arc::clone(&state.interface_channel);
     std::thread::spawn(move || {
         let mut buf: [u8; 64_000] = [0u8; 64_000];
+        let mut packets = HashMap::<SourceDestination, PacketExchange>::new();
 
         loop {
             let mut channel = channel.lock().expect("Poisoned lock");
@@ -100,6 +112,7 @@ fn start_sniffing(state: tauri::State<SniffingState>, window: Window<Wry>) {
                     let mut ip_source = String::new();
                     let mut ip_destination = String::new();
                     let mut ip_version = "";
+                    let mut packet_size = 0;
 
                     match ethernet_encapsulated_protocol {
                         Ipv4 => {
@@ -108,14 +121,16 @@ fn start_sniffing(state: tauri::State<SniffingState>, window: Window<Wry>) {
                             ip_source = ip_packet.get_source().to_string();
                             ip_destination = ip_packet.get_destination().to_string();
                             ip_version = "IPv4";
-                        },
+                            packet_size = ip_packet.packet_size();
+                        }
                         Ipv6 => {
                             let ip_packet = Ipv6Packet::new(packet).unwrap();
                             // TODO: Handle case ip_packet is None
                             ip_source = ip_packet.get_source().to_string();
                             ip_destination = ip_packet.get_destination().to_string();
                             ip_version = "IPv6";
-                        },
+                            packet_size = ip_packet.packet_size();
+                        }
                         unsupported_protocol => {
                             println!("TODO: Handle Unsupported Protocol {:?}", unsupported_protocol);
                             ip_version = "-";

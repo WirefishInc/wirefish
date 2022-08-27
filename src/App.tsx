@@ -75,7 +75,7 @@ function App() {
     const startSniffing = async () => {
         if (currentInterface === null) return;
 
-        await API.startSniffing();
+        await API.startSniffing(`${reportFileName}.txt`, reportUpdateTime);
         setSniffingStatus(SniffingStatus.Active);
     }
 
@@ -89,7 +89,7 @@ function App() {
         // TODO: RESUME
         if (currentInterface === null) return;
 
-        await API.startSniffing();
+        await API.startSniffing(`${reportFileName}.txt`, reportUpdateTime);
         setSniffingStatus(SniffingStatus.Active);
     }
 
