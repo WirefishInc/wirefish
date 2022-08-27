@@ -9,6 +9,8 @@ use env_logger::Builder;
 use log::{error, info};
 use std::io::Write;
 
+mod report;
+
 use pnet::datalink::Channel::Ethernet;
 use pnet::datalink::{self, ChannelType, Config, DataLinkReceiver, NetworkInterface};
 use pnet::packet::ethernet::EthernetPacket;
@@ -131,6 +133,10 @@ async fn start_sniffing(
         "[{}] Sniffing started",
         sniffing_state.interface_name.as_ref().unwrap()
     );
+
+    // Remove old report file
+    fs::remove_file(&report_path);
+    let mut packets = HashMap::<SourceDestination, PacketExchange>::new();
 
     let ss = Arc::clone(&state.0);
     async_runtime::spawn(async move {
