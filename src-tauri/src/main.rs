@@ -8,8 +8,9 @@ use pnet::datalink::Channel::Ethernet;
 use pnet::datalink::{self, DataLinkReceiver, NetworkInterface};
 use pnet::packet::ethernet::EthernetPacket;
 
-use std::sync::{Arc, Mutex};
-use tauri::{Manager, Window, Wry};
+use std::sync::Arc;
+use tauri::async_runtime::Mutex;
+use tauri::{async_runtime, Manager, Window, Wry};
 use tauri_awesome_rpc::{AwesomeEmit, AwesomeRpc};
 
 use sniffer_parser::handle_ethernet_frame;
@@ -32,7 +33,7 @@ impl SniffingInfo {
 }
 
 #[tauri::command]
-fn get_interfaces_list() -> Vec<String> {
+async fn get_interfaces_list() -> Vec<String> {
     let interfaces = datalink::interfaces()
         .into_iter()
         .map(|i| i.description)
@@ -43,7 +44,10 @@ fn get_interfaces_list() -> Vec<String> {
 }
 
 #[tauri::command]
-fn select_interface(state: tauri::State<SniffingInfoState>, interface_name: String) {
+async fn select_interface(
+    state: tauri::State<'_, SniffingInfoState>,
+    interface_name: String,
+) -> Result<(), ()> {
     let interface_names_match = |iface: &NetworkInterface| iface.description == interface_name;
 
     // Find the network interface with the provided name
@@ -66,7 +70,7 @@ fn select_interface(state: tauri::State<SniffingInfoState>, interface_name: Stri
         ),
     };
 
-    let mut sniffing_state = state.0.lock().expect("Poisoned lock");
+    let mut sniffing_state = state.0.lock().await;
     sniffing_state.interface_channel = Some(rx);
     sniffing_state.interface_name = Some(interface_name);
 
@@ -74,15 +78,20 @@ fn select_interface(state: tauri::State<SniffingInfoState>, interface_name: Stri
         "[{}] Channel created",
         sniffing_state.interface_name.as_ref().unwrap()
     );
+
+    Ok(())
 }
 
 #[tauri::command]
-fn start_sniffing(state: tauri::State<SniffingInfoState>, window: Window<Wry>) {
-    let mut sniffing_state = state.0.lock().expect("Poisoned lock");
+async fn start_sniffing(
+    state: tauri::State<'_, SniffingInfoState>,
+    window: Window<Wry>,
+) -> Result<(), String> {
+    let mut sniffing_state = state.0.lock().await;
 
     if sniffing_state.interface_name.is_none() {
         error!("Start sniffing without prior selection of the inteface");
-        return;
+        return Err("Start sniffing without prior selection of the inteface".to_owned());
     }
 
     sniffing_state.is_sniffing = true;
@@ -92,9 +101,9 @@ fn start_sniffing(state: tauri::State<SniffingInfoState>, window: Window<Wry>) {
     );
 
     let ss = Arc::clone(&state.0);
-    std::thread::spawn(move || {
+    async_runtime::spawn(async move {
         loop {
-            let mut sniffing_state = ss.lock().expect("Poisoned lock");
+            let mut sniffing_state = ss.lock().await;
 
             if !sniffing_state.is_sniffing {
                 break;
@@ -120,16 +129,20 @@ fn start_sniffing(state: tauri::State<SniffingInfoState>, window: Window<Wry>) {
             drop(sniffing_state);
         }
     });
+
+    Ok(())
 }
 
 #[tauri::command]
-fn stop_sniffing(state: tauri::State<SniffingInfoState>) {
-    let mut sniffing_state = state.0.lock().expect("Poisoned lock");
+async fn stop_sniffing(state: tauri::State<'_, SniffingInfoState>) -> Result<(), ()> {
+    let mut sniffing_state = state.0.lock().await;
     sniffing_state.is_sniffing = false;
     info!(
         "[{}] Sniffing stopped",
         sniffing_state.interface_name.as_ref().unwrap()
     );
+
+    Ok(())
 }
 
 fn main() {
