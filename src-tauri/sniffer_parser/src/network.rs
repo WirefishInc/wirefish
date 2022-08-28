@@ -11,50 +11,43 @@ use crate::serializable_packet::network::{
 };
 use crate::transport::*;
 
-pub fn handle_ipv4_packet(
-    ethernet: &EthernetPacket,
-    packets: &mut Vec<Box<dyn SerializablePacket>>,
-) {
+pub fn handle_ipv4_packet(ethernet: &EthernetPacket, packets: &mut Vec<SerializablePacket>) {
     let header = Ipv4Packet::new(ethernet.payload());
     if let Some(header) = header {
-        packets.push(Box::new(SerializableIpv4Packet::from(&header)));
+        packets.push(SerializablePacket::Ipv4Packet(
+            SerializableIpv4Packet::from(&header),
+        ));
         handle_transport_protocol(
-            ethernet.get_source(),
-            ethernet.get_destination(),
             IpAddr::V4(header.get_source()),
             IpAddr::V4(header.get_destination()),
             header.get_next_level_protocol(),
             header.payload(),
+            packets,
         );
     } else {
         println!("[]: Malformed IPv4 Packet");
     }
 }
 
-pub fn handle_ipv6_packet(
-    ethernet: &EthernetPacket,
-    packets: &mut Vec<Box<dyn SerializablePacket>>,
-) {
+pub fn handle_ipv6_packet(ethernet: &EthernetPacket, packets: &mut Vec<SerializablePacket>) {
     let header = Ipv6Packet::new(ethernet.payload());
     if let Some(header) = header {
-        packets.push(Box::new(SerializableIpv6Packet::from(&header)));
+        packets.push(SerializablePacket::Ipv6Packet(
+            SerializableIpv6Packet::from(&header),
+        ));
         handle_transport_protocol(
-            ethernet.get_source(),
-            ethernet.get_destination(),
             IpAddr::V6(header.get_source()),
             IpAddr::V6(header.get_destination()),
             header.get_next_header(),
             header.payload(),
+            packets,
         );
     } else {
         println!("[]: Malformed IPv6 Packet");
     }
 }
 
-pub fn handle_arp_packet(
-    ethernet: &EthernetPacket,
-    packets: &mut Vec<Box<dyn SerializablePacket>>,
-) {
+pub fn handle_arp_packet(ethernet: &EthernetPacket, packets: &mut Vec<SerializablePacket>) {
     let header = ArpPacket::new(ethernet.payload());
     if let Some(header) = header {
         println!(
@@ -66,44 +59,73 @@ pub fn handle_arp_packet(
             header.get_operation()
         );
 
-        packets.push(Box::new(SerializableArpPacket::from(&header)));
+        packets.push(SerializablePacket::ArpPacket(SerializableArpPacket::from(
+            &header,
+        )));
     } else {
         println!("[]: Malformed ARP Packet");
     }
 }
 
-/*
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use std::net::Ipv4Addr;
 
-    use pnet::packet::arp::{ArpHardwareTypes, ArpOperations, MutableArpPacket};
+    use pnet::packet::arp::{ArpHardwareTypes, ArpOperations, ArpPacket, MutableArpPacket};
     use pnet::packet::ethernet::{EtherTypes, EthernetPacket, MutableEthernetPacket};
     use pnet::packet::Packet;
     use pnet::util::MacAddr;
+
+    use crate::serializable_packet::SerializablePacket;
 
     use super::handle_arp_packet;
 
     #[test]
     fn valid_arp_packet() {
         let mut ethernet_buffer = [0u8; 42];
-        let mock_packet = build_test_arp_packet(ethernet_buffer.as_mut_slice());
 
-        let new_packet = handle_arp_packet(&mock_packet);
+        let ethernet_packet = build_test_arp_packet(ethernet_buffer.as_mut_slice());
+        let arp_packet = ArpPacket::new(ethernet_packet.payload()).unwrap();
 
-        assert!(new_packet.is_some());
-        let new_packet = new_packet.unwrap();
+        let mut packets: Vec<SerializablePacket> = vec![];
+        handle_arp_packet(&ethernet_packet, &mut packets);
 
-        assert_eq!(new_packet.packet_type, "ARP");
-        assert_eq!(new_packet.mac_source, MacAddr::new(10, 10, 10, 10, 10, 10));
-        assert_eq!(
-            new_packet.mac_destination,
-            MacAddr::new(11, 11, 11, 11, 11, 11)
-        );
-        assert_eq!(new_packet.ip_source, "10.10.10.10");
-        assert_eq!(new_packet.ip_destination, "11.11.11.11");
-        assert_eq!(new_packet.info, "-");
-        assert_eq!(new_packet.payload, None);
+        if let SerializablePacket::ArpPacket(new_arp_packet) = &packets[0] {
+            assert_eq!(
+                new_arp_packet.hardware_type,
+                format!("{:?}", arp_packet.get_hardware_type())
+            );
+            assert_eq!(
+                new_arp_packet.protocol_type,
+                arp_packet.get_protocol_type().0
+            );
+            assert_eq!(new_arp_packet.hw_addr_len, arp_packet.get_hw_addr_len());
+            assert_eq!(
+                new_arp_packet.proto_addr_len,
+                arp_packet.get_proto_addr_len()
+            );
+            assert_eq!(
+                new_arp_packet.operation,
+                format!("ARP Request ({})", arp_packet.get_operation().0)
+            );
+            assert_eq!(
+                new_arp_packet.sender_hw_addr,
+                arp_packet.get_sender_hw_addr()
+            );
+            assert_eq!(
+                new_arp_packet.sender_proto_addr,
+                arp_packet.get_sender_proto_addr()
+            );
+            assert_eq!(
+                new_arp_packet.target_hw_addr,
+                arp_packet.get_target_hw_addr()
+            );
+            assert_eq!(
+                new_arp_packet.target_proto_addr,
+                arp_packet.get_target_proto_addr()
+            );
+            assert_eq!(new_arp_packet.payload, arp_packet.payload().to_vec());
+        }
     }
 
     #[test]
@@ -113,7 +135,8 @@ mod tests {
 
         println!("{:?}", mock_packet.payload());
 
-        let _new_packet = handle_arp_packet(&mock_packet);
+        let mut packets: Vec<SerializablePacket> = vec![];
+        handle_arp_packet(&mock_packet, &mut packets);
 
         // TODO: Understand how to create a malformed packet... It seems impossible using the library
         // since the correct structure is enforced at every step. Maybe this case can be triggered just
@@ -148,4 +171,4 @@ mod tests {
 
         ethernet_packet.consume_to_immutable()
     }
-}*/
+}
