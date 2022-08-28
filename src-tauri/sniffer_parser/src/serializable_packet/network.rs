@@ -7,25 +7,21 @@ use pnet::packet::Packet;
 use pnet::util::MacAddr;
 use serde::Serialize;
 
-use super::SerializablePacket;
-
 /// ARP Packet Representation
 
 #[derive(Serialize, Debug)]
 pub struct SerializableArpPacket {
-    hardware_type: String,
-    protocol_type: u16,
-    hw_addr_len: u8,
-    proto_addr_len: u8,
-    operation: String,
-    sender_hw_addr: MacAddr,
-    sender_proto_addr: Ipv4Addr,
-    target_hw_addr: MacAddr,
-    target_proto_addr: Ipv4Addr,
-    payload: Vec<u8>,
+    pub hardware_type: String,
+    pub protocol_type: u16,
+    pub hw_addr_len: u8,
+    pub proto_addr_len: u8,
+    pub operation: String,
+    pub sender_hw_addr: MacAddr,
+    pub sender_proto_addr: Ipv4Addr,
+    pub target_hw_addr: MacAddr,
+    pub target_proto_addr: Ipv4Addr,
+    pub payload: Vec<u8>,
 }
-
-impl SerializablePacket for SerializableArpPacket {}
 
 impl<'a> From<&ArpPacket<'a>> for SerializableArpPacket {
     fn from(packet: &ArpPacket<'a>) -> Self {
@@ -62,8 +58,6 @@ pub struct SerializableIpv6Packet {
     pub destination: Ipv6Addr,
     pub payload: Vec<u8>,
 }
-
-impl SerializablePacket for SerializableIpv6Packet {}
 
 impl<'a> From<&Ipv6Packet<'a>> for SerializableIpv6Packet {
     fn from(packet: &Ipv6Packet<'a>) -> Self {
@@ -104,8 +98,6 @@ pub struct SerializableIpv4Packet {
     destination: Ipv4Addr,
     payload: Vec<u8>,
 }
-
-impl SerializablePacket for SerializableIpv4Packet {}
 
 impl<'a> From<&Ipv4Packet<'a>> for SerializableIpv4Packet {
     fn from(packet: &Ipv4Packet<'a>) -> Self {

@@ -4,18 +4,21 @@ use pnet::packet::ip::{IpNextHeaderProtocol, IpNextHeaderProtocols};
 use pnet::packet::tcp::TcpPacket;
 use pnet::packet::udp::UdpPacket;
 
-use pnet::util::MacAddr;
 use std::net::IpAddr;
 
-use super::GenericPacket;
+use crate::serializable_packet::transport::{
+    SerializableEchoReplyPacket, SerializableEchoRequestPacket, SerializableIcmpPacket,
+    SerializableIcmpv6Packet, SerializableTcpPacket, SerializableUdpPacket,
+};
+
+use super::*;
 
 pub fn handle_udp_packet(
-    mac_source: MacAddr,
-    mac_destination: MacAddr,
     source: IpAddr,
     destination: IpAddr,
     packet: &[u8],
-) -> Option<GenericPacket> {
+    packets: &mut Vec<SerializablePacket>,
+) {
     let udp = UdpPacket::new(packet);
 
     if let Some(udp) = udp {
@@ -28,29 +31,20 @@ pub fn handle_udp_packet(
             udp.get_length()
         );
 
-        return Some(GenericPacket::new(
-            "UDP".to_owned(),
-            mac_source,
-            mac_destination,
-            format!("{}:{}", source, udp.get_source()),
-            format!("{}:{}", destination, udp.get_destination()),
-            udp.get_length().into(),
-            "-".to_owned(),
-            None,
-        ));
+        packets.push(SerializablePacket::UdpPacket(SerializableUdpPacket::from(
+            &udp,
+        )));
     } else {
         println!("[]: Malformed UDP Packet");
-        return None;
     }
 }
 
 pub fn handle_tcp_packet(
-    mac_source: MacAddr,
-    mac_destination: MacAddr,
     source: IpAddr,
     destination: IpAddr,
     packet: &[u8],
-) -> Option<GenericPacket> {
+    packets: &mut Vec<SerializablePacket>,
+) {
     let tcp = TcpPacket::new(packet);
     if let Some(tcp) = tcp {
         println!(
@@ -62,43 +56,26 @@ pub fn handle_tcp_packet(
             packet.len()
         );
 
-        return Some(GenericPacket::new(
-            "TCP".to_owned(),
-            mac_source,
-            mac_destination,
-            format!("{}:{}", source, tcp.get_source()),
-            format!("{}:{}", destination, tcp.get_destination()),
-            packet.len(),
-            "-".to_owned(),
-            None,
-        ));
+        packets.push(SerializablePacket::TcpPacket(SerializableTcpPacket::from(
+            &tcp,
+        )));
     } else {
         println!("[]: Malformed TCP Packet");
-        return None;
     }
 }
 
 pub fn handle_transport_protocol(
-    mac_source: MacAddr,
-    mac_destination: MacAddr,
     source: IpAddr,
     destination: IpAddr,
     protocol: IpNextHeaderProtocol,
     packet: &[u8],
-) -> Option<GenericPacket> {
+    packets: &mut Vec<SerializablePacket>,
+) {
     return match protocol {
-        IpNextHeaderProtocols::Udp => {
-            handle_udp_packet(mac_source, mac_destination, source, destination, packet)
-        }
-        IpNextHeaderProtocols::Tcp => {
-            handle_tcp_packet(mac_source, mac_destination, source, destination, packet)
-        }
-        IpNextHeaderProtocols::Icmp => {
-            handle_icmp_packet(mac_source, mac_destination, source, destination, packet)
-        }
-        IpNextHeaderProtocols::Icmpv6 => {
-            handle_icmpv6_packet(mac_source, mac_destination, source, destination, packet)
-        }
+        IpNextHeaderProtocols::Udp => handle_udp_packet(source, destination, packet, packets),
+        IpNextHeaderProtocols::Tcp => handle_tcp_packet(source, destination, packet, packets),
+        IpNextHeaderProtocols::Icmp => handle_icmp_packet(source, destination, packet, packets),
+        IpNextHeaderProtocols::Icmpv6 => handle_icmpv6_packet(source, destination, packet, packets),
         _ => {
             println!(
                 "[]: Unknown {} packet: {} > {}; protocol: {:?} length: {}",
@@ -111,19 +88,16 @@ pub fn handle_transport_protocol(
                 protocol,
                 packet.len()
             );
-
-            None
         }
     };
 }
 
 pub fn handle_icmp_packet(
-    mac_source: MacAddr,
-    mac_destination: MacAddr,
     source: IpAddr,
     destination: IpAddr,
     packet: &[u8],
-) -> Option<GenericPacket> {
+    packets: &mut Vec<SerializablePacket>,
+) {
     let icmp_packet = IcmpPacket::new(packet);
     if let Some(icmp_packet) = icmp_packet {
         match icmp_packet.get_icmp_type() {
@@ -137,19 +111,8 @@ pub fn handle_icmp_packet(
                     echo_reply_packet.get_identifier(),
                 );
 
-                return Some(GenericPacket::new(
-                    "ICMP echo reply".to_owned(),
-                    mac_source,
-                    mac_destination,
-                    source.to_string(),
-                    destination.to_string(),
-                    packet.len(),
-                    format!(
-                        "seq={:?}, id={:?}",
-                        echo_reply_packet.get_sequence_number(),
-                        echo_reply_packet.get_identifier()
-                    ),
-                    None,
+                packets.push(SerializablePacket::EchoReplyPacket(
+                    SerializableEchoReplyPacket::from(&echo_reply_packet),
                 ));
             }
             IcmpTypes::EchoRequest => {
@@ -162,19 +125,8 @@ pub fn handle_icmp_packet(
                     echo_request_packet.get_identifier()
                 );
 
-                return Some(GenericPacket::new(
-                    "ICMP echo request".to_owned(),
-                    mac_source,
-                    mac_destination,
-                    source.to_string(),
-                    destination.to_string(),
-                    packet.len(),
-                    format!(
-                        "seq={:?}, id={:?}",
-                        echo_request_packet.get_sequence_number(),
-                        echo_request_packet.get_identifier()
-                    ),
-                    None,
+                packets.push(SerializablePacket::EchoRequestPacket(
+                    SerializableEchoRequestPacket::from(&echo_request_packet),
                 ));
             }
             _ => {
@@ -186,35 +138,22 @@ pub fn handle_icmp_packet(
                     icmp_packet.get_icmp_type()
                 );
 
-                return Some(GenericPacket::new(
-                    "ICMP".to_owned(),
-                    mac_source,
-                    mac_destination,
-                    source.to_string(),
-                    destination.to_string(),
-                    packet.len(),
-                    format!(
-                        "code={:?}, type={:?}",
-                        icmp_packet.get_icmp_code(),
-                        icmp_packet.get_icmp_type()
-                    ),
-                    None,
+                packets.push(SerializablePacket::IcmpPacket(
+                    SerializableIcmpPacket::from(&icmp_packet),
                 ));
             }
         }
     } else {
         println!("[]: Malformed ICMP Packet");
-        return None;
     }
 }
 
 pub fn handle_icmpv6_packet(
-    mac_source: MacAddr,
-    mac_destination: MacAddr,
     source: IpAddr,
     destination: IpAddr,
     packet: &[u8],
-) -> Option<GenericPacket> {
+    packets: &mut Vec<SerializablePacket>,
+) {
     let icmpv6_packet = Icmpv6Packet::new(packet);
     if let Some(icmpv6_packet) = icmpv6_packet {
         println!(
@@ -224,23 +163,11 @@ pub fn handle_icmpv6_packet(
             icmpv6_packet.get_icmpv6_type()
         );
 
-        return Some(GenericPacket::new(
-            "ICMP-V6".to_owned(),
-            mac_source,
-            mac_destination,
-            source.to_string(),
-            destination.to_string(),
-            packet.len(),
-            format!(
-                "code={:?}, type={:?}",
-                icmpv6_packet.get_icmpv6_code(),
-                icmpv6_packet.get_icmpv6_type()
-            ),
-            None,
+        packets.push(SerializablePacket::Icmpv6Packet(
+            SerializableIcmpv6Packet::from(&icmpv6_packet),
         ));
     } else {
         println!("[]: Malformed ICMPv6 Packet");
-        return None;
     }
 }
 
@@ -252,10 +179,10 @@ mod tests {
     use pnet::packet::icmp::destination_unreachable::MutableDestinationUnreachablePacket;
     use pnet::packet::icmp::IcmpPacket;
     use pnet::packet::icmp::IcmpType;
+    use pnet::packet::icmpv6::echo_reply::Icmpv6Codes;
     use pnet::packet::icmpv6::Icmpv6Code;
     use pnet::packet::icmpv6::Icmpv6Types;
     use pnet::packet::icmpv6::MutableIcmpv6Packet;
-    use pnet::packet::icmpv6::echo_reply::Icmpv6Codes;
     use pnet::packet::tcp::MutableTcpPacket;
     use pnet::packet::tcp::TcpPacket;
     use pnet::packet::udp::MutableUdpPacket;
@@ -268,207 +195,188 @@ mod tests {
     #[test]
     fn valid_udp_packet() {
         let mut udp_buffer = [0u8; 42];
-        let mock_packet = build_test_udp_packet(&mut udp_buffer);
 
-        let new_packet = handle_udp_packet(
-            MacAddr::new(10, 10, 10, 10, 10, 10),
-            MacAddr::new(11, 11, 11, 11, 11, 11),
+        let udp_packet = build_test_udp_packet(udp_buffer.as_mut_slice());
+        let mut packets: Vec<SerializablePacket> = vec![];
+        handle_udp_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),
-            mock_packet.packet(),
+            udp_packet.packet(),
+            &mut packets,
         );
 
-        assert!(new_packet.is_some());
-        let new_packet = new_packet.unwrap();
-
-        assert_eq!(new_packet.packet_type, "UDP");
-        assert_eq!(new_packet.mac_source, MacAddr::new(10, 10, 10, 10, 10, 10));
-        assert_eq!(
-            new_packet.mac_destination,
-            MacAddr::new(11, 11, 11, 11, 11, 11)
-        );
-        assert_eq!(new_packet.ip_source, "10.10.10.10:4444");
-        assert_eq!(new_packet.ip_destination, "11.11.11.11:4445");
-        assert_eq!(new_packet.info, "-");
-        assert_eq!(new_packet.payload, None);
+        if let SerializablePacket::UdpPacket(new_udp_packet) = &packets[0] {
+            assert_eq!(new_udp_packet.source, udp_packet.get_source());
+            assert_eq!(new_udp_packet.destination, udp_packet.get_destination());
+            assert_eq!(new_udp_packet.length, udp_packet.get_length());
+            assert_eq!(new_udp_packet.checksum, udp_packet.get_checksum());
+            assert_eq!(new_udp_packet.payload, udp_packet.payload().to_vec());
+        }
     }
 
     #[test]
     fn valid_tcp_packet() {
         let mut tcp_buffer = [0u8; 42];
-        let mock_packet = build_test_tcp_packet(&mut tcp_buffer);
 
-        let new_packet = handle_tcp_packet(
-            MacAddr::new(10, 10, 10, 10, 10, 10),
-            MacAddr::new(11, 11, 11, 11, 11, 11),
+        let tcp_packet = build_test_tcp_packet(tcp_buffer.as_mut_slice());
+        let mut packets: Vec<SerializablePacket> = vec![];
+        handle_tcp_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),
-            mock_packet.packet(),
+            tcp_packet.packet(),
+            &mut packets,
         );
 
-        assert!(new_packet.is_some());
-        let new_packet = new_packet.unwrap();
-
-        assert_eq!(new_packet.packet_type, "TCP");
-        assert_eq!(new_packet.mac_source, MacAddr::new(10, 10, 10, 10, 10, 10));
-        assert_eq!(
-            new_packet.mac_destination,
-            MacAddr::new(11, 11, 11, 11, 11, 11)
-        );
-        assert_eq!(new_packet.ip_source, "10.10.10.10:4444");
-        assert_eq!(new_packet.ip_destination, "11.11.11.11:4445");
-        assert_eq!(new_packet.info, "-");
-        assert_eq!(new_packet.payload, None);
+        if let SerializablePacket::TcpPacket(new_tcp_packet) = &packets[0] {
+            assert_eq!(new_tcp_packet.source, tcp_packet.get_source());
+            assert_eq!(new_tcp_packet.destination, tcp_packet.get_destination());
+            assert_eq!(new_tcp_packet.sequence, tcp_packet.get_sequence());
+            assert_eq!(
+                new_tcp_packet.acknowledgement,
+                tcp_packet.get_acknowledgement()
+            );
+            assert_eq!(new_tcp_packet.data_offset, tcp_packet.get_data_offset());
+            assert_eq!(new_tcp_packet.reserved, tcp_packet.get_reserved());
+            assert_eq!(new_tcp_packet.flags, tcp_packet.get_flags());
+            assert_eq!(new_tcp_packet.window, tcp_packet.get_window());
+            assert_eq!(new_tcp_packet.checksum, tcp_packet.get_checksum());
+            assert_eq!(new_tcp_packet.urgent_ptr, tcp_packet.get_urgent_ptr());
+            assert_eq!(new_tcp_packet.options, tcp_packet.get_options_raw());
+            assert_eq!(new_tcp_packet.payload, tcp_packet.payload().to_vec());
+        }
     }
 
     #[test]
     fn valid_icmp_echo_reply_packet() {
         let mut icmp_buffer = [0u8; 42];
-        let mock_packet = echo_reply::EchoReplyPacket::new(&mut icmp_buffer).unwrap();
 
-        println!("Reply: {:?}", mock_packet.get_icmp_type());
-
-        let new_packet = handle_icmp_packet(
-            MacAddr::new(10, 10, 10, 10, 10, 10),
-            MacAddr::new(11, 11, 11, 11, 11, 11),
+        let echo_reply_packet = echo_reply::EchoReplyPacket::new(&mut icmp_buffer).unwrap();
+        let mut packets: Vec<SerializablePacket> = vec![];
+        handle_icmp_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),
-            mock_packet.packet(),
+            echo_reply_packet.packet(),
+            &mut packets,
         );
 
-        assert!(new_packet.is_some());
-        let new_packet = new_packet.unwrap();
-
-        assert_eq!(new_packet.packet_type, "ICMP echo reply");
-        assert_eq!(new_packet.mac_source, MacAddr::new(10, 10, 10, 10, 10, 10));
-        assert_eq!(
-            new_packet.mac_destination,
-            MacAddr::new(11, 11, 11, 11, 11, 11)
-        );
-        assert_eq!(new_packet.ip_source, "10.10.10.10");
-        assert_eq!(new_packet.ip_destination, "11.11.11.11");
-        assert_eq!(
-            new_packet.info,
-            format!(
-                "seq={:?}, id={:?}",
-                mock_packet.get_sequence_number(),
-                mock_packet.get_identifier()
-            )
-        );
-        assert_eq!(new_packet.payload, None);
+        if let SerializablePacket::EchoReplyPacket(new_echo_reply_packet) = &packets[0] {
+            assert_eq!(
+                new_echo_reply_packet.icmp_type,
+                echo_reply_packet.get_icmp_type().0
+            );
+            assert_eq!(
+                new_echo_reply_packet.icmp_code,
+                echo_reply_packet.get_icmp_code().0
+            );
+            assert_eq!(
+                new_echo_reply_packet.checksum,
+                echo_reply_packet.get_checksum()
+            );
+            assert_eq!(
+                new_echo_reply_packet.identifier,
+                echo_reply_packet.get_identifier()
+            );
+            assert_eq!(
+                new_echo_reply_packet.sequence_number,
+                echo_reply_packet.get_sequence_number()
+            );
+            assert_eq!(
+                new_echo_reply_packet.payload,
+                echo_reply_packet.payload().to_vec()
+            );
+        }
     }
 
     #[test]
     fn valid_icmp_echo_request_packet() {
         let mut icmp_buffer = [0u8; 42];
-        let mut mock_packet =
+        let mut echo_request_packet =
             echo_request::MutableEchoRequestPacket::new(&mut icmp_buffer).unwrap();
 
-        mock_packet.set_icmp_type(IcmpTypes::EchoRequest);
+        echo_request_packet.set_icmp_type(IcmpTypes::EchoRequest);
 
-        let new_packet = handle_icmp_packet(
-            MacAddr::new(10, 10, 10, 10, 10, 10),
-            MacAddr::new(11, 11, 11, 11, 11, 11),
+        let mut packets: Vec<SerializablePacket> = vec![];
+        handle_icmp_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),
-            mock_packet.packet(),
+            echo_request_packet.packet(),
+            &mut packets,
         );
 
-        assert!(new_packet.is_some());
-        let new_packet = new_packet.unwrap();
-        println!("{:?}", new_packet);
-
-        assert_eq!(new_packet.packet_type, "ICMP echo request");
-        assert_eq!(new_packet.mac_source, MacAddr::new(10, 10, 10, 10, 10, 10));
-        assert_eq!(
-            new_packet.mac_destination,
-            MacAddr::new(11, 11, 11, 11, 11, 11)
-        );
-        assert_eq!(new_packet.ip_source, "10.10.10.10");
-        assert_eq!(new_packet.ip_destination, "11.11.11.11");
-        assert_eq!(
-            new_packet.info,
-            format!(
-                "seq={:?}, id={:?}",
-                mock_packet.get_sequence_number(),
-                mock_packet.get_identifier()
-            )
-        );
-        assert_eq!(new_packet.payload, None);
+        if let SerializablePacket::EchoRequestPacket(new_echo_reply_packet) = &packets[0] {
+            assert_eq!(
+                new_echo_reply_packet.icmp_type,
+                echo_request_packet.get_icmp_type().0
+            );
+            assert_eq!(
+                new_echo_reply_packet.icmp_code,
+                echo_request_packet.get_icmp_code().0
+            );
+            assert_eq!(
+                new_echo_reply_packet.checksum,
+                echo_request_packet.get_checksum()
+            );
+            assert_eq!(
+                new_echo_reply_packet.identifier,
+                echo_request_packet.get_identifier()
+            );
+            assert_eq!(
+                new_echo_reply_packet.sequence_number,
+                echo_request_packet.get_sequence_number()
+            );
+            assert_eq!(
+                new_echo_reply_packet.payload,
+                echo_request_packet.payload().to_vec()
+            );
+        }
     }
 
     #[test]
     fn unrecognized_icmp_packet() {
         let mut icmp_buffer = [0u8; 42];
-        let mut mock_packet = MutableDestinationUnreachablePacket::new(&mut icmp_buffer).unwrap();
+        let mut icmp_packet = IcmpPacket::new(&mut icmp_buffer).unwrap();
 
-        mock_packet.set_icmp_type(IcmpTypes::DestinationUnreachable);
-
-        let new_packet = handle_icmp_packet(
-            MacAddr::new(10, 10, 10, 10, 10, 10),
-            MacAddr::new(11, 11, 11, 11, 11, 11),
+        let mut packets: Vec<SerializablePacket> = vec![];
+        handle_icmp_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),
-            mock_packet.packet(),
+            icmp_packet.packet(),
+            &mut packets,
         );
 
-        assert!(new_packet.is_some());
-        let new_packet = new_packet.unwrap();
-        println!("{:?}", new_packet);
-
-        assert_eq!(new_packet.packet_type, "ICMP");
-        assert_eq!(new_packet.mac_source, MacAddr::new(10, 10, 10, 10, 10, 10));
-        assert_eq!(
-            new_packet.mac_destination,
-            MacAddr::new(11, 11, 11, 11, 11, 11)
-        );
-        assert_eq!(new_packet.ip_source, "10.10.10.10");
-        assert_eq!(new_packet.ip_destination, "11.11.11.11");
-        assert_eq!(
-            new_packet.info,
-            format!(
-                "code={:?}, type={:?}",
-                mock_packet.get_icmp_code(),
-                mock_packet.get_icmp_type()
-            )
-        );
-        assert_eq!(new_packet.payload, None);
+        if let SerializablePacket::IcmpPacket(new_icmp_packet) = &packets[0] {
+            assert_eq!(new_icmp_packet.icmp_type, icmp_packet.get_icmp_type().0);
+            assert_eq!(new_icmp_packet.icmp_code, icmp_packet.get_icmp_code().0);
+            assert_eq!(new_icmp_packet.checksum, icmp_packet.get_checksum());
+            assert_eq!(new_icmp_packet.payload, icmp_packet.payload().to_vec());
+        }
     }
 
     #[test]
     fn valid_icmpv6_packet() {
         let mut icmpv6_buffer = [0u8; 42];
-        let mock_packet = build_test_icmpv6_packet(&mut icmpv6_buffer);
 
+        let icmpv6_packet = build_test_icmpv6_packet(&mut icmpv6_buffer);
+        let mut packets: Vec<SerializablePacket> = vec![];
         let new_packet = handle_icmpv6_packet(
-            MacAddr::new(10, 10, 10, 10, 10, 10),
-            MacAddr::new(11, 11, 11, 11, 11, 11),
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),
-            mock_packet.packet(),
+            icmpv6_packet.packet(),
+            &mut packets,
         );
 
-        assert!(new_packet.is_some());
-        let new_packet = new_packet.unwrap();
-        println!("{:?}", new_packet);
-
-        assert_eq!(new_packet.packet_type, "ICMP-V6");
-        assert_eq!(new_packet.mac_source, MacAddr::new(10, 10, 10, 10, 10, 10));
-        assert_eq!(
-            new_packet.mac_destination,
-            MacAddr::new(11, 11, 11, 11, 11, 11)
-        );
-        assert_eq!(new_packet.ip_source, "10.10.10.10");
-        assert_eq!(new_packet.ip_destination, "11.11.11.11");
-        assert_eq!(
-            new_packet.info,
-            format!(
-                "code={:?}, type={:?}",
-                mock_packet.get_icmpv6_code(),
-                mock_packet.get_icmpv6_type()
-            )
-        );
-        assert_eq!(new_packet.payload, None);
+        if let SerializablePacket::Icmpv6Packet(new_icmpv6_packet) = &packets[0] {
+            assert_eq!(
+                new_icmpv6_packet.icmpv6_type,
+                icmpv6_packet.get_icmpv6_type().0
+            );
+            assert_eq!(
+                new_icmpv6_packet.icmpv6_code,
+                icmpv6_packet.get_icmpv6_code().0
+            );
+            assert_eq!(new_icmpv6_packet.checksum, icmpv6_packet.get_checksum());
+            assert_eq!(new_icmpv6_packet.payload, icmpv6_packet.payload().to_vec());
+        }
     }
 
     ///////////////////// Utils
