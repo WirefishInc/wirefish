@@ -1,6 +1,8 @@
 extern crate pnet;
 extern crate sniffer_parser;
 
+mod report;
+
 use dotenv;
 use log::{error, info};
 
