@@ -9,6 +9,7 @@ import API from './API';
 import {Packet, TrafficType, SniffingStatus} from "./types/sniffing";
 import InterfaceInput from './components/InterfaceInput';
 import TimeIntervalInput from './components/TimeIntervalInput';
+import ReportFolderInput from "./components/ReportFolderInput";
 import ReportNameInput from "./components/ReportNameInput";
 import ToggleButton from "./components/ToggleButton";
 
@@ -37,6 +38,7 @@ function App() {
     let [capturedPackets, setCapturedPackets] = useState<Packet[]>([]);
     let [reportUpdateTime, setReportUpdateTime] = useState<number>(30);
     let [reportFileName, setReportFileName] = useState<string>("report");
+    let [reportFolder, setReportFolder] = useState<string>("./");
     let [errorMessage, setErrorMessage] = useState<string>("");
 
     useEffect(() => {
@@ -77,7 +79,7 @@ function App() {
     const startSniffing = async () => {
         if (currentInterface === null) return;
 
-        await API.startSniffing(`${reportFileName}.txt`, reportUpdateTime);
+        await API.startSniffing(`${reportFolder}${reportFileName}.txt`, reportUpdateTime);
         setSniffingStatus(SniffingStatus.Active);
     }
 
@@ -91,7 +93,7 @@ function App() {
         // TODO: RESUME
         if (currentInterface === null) return;
 
-        await API.startSniffing(`${reportFileName}.txt`, reportUpdateTime);
+        await API.startSniffing(`${reportFolder}${reportFileName}.txt`, reportUpdateTime);
         setSniffingStatus(SniffingStatus.Active);
     }
 
@@ -119,7 +121,7 @@ function App() {
 
                 {/* Time interval selection */}
 
-                <Grid xs={6} item={true}>
+                <Grid xs={3} item={true}>
                     <TimeIntervalInput reportUpdateTime={reportUpdateTime} sniffingStatus={sniffingStatus}
                                        setReportUpdateTime={setReportUpdateTime}/>
                 </Grid>
@@ -127,6 +129,10 @@ function App() {
                 {/* Output file selection */}
 
                 <Grid xs={6} item={true}>
+                    <ReportFolderInput setReportFolder={setReportFolder} sniffingStatus={sniffingStatus}
+                                       reportFolder={reportFolder}/>
+                </Grid>
+                <Grid xs={3} item={true}>
                     <ReportNameInput setReportFileName={setReportFileName} sniffingStatus={sniffingStatus}
                                      reportFileName={reportFileName}/>
                 </Grid>
