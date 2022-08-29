@@ -13,7 +13,7 @@ use tauri::async_runtime::Mutex;
 use tauri::{async_runtime, Manager, Window, Wry};
 use tauri_awesome_rpc::{AwesomeEmit, AwesomeRpc};
 
-use sniffer_parser::handle_ethernet_frame;
+use sniffer_parser::parse_ethernet_frame;
 
 struct SniffingInfoState(Arc<Mutex<SniffingInfo>>);
 struct SniffingInfo {
@@ -112,12 +112,11 @@ async fn start_sniffing(
             match sniffing_state.interface_channel.as_mut().unwrap().next() {
                 Ok(packet) => {
                     let ethernet_packet = EthernetPacket::new(packet).unwrap();
-                    let new_packet = handle_ethernet_frame(&ethernet_packet);
-                    if !new_packet.is_empty() {
-                        window
-                            .state::<AwesomeEmit>()
-                            .emit("main", "packet_received", new_packet);
-                    }
+                    let new_packet = parse_ethernet_frame(&ethernet_packet);
+
+                    window
+                        .state::<AwesomeEmit>()
+                        .emit("main", "packet_received", new_packet);
                 }
                 Err(e) => {
                     // If an error occurs, we can handle it here

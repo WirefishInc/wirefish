@@ -11,43 +11,49 @@ use crate::serializable_packet::network::{
 };
 use crate::transport::*;
 
-pub fn handle_ipv4_packet(ethernet: &EthernetPacket, packets: &mut Vec<SerializablePacket>) {
+pub fn handle_ipv4_packet(ethernet: &EthernetPacket, parsed_packet: &mut ParsedPacket) {
     let header = Ipv4Packet::new(ethernet.payload());
     if let Some(header) = header {
-        packets.push(SerializablePacket::Ipv4Packet(
+        parsed_packet.set_network_layer_packet(Some(SerializablePacket::Ipv4Packet(
             SerializableIpv4Packet::from(&header),
-        ));
+        )));
         handle_transport_protocol(
             IpAddr::V4(header.get_source()),
             IpAddr::V4(header.get_destination()),
             header.get_next_level_protocol(),
             header.payload(),
-            packets,
+            parsed_packet,
         );
     } else {
         println!("[]: Malformed IPv4 Packet");
+        parsed_packet.set_network_layer_packet(Some(SerializablePacket::MalformedPacket(
+            "Malformed IPv4 Packet".to_string(),
+        )));
     }
 }
 
-pub fn handle_ipv6_packet(ethernet: &EthernetPacket, packets: &mut Vec<SerializablePacket>) {
+pub fn handle_ipv6_packet(ethernet: &EthernetPacket, parsed_packet: &mut ParsedPacket) {
     let header = Ipv6Packet::new(ethernet.payload());
     if let Some(header) = header {
-        packets.push(SerializablePacket::Ipv6Packet(
+        parsed_packet.set_network_layer_packet(Some(SerializablePacket::Ipv6Packet(
             SerializableIpv6Packet::from(&header),
-        ));
+        )));
         handle_transport_protocol(
             IpAddr::V6(header.get_source()),
             IpAddr::V6(header.get_destination()),
             header.get_next_header(),
             header.payload(),
-            packets,
+            parsed_packet,
         );
     } else {
         println!("[]: Malformed IPv6 Packet");
+        parsed_packet.set_network_layer_packet(Some(SerializablePacket::MalformedPacket(
+            "Malformed IPv6 Packet".to_string(),
+        )));
     }
 }
 
-pub fn handle_arp_packet(ethernet: &EthernetPacket, packets: &mut Vec<SerializablePacket>) {
+pub fn handle_arp_packet(ethernet: &EthernetPacket, parsed_packet: &mut ParsedPacket) {
     let header = ArpPacket::new(ethernet.payload());
     if let Some(header) = header {
         println!(
@@ -59,11 +65,14 @@ pub fn handle_arp_packet(ethernet: &EthernetPacket, packets: &mut Vec<Serializab
             header.get_operation()
         );
 
-        packets.push(SerializablePacket::ArpPacket(SerializableArpPacket::from(
-            &header,
+        parsed_packet.set_network_layer_packet(Some(SerializablePacket::ArpPacket(
+            SerializableArpPacket::from(&header),
         )));
     } else {
         println!("[]: Malformed ARP Packet");
+        parsed_packet.set_network_layer_packet(Some(SerializablePacket::MalformedPacket(
+            "Malformed ARP Packet".to_string(),
+        )));
     }
 }
 
@@ -76,7 +85,7 @@ pub mod tests {
     use pnet::packet::Packet;
     use pnet::util::MacAddr;
 
-    use crate::serializable_packet::SerializablePacket;
+    use crate::serializable_packet::{ParsedPacket, SerializablePacket};
 
     use super::handle_arp_packet;
 
@@ -87,10 +96,12 @@ pub mod tests {
         let ethernet_packet = build_test_arp_packet(ethernet_buffer.as_mut_slice());
         let arp_packet = ArpPacket::new(ethernet_packet.payload()).unwrap();
 
-        let mut packets: Vec<SerializablePacket> = vec![];
-        handle_arp_packet(&ethernet_packet, &mut packets);
+        let mut parsed_packet = ParsedPacket::new();
+        handle_arp_packet(&ethernet_packet, &mut parsed_packet);
 
-        if let SerializablePacket::ArpPacket(new_arp_packet) = &packets[0] {
+        if let SerializablePacket::ArpPacket(new_arp_packet) =
+            parsed_packet.get_network_layer_packet().unwrap()
+        {
             assert_eq!(
                 new_arp_packet.hardware_type,
                 format!("{:?}", arp_packet.get_hardware_type())
@@ -135,8 +146,8 @@ pub mod tests {
 
         println!("{:?}", mock_packet.payload());
 
-        let mut packets: Vec<SerializablePacket> = vec![];
-        handle_arp_packet(&mock_packet, &mut packets);
+        let mut parsed_packet = ParsedPacket::new();
+        handle_arp_packet(&mock_packet, &mut parsed_packet);
 
         // TODO: Understand how to create a malformed packet... It seems impossible using the library
         // since the correct structure is enforced at every step. Maybe this case can be triggered just
