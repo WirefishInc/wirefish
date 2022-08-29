@@ -1,61 +1,53 @@
-#![cfg_attr(
-all(not(debug_assertions), target_os = "windows"),
-windows_subsystem = "windows"
-)]
-
 extern crate pnet;
+extern crate sniffer_parser;
 
-mod report;
+use dotenv;
+use log::{error, info};
 
 use pnet::datalink::Channel::Ethernet;
-use pnet::datalink::{self, DataLinkReceiver, DataLinkSender, NetworkInterface};
-use pnet::packet::ethernet::{EthernetPacket, MutableEthernetPacket};
-use pnet::packet::ethernet::EtherTypes::{Ipv4, Ipv6};
-use pnet::packet::{MutablePacket, Packet};
-use pnet::packet::ipv4::Ipv4Packet;
-use pnet::packet::ipv6::Ipv6Packet;
-use crate::pnet::packet::PacketSize;
-use crate::report::report::write_report;
-use report::report::data::{SourceDestination, PacketExchange};
-use std::collections::HashMap;
-use chrono::{Local};
-use std::fs;
+use pnet::datalink::{self, DataLinkReceiver, NetworkInterface};
+use pnet::packet::ethernet::EthernetPacket;
 
-use serde_json::json;
-use std::fmt::{Display, Formatter};
-use std::sync::mpsc::{channel, Receiver, Sender};
-use std::sync::{Arc, Mutex};
-use std::thread::JoinHandle;
-use tauri::{Manager, State, Window, Wry};
+use std::sync::Arc;
+use tauri::async_runtime::Mutex;
+use tauri::{async_runtime, Manager, Window, Wry};
 use tauri_awesome_rpc::{AwesomeEmit, AwesomeRpc};
 
-struct SniffingState {
-    interface_channel: Arc<Mutex<Option<(bool, Box<dyn DataLinkReceiver>)>>>,
+use sniffer_parser::parse_ethernet_frame;
+
+struct SniffingInfoState(Arc<Mutex<SniffingInfo>>);
+struct SniffingInfo {
+    interface_channel: Option<Box<dyn DataLinkReceiver>>,
+    interface_name: Option<String>,
+    is_sniffing: bool,
 }
 
-impl SniffingState {
+impl SniffingInfo {
     fn new() -> Self {
-        SniffingState {
-            interface_channel: Arc::new(Mutex::new(None)),
+        SniffingInfo {
+            interface_channel: None,
+            interface_name: None,
+            is_sniffing: false,
         }
     }
 }
 
 #[tauri::command]
-fn get_interfaces_list() -> Vec<String> {
-    println!("Interface retrieval started");
+async fn get_interfaces_list() -> Vec<String> {
     let interfaces = datalink::interfaces()
         .into_iter()
         .map(|i| i.description)
         .collect::<Vec<String>>();
-    println!("Interfaces: {:?}", interfaces);
+    info!("Interfaces retrieved: {:#?}", interfaces);
+
     interfaces
 }
 
 #[tauri::command]
-fn select_interface(state: tauri::State<SniffingState>, interface_name: String) {
-    println!("Interface name: {}", interface_name);
-
+async fn select_interface(
+    state: tauri::State<'_, SniffingInfoState>,
+    interface_name: String,
+) -> Result<(), ()> {
     let interface_names_match = |iface: &NetworkInterface| iface.description == interface_name;
 
     // Find the network interface with the provided name
@@ -66,8 +58,10 @@ fn select_interface(state: tauri::State<SniffingState>, interface_name: String) 
         .next()
         .unwrap();
 
+    info!("Interface selected: {}", interface_name);
+
     // Create a new channel, dealing with layer 2 packets
-    let (tx, rx) = match datalink::channel(&interface, Default::default()) {
+    let (_, rx) = match datalink::channel(&interface, Default::default()) {
         Ok(Ethernet(tx, rx)) => (tx, rx),
         Ok(_) => panic!("Unhandled channel type"),
         Err(e) => panic!(
@@ -76,100 +70,84 @@ fn select_interface(state: tauri::State<SniffingState>, interface_name: String) 
         ),
     };
 
-    let mut interface_channel = state.interface_channel.lock().expect("Poisoned lock");
-    *interface_channel = Some((false, rx));
+    let mut sniffing_state = state.0.lock().await;
+    sniffing_state.interface_channel = Some(rx);
+    sniffing_state.interface_name = Some(interface_name);
 
-    println!("Selected!");
+    info!(
+        "[{}] Channel created",
+        sniffing_state.interface_name.as_ref().unwrap()
+    );
+
+    Ok(())
 }
 
 #[tauri::command]
-fn start_sniffing(state: tauri::State<SniffingState>, report_path: String, report_interval: usize, window: Window<Wry>) {
-    // Set sniffing to true
-    state.interface_channel.lock().expect("Poisoned lock").as_mut().unwrap().0 = true;
+async fn start_sniffing(
+    state: tauri::State<'_, SniffingInfoState>,
+    window: Window<Wry>,
+) -> Result<(), String> {
+    let mut sniffing_state = state.0.lock().await;
 
-    // Remove old report file
-    fs::remove_file(&report_path);
+    if sniffing_state.interface_name.is_none() {
+        error!("Start sniffing without prior selection of the inteface");
+        return Err("Start sniffing without prior selection of the inteface".to_owned());
+    }
 
-    let channel = Arc::clone(&state.interface_channel);
-    std::thread::spawn(move || {
-        let mut buf: [u8; 64_000] = [0u8; 64_000];
-        let mut packets = HashMap::<SourceDestination, PacketExchange>::new();
+    sniffing_state.is_sniffing = true;
+    info!(
+        "[{}] Sniffing started",
+        sniffing_state.interface_name.as_ref().unwrap()
+    );
 
+    let ss = Arc::clone(&state.0);
+    async_runtime::spawn(async move {
         loop {
-            let mut channel = channel.lock().expect("Poisoned lock");
-            if channel.as_mut().is_none() || !channel.as_mut().unwrap().0 { break; }
+            let mut sniffing_state = ss.lock().await;
 
-            match channel.as_mut().unwrap().1.next() {
+            if !sniffing_state.is_sniffing {
+                break;
+            }
+
+            match sniffing_state.interface_channel.as_mut().unwrap().next() {
                 Ok(packet) => {
                     let ethernet_packet = EthernetPacket::new(packet).unwrap();
-                    // let mut new_packet = MutableEthernetPacket::new(&mut buf[..]).unwrap();
+                    let new_packet = parse_ethernet_frame(&ethernet_packet);
 
-                    // TODO: I've commented this to create the IP packet, let's review this together
-                    // Create a clone of the original packet
-                    // new_packet.clone_from(&ethernet_packet);
-
-                    let ethernet_encapsulated_protocol = ethernet_packet.get_ethertype();
-                    let mut ip_source = String::new();
-                    let mut ip_destination = String::new();
-                    let mut ip_version = "";
-                    let mut packet_size = 0;
-
-                    match ethernet_encapsulated_protocol {
-                        Ipv4 => {
-                            let ip_packet = Ipv4Packet::new(packet).unwrap();
-                            // TODO: Handle case ip_packet is None
-                            ip_source = ip_packet.get_source().to_string();
-                            ip_destination = ip_packet.get_destination().to_string();
-                            ip_version = "IPv4";
-                            packet_size = ip_packet.packet_size();
-                        }
-                        Ipv6 => {
-                            let ip_packet = Ipv6Packet::new(packet).unwrap();
-                            // TODO: Handle case ip_packet is None
-                            ip_source = ip_packet.get_source().to_string();
-                            ip_destination = ip_packet.get_destination().to_string();
-                            ip_version = "IPv6";
-                            packet_size = ip_packet.packet_size();
-                        }
-                        unsupported_protocol => {
-                            println!("TODO: Handle Unsupported Protocol {:?}", unsupported_protocol);
-                            ip_version = "-";
-                            // Other protocols found so far: EtherType(2054) ARP
-                        } // Unsupported protocol
-                    }
-
-                    window.state::<AwesomeEmit>().emit(
-                        "main",
-                        "packet_received",
-                        serde_json::to_string(&(
-                            ethernet_packet.get_source(),
-                            ethernet_packet.get_destination(),
-                            ip_version,
-                            ip_source,
-                            ip_destination
-                        ))
-                            .unwrap(),
-                    )
+                    window
+                        .state::<AwesomeEmit>()
+                        .emit("main", "packet_received", new_packet);
                 }
                 Err(e) => {
                     // If an error occurs, we can handle it here
+                    error!("An error occurred while reading");
                     panic!("An error occurred while reading: {}", e);
                 }
             }
 
-            drop(channel);
+            drop(sniffing_state);
         }
     });
+
+    Ok(())
 }
 
 #[tauri::command]
-fn stop_sniffing(state: tauri::State<SniffingState>) {
-    let mut channel = state.interface_channel.lock().expect("Poisoned lock");
-    channel.as_mut().unwrap().0 = false;
-    println!("Stop Sniffing :(");
+async fn stop_sniffing(state: tauri::State<'_, SniffingInfoState>) -> Result<(), ()> {
+    let mut sniffing_state = state.0.lock().await;
+    sniffing_state.is_sniffing = false;
+    info!(
+        "[{}] Sniffing stopped",
+        sniffing_state.interface_name.as_ref().unwrap()
+    );
+
+    Ok(())
 }
 
 fn main() {
+    dotenv::dotenv().ok();
+    env_logger::init();
+
     let awesome_rpc = AwesomeRpc::new(vec!["tauri://localhost", "http://localhost:*"]);
 
     tauri::Builder::default()
@@ -178,7 +156,7 @@ fn main() {
             awesome_rpc.start(app.handle());
             Ok(())
         })
-        .manage(SniffingState::new())
+        .manage(SniffingInfoState(Arc::new(Mutex::new(SniffingInfo::new()))))
         .invoke_handler(tauri::generate_handler![
             start_sniffing,
             stop_sniffing,

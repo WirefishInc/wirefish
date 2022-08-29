@@ -20,11 +20,13 @@ const darkTheme = createTheme({
 
 const columns: GridColDef[] = [
     {field: 'id', headerName: '#', width: 10},
+    {field: 'type', headerName: 'Type', width: 140},
     {field: 'sourceMAC', headerName: 'Source MAC', width: 140},
     {field: 'destinationMAC', headerName: 'Destination MAC', width: 140},
-    {field: 'ipVersion', headerName: 'IPv#', width: 30},
     {field: 'sourceIP', headerName: 'Source IP', width: 120},
     {field: 'destinationIP', headerName: 'Destination IP', width: 120},
+    {field: 'length', headerName: 'Lenght', width: 30},
+    {field: 'info', headerName: 'Info', width: 200},
 ];
 
 function App() {
@@ -50,11 +52,11 @@ function App() {
             }
 
             /* Packet reception event */
-            window.AwesomeEvent.listen("packet_received", (data: string) => {
-                let packet: string[] = JSON.parse(data);
+            window.AwesomeEvent.listen("packet_received", (packet: any) => {
                 setCapturedPackets(packets => {
                     // TODO: Fill last properties of Packet with real values
-                    return [...packets, new Packet(packets.length, packet[0], packet[1], packet[2], packet[3], packet[4], "", TrafficType.Incoming)];
+                    return [...packets, new Packet(packets.length, packet.packet_type, packet.mac_source, 
+                        packet.mac_destination, packet.ip_source, packet.ip_destination, packet.length, packet.info, TrafficType.Incoming)];
                 });
             });
         };
