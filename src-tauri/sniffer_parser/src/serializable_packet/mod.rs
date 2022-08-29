@@ -11,10 +11,50 @@ use self::transport::{
     SerializableIcmpv6Packet, SerializableTcpPacket, SerializableUdpPacket,
 };
 
-// pub trait SerializablePacket: erased_serde::Serialize {}
-// erased_serde::serialize_trait_object!(SerializablePacket);
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ParsedPacket {
+    link_layer_packet: Option<SerializablePacket>,
+    network_layer_packet: Option<SerializablePacket>,
+    transport_layer_packet: Option<SerializablePacket>,
+}
+
+impl ParsedPacket {
+    pub fn new() -> Self {
+        ParsedPacket {
+            link_layer_packet: None,
+            network_layer_packet: None,
+            transport_layer_packet: None,
+        }
+    }
+
+    pub fn get_link_layer_packet(&self) -> Option<&SerializablePacket> {
+        self.link_layer_packet.as_ref()
+    }
+
+    pub fn get_network_layer_packet(&self) -> Option<&SerializablePacket> {
+        self.network_layer_packet.as_ref()
+    }
+
+    pub fn get_transport_layer_packet(&self) -> Option<&SerializablePacket> {
+        self.transport_layer_packet.as_ref()
+    }
+
+    pub fn set_link_layer_packet(&mut self, link_layer_packet: Option<SerializablePacket>) {
+        self.link_layer_packet = link_layer_packet;
+    }
+
+    pub fn set_network_layer_packet(&mut self, network_layer_packet: Option<SerializablePacket>) {
+        self.network_layer_packet = network_layer_packet;
+    }
+
+    pub fn set_transport_layer_packet(&mut self, transport_layer_packet: Option<SerializablePacket>) {
+        self.transport_layer_packet = transport_layer_packet;
+    }
+}
 
 #[derive(Serialize, Debug)]
+#[serde(tag = "type", content = "packet")]
 pub enum SerializablePacket {
     EthernetPacket(SerializableEthernetPacket),
     ArpPacket(SerializableArpPacket),
@@ -26,6 +66,8 @@ pub enum SerializablePacket {
     Icmpv6Packet(SerializableIcmpv6Packet),
     TcpPacket(SerializableTcpPacket),
     UdpPacket(SerializableUdpPacket),
+
+    MalformedPacket(String),
 }
 
 /// Ethernet Packet Representation

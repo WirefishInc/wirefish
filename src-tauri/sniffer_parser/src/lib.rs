@@ -10,6 +10,7 @@ use pnet::packet::ethernet::{EtherTypes, EthernetPacket};
 use pnet::packet::Packet;
 use pnet::util::MacAddr;
 use serde::Serialize;
+use serializable_packet::ParsedPacket;
 use serializable_packet::SerializableEthernetPacket;
 use serializable_packet::SerializablePacket;
 
@@ -59,16 +60,17 @@ impl GenericPacket {
     }
 }
 
-pub fn handle_ethernet_frame(ethernet: &EthernetPacket) -> Vec<SerializablePacket> {
-    let mut packets: Vec<SerializablePacket> = vec![];
-    packets.push(SerializablePacket::EthernetPacket(
+pub fn parse_ethernet_frame(ethernet: &EthernetPacket) -> ParsedPacket {
+    let mut parsed_packet = ParsedPacket::new();
+
+    parsed_packet.set_link_layer_packet(Some(SerializablePacket::EthernetPacket(
         SerializableEthernetPacket::from(ethernet),
-    ));
+    )));
 
     match ethernet.get_ethertype() {
-        EtherTypes::Ipv4 => handle_ipv4_packet(ethernet, &mut packets),
-        EtherTypes::Ipv6 => handle_ipv6_packet(ethernet, &mut packets),
-        EtherTypes::Arp => handle_arp_packet(ethernet, &mut packets),
+        EtherTypes::Ipv4 => handle_ipv4_packet(ethernet, &mut parsed_packet),
+        EtherTypes::Ipv6 => handle_ipv6_packet(ethernet, &mut parsed_packet),
+        EtherTypes::Arp => handle_arp_packet(ethernet, &mut parsed_packet),
         _ => {
             println!(
                 "[]: Unknown packet: {} > {}; ethertype: {:?} length: {}",
@@ -80,12 +82,12 @@ pub fn handle_ethernet_frame(ethernet: &EthernetPacket) -> Vec<SerializablePacke
         }
     }
 
-    packets
+    parsed_packet
 }
 
 #[cfg(test)]
-mod test {
-    use crate::handle_ethernet_frame;
+mod tests {
+    use crate::parse_ethernet_frame;
     use crate::serializable_packet::SerializablePacket;
     use pnet::packet::ethernet::{EtherTypes, EthernetPacket, MutableEthernetPacket};
     use pnet::packet::Packet;
@@ -96,9 +98,11 @@ mod test {
         let mut ethernet_buffer = [0u8; 42];
         let ethernet_packet = build_test_ethernet_packet(ethernet_buffer.as_mut_slice());
 
-        let packets: Vec<SerializablePacket> = handle_ethernet_frame(&ethernet_packet);
+        let parsed_packet = parse_ethernet_frame(&ethernet_packet);
 
-        if let SerializablePacket::EthernetPacket(new_ethernet_packet) = &packets[0] {
+        if let SerializablePacket::EthernetPacket(new_ethernet_packet) =
+            parsed_packet.get_link_layer_packet().unwrap()
+        {
             assert_eq!(
                 new_ethernet_packet.destination,
                 ethernet_packet.get_destination()
