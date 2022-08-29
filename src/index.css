@@ -59,3 +59,7 @@ input.filename-input {
     padding-bottom: 18px;
     padding-right: 2px;
 }
+
+.css-60ctgw-MuiFormControl-root {
+    padding-right: 0;
+}
