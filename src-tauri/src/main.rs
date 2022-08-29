@@ -9,8 +9,6 @@ use env_logger::Builder;
 use log::{error, info};
 use std::io::Write;
 
-mod report;
-
 use pnet::datalink::Channel::Ethernet;
 use pnet::datalink::{self, ChannelType, Config, DataLinkReceiver, NetworkInterface};
 use pnet::packet::ethernet::EthernetPacket;
@@ -180,6 +178,11 @@ async fn stop_sniffing(state: tauri::State<'_, SniffingInfoState>) -> Result<(),
     );
 
     Ok(())
+}
+
+#[tauri::command]
+async fn generate_report(state: tauri::State<'_, SniffingInfoState>, report_path: String) -> bool {
+
 }
 
 fn main() {

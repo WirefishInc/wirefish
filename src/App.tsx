@@ -1,21 +1,21 @@
-import {ThemeProvider, createTheme} from '@mui/material/styles';
+import {createTheme, ThemeProvider} from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import {useState, useEffect} from 'react';
 import {
     Accordion, AccordionDetails, AccordionSummary, Alert, Fab, FormControl, Grid, List, Snackbar
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import {PlayArrow, Stop, Pause, RestartAlt} from '@mui/icons-material';
+import {Pause, PlayArrow, RestartAlt, Stop} from '@mui/icons-material';
 import {DataGrid, GridColDef} from '@mui/x-data-grid';
 import './index.css';
 import API from './API';
+import {SniffingStatus, GeneralPacket} from "./types/sniffing";
 import InterfaceInput from './components/InterfaceInput';
 import TimeIntervalInput from './components/TimeIntervalInput';
 import CloseIcon from '@mui/icons-material/Close';
 import ReportFolderInput from "./components/ReportFolderInput";
 import ReportNameInput from "./components/ReportNameInput";
 import ToggleButton from "./components/ToggleButton";
-import {SniffingStatus, GeneralPacket} from "./types/sniffing";
 import Fields from "./components/Fields";
 import HewViewer from "./components/HexViewer";
 
@@ -62,6 +62,9 @@ function App() {
     let [errorMessage, setErrorMessage] = useState<string>("");
     let [selectedPacket, setSelectedPacket] = useState<GeneralPacket | null>(null);
     let [over, setOver] = useState<string | null>(null);
+    let [reportTimer, setReportTimer] = useState<null | ReturnType<typeof setInterval>>(null);
+    let [timerStartTime, setTimerStartTime] = useState<number>(0);
+    let [timerRemainingTime, setTimerRemainingTime] = useState<number>(0);
 
     useEffect(() => {
         const setup = async () => {
@@ -85,32 +88,56 @@ function App() {
         setup();
     }, []);
 
+    const generateReport = async () => {
+        try {
+            await API.generateReport(`${reportFileName}.txt`);
+            // TODO: show success message
+        } catch (exception) {
+            // TODO: show error message
+        }
+    }
+
+    const resumeReportTimer = async () => {
+        setTimerStartTime(Date.now());
+        setReportTimer(setInterval(generateReport, reportUpdateTime * 1000));
+        await generateReport();
+    }
+
     const selectInterface = async (interfaceName: string) => {
         await API.selectInterface(interfaceName);
         setCurrentInterface(interfaceName);
     }
 
     const stopSniffing = async () => {
+        if (sniffingStatus !== SniffingStatus.Active) return;
+        if (reportTimer)
+            clearInterval(reportTimer);
         await API.stopSniffing();
         setSniffingStatus(SniffingStatus.Inactive);
     }
 
     const startSniffing = async () => {
-        if (currentInterface === null) return;
-        await API.startSniffing(`${reportFolder}${reportFileName}.txt`, reportUpdateTime);
+        if (currentInterface === null || sniffingStatus !== SniffingStatus.Inactive) return;
+        setTimerStartTime(Date.now());
+        setReportTimer(setInterval(generateReport, reportUpdateTime * 1000));
+        await API.startSniffing();
         setSniffingStatus(SniffingStatus.Active);
     }
 
     const pauseSniffing = async () => {
-        // TODO: PAUSE
+        if (sniffingStatus !== SniffingStatus.Active) return;
+        if (reportTimer) {
+            setTimerRemainingTime(reportUpdateTime - (Date.now() - timerStartTime));
+            clearInterval(reportTimer);
+        }
         await API.stopSniffing();
         setSniffingStatus(SniffingStatus.Paused);
     }
 
     const resumeSniffing = async () => {
-        // TODO: RESUME
-        if (currentInterface === null) return;
-        await API.startSniffing(`${reportFolder}${reportFileName}.txt`, reportUpdateTime);
+        if (currentInterface === null || sniffingStatus !== SniffingStatus.Paused) return;
+        setTimeout(resumeReportTimer, timerRemainingTime);
+        await API.startSniffing();
         setSniffingStatus(SniffingStatus.Active);
     }
 

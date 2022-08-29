@@ -1,7 +1,7 @@
 import {invoke} from '@tauri-apps/api';
 
-async function startSniffing(reportPath: string, reportInterval: number) {
-    return invoke('start_sniffing', {reportPath, reportInterval})
+async function startSniffing() {
+    return invoke('start_sniffing')
 }
 
 async function stopSniffing() {
@@ -16,11 +16,16 @@ async function getInterfacesList(): Promise<string[]> {
     return invoke('get_interfaces_list')
 }
 
+async function generateReport(reportPath: string): Promise<boolean> {
+    return invoke('generate_report', {reportPath})
+}
+
 const API = {
     startSniffing,
     stopSniffing,
     getInterfacesList,
-    selectInterface
+    selectInterface,
+    generateReport
 };
 
 export default API;
