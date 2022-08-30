@@ -9,7 +9,21 @@ export enum SniffingStatus {
     Active
 }
 
+export interface SerializablePacket {}
+
+// ParsedPacket
 export class Packet {
+    link_layer_packet: SerializablePacket;
+    network_layer_packet: SerializablePacket;
+    transport_layer_packet: SerializablePacket;
+
+
+    constructor(link_layer_packet: SerializablePacket, network_layer_packet: SerializablePacket, transport_layer_packet: SerializablePacket ) {
+        this.link_layer_packet = link_layer_packet;
+        this.network_layer_packet = network_layer_packet;
+        this.transport_layer_packet = transport_layer_packet;
+    }
+/*
     id: number;
     type: string;
     sourceMAC: string;
@@ -31,4 +45,5 @@ export class Packet {
         this.info = info;
         this.trafficType = trafficType;
     }
+ */
 }

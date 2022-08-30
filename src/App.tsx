@@ -6,12 +6,14 @@ import {PlayArrow, Stop, Pause, RestartAlt} from '@mui/icons-material';
 import {DataGrid, GridColDef} from '@mui/x-data-grid';
 import './index.css';
 import API from './API';
-import {Packet, TrafficType, SniffingStatus} from "./types/sniffing";
+import {Packet, TrafficType, SniffingStatus, SerializablePacket} from "./types/sniffing";
 import InterfaceInput from './components/InterfaceInput';
 import TimeIntervalInput from './components/TimeIntervalInput';
 import ReportFolderInput from "./components/ReportFolderInput";
 import ReportNameInput from "./components/ReportNameInput";
 import ToggleButton from "./components/ToggleButton";
+import {EthernetPacket} from "./serializable_packet/link";
+import {ArpPacket} from "./serializable_packet/network";
 
 const darkTheme = createTheme({
     palette: {
@@ -26,7 +28,7 @@ const columns: GridColDef[] = [
     {field: 'destinationMAC', headerName: 'Destination MAC', width: 140},
     {field: 'sourceIP', headerName: 'Source IP', width: 120},
     {field: 'destinationIP', headerName: 'Destination IP', width: 120},
-    {field: 'length', headerName: 'Lenght', width: 30},
+    {field: 'length', headerName: 'Lenght', width: 50},
     {field: 'info', headerName: 'Info', width: 200},
 ];
 
@@ -55,10 +57,38 @@ function App() {
 
             /* Packet reception event */
             window.AwesomeEvent.listen("packet_received", (packet: any) => {
+                let link_layer : SerializablePacket;
+                let network_layer: SerializablePacket;
+                // ...
+
+                switch (packet.linkLayerPacket.type){
+                    case "EthernetPacket":
+                        link_layer = new EthernetPacket(
+                            packet.linkLayerPacket.packet.destination,
+                            packet.linkLayerPacket.packet.source,
+                            packet.linkLayerPacket.packet.ethertype,
+                            packet.linkLayerPacket.packet.payload)
+                        break;
+                }
+
+                switch (packet.networkLayerPacket.type){
+                    case "ArpPacket":
+                        network_layer = new ArpPacket(
+                            packet.networkLayerPacket.packet.hardware_type,
+                            packet.networkLayerPacket.packet.protocol_type,
+                            packet.networkLayerPacket.packet.hw_addr_len,
+                            packet.networkLayerPacket.packet.proto_addr_len,
+                            packet.networkLayerPacket.packet.operation,
+                            packet.networkLayerPacket.packet.sender_hw_addr,
+                            packet.networkLayerPacket.packet.sender_proto_addr,
+                            packet.networkLayerPacket.packet.target_hw_addr,
+                            packet.networkLayerPacket.packet.target_proto_addr,
+                            packet.networkLayerPacket.packet.payload)
+                        break;
+                }
+
                 setCapturedPackets(packets => {
-                    // TODO: Fill last properties of Packet with real values
-                    return [...packets, new Packet(packets.length, packet.packet_type, packet.mac_source, 
-                        packet.mac_destination, packet.ip_source, packet.ip_destination, packet.length, packet.info, TrafficType.Incoming)];
+                    return [...packets, new Packet(link_layer, network_layer, network_layer)]; // ! ...
                 });
             });
         };
@@ -74,6 +104,7 @@ function App() {
     const stopSniffing = async () => {
         await API.stopSniffing();
         setSniffingStatus(SniffingStatus.Inactive);
+        console.log(capturedPackets) // todo: delete
     }
 
     const startSniffing = async () => {
@@ -160,11 +191,13 @@ function App() {
                     </FormControl>
                 </Grid>
 
-                {/* Sniffing Results */}
+                {/* Sniffing Results
 
                 <Grid xs={12} item={true}>
                     <DataGrid style={{marginTop: "15px", minHeight: "250px"}} rows={capturedPackets} columns={columns}/>
                 </Grid>
+
+                */}
 
                 <Snackbar anchorOrigin={{vertical: "bottom", horizontal: "right"}} open={errorMessage.length > 0}
                           key={errorMessage} onClick={() => setErrorMessage("")}>
