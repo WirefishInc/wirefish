@@ -42,3 +42,9 @@ export class TcpPacket implements SerializablePacket {
         this.payload = payload;
     }
 }
+
+//udp
+//icmpv6
+//icmp
+//echo reply
+//echo request

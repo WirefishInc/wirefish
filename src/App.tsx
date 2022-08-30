@@ -13,7 +13,8 @@ import ReportFolderInput from "./components/ReportFolderInput";
 import ReportNameInput from "./components/ReportNameInput";
 import ToggleButton from "./components/ToggleButton";
 import {EthernetPacket} from "./serializable_packet/link";
-import {ArpPacket} from "./serializable_packet/network";
+import {ArpPacket, Ipv4Packet, Ipv6Packet} from "./serializable_packet/network";
+import {TcpPacket} from "./serializable_packet/transport";
 
 const darkTheme = createTheme({
     palette: {
@@ -59,22 +60,44 @@ function App() {
             window.AwesomeEvent.listen("packet_received", (packet: any) => {
                 let link_layer : SerializablePacket;
                 let network_layer: SerializablePacket;
-                // ...
+                let transport_layer: SerializablePacket;
 
                 switch (packet.linkLayerPacket.type){
                     case "EthernetPacket":
                         link_layer = packet.linkLayerPacket.packet as EthernetPacket;
                         break;
+
+                    default:
+                        console.log("Malformed packet") // todo
                 }
 
                 switch (packet.networkLayerPacket.type){
                     case "ArpPacket":
                         network_layer = packet.networkLayerPacket.packet as ArpPacket;
                         break;
+
+                    case "Ipv4Packet":
+                        network_layer = packet.networkLayerPacket.packet as Ipv4Packet;
+                        break;
+
+                    case "Ipv6Packet":
+                        network_layer = packet.networkLayerPacket.packet as Ipv6Packet;
+                        break;
+
+                    default:
+                        console.log("Malformed packet") // todo
+                }
+
+                switch (packet.transportLayerPacket.type){
+                    case "TcpPacket":
+                        transport_layer = packet.networkLayerPacket.packet as TcpPacket;
+                        break;
+
+                    /* ... */
                 }
 
                 setCapturedPackets(packets => {
-                    return [...packets, new Packet(link_layer, network_layer, network_layer)]; // ! ...
+                    return [...packets, new Packet(link_layer, network_layer, transport_layer)];
                 });
             });
         };

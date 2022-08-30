@@ -36,3 +36,87 @@ export class ArpPacket implements SerializablePacket {
         this.payload = payload
     }
 }
+
+export class Ipv6Packet implements SerializablePacket{
+    version: number;
+    traffic_class: number;
+    flow_label: number;
+    payload_length: number;
+    next_header: string;
+    hop_limit: number;
+    source: string;
+    destination: string;
+    payload: [];
+
+    constructor(
+        version: number,
+        traffic_class: number,
+        flow_label: number,
+        payload_length: number,
+        next_header: string,
+        hop_limit: number,
+        source: string,
+        destination: string,
+        payload: []
+    ) {
+        this.version = version;
+        this.traffic_class = traffic_class;
+        this.flow_label = flow_label;
+        this.payload_length = payload_length;
+        this.next_header = next_header;
+        this.hop_limit = hop_limit;
+        this.source = source;
+        this.destination = destination;
+        this.payload = payload;
+    }
+}
+
+
+export class Ipv4Packet implements SerializablePacket {
+    version: number;
+    header_length: number;
+    dscp: number;
+    ecn: number;
+    total_length: number;
+    identification: number;
+    flags: number;
+    fragment_offset: number;
+    ttl: number;
+    next_level_protocol: string;
+    checksum: number;
+    source: string;
+    destination: string;
+    payload: [];
+
+    constructor(
+        version: number,
+        header_length: number,
+        dscp: number,
+        ecn: number,
+        total_length: number,
+        identification: number,
+        flags: number,
+        fragment_offset: number,
+        ttl: number,
+        next_level_protocol: string,
+        checksum: number,
+        source: string,
+        destination: string,
+        payload: [],
+    ) {
+        this.version = version;
+        this.header_length = header_length;
+        this.dscp = dscp;
+        this.ecn = ecn;
+        this.total_length = total_length;
+        this.identification = identification;
+        this.flags = flags;
+        this.fragment_offset = fragment_offset;
+        this.ttl = ttl;
+        this.next_level_protocol = next_level_protocol;
+        this.checksum = checksum;
+        this.source = source;
+        this.destination = destination;
+        this.payload = payload;
+    }
+}
