@@ -3079,6 +3079,7 @@ name = "sniffer_parser"
 version = "0.1.0"
 dependencies = [
  "erased-serde",
+ "httparse",
  "log",
  "pnet",
  "serde",

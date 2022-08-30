@@ -6,6 +6,7 @@ use pnet::packet::udp::UdpPacket;
 
 use std::net::IpAddr;
 
+use crate::application::{handle_http_packet, HttpType, HTTP_PORT};
 use crate::serializable_packet::transport::{
     SerializableEchoReplyPacket, SerializableEchoRequestPacket, SerializableIcmpPacket,
     SerializableIcmpv6Packet, SerializableTcpPacket, SerializableUdpPacket,
@@ -62,6 +63,31 @@ pub fn handle_tcp_packet(
         parsed_packet.set_transport_layer_packet(Some(SerializablePacket::TcpPacket(
             SerializableTcpPacket::from(&tcp),
         )));
+
+        if tcp.get_destination() == HTTP_PORT {
+            handle_http_packet(
+                source,
+                tcp.get_source(),
+                destination,
+                tcp.get_destination(),
+                HttpType::Request,
+                tcp.payload(),
+                parsed_packet,
+            )
+        }
+
+        if tcp.get_source() == HTTP_PORT {
+            handle_http_packet(
+                source,
+                tcp.get_source(),
+                destination,
+                tcp.get_destination(),
+                HttpType::Response,
+                tcp.payload(),
+                parsed_packet,
+            )
+        }
+
     } else {
         println!("[]: Malformed TCP Packet");
         parsed_packet.set_transport_layer_packet(Some(SerializablePacket::MalformedPacket(
