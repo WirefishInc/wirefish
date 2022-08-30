@@ -14,7 +14,7 @@ import ReportNameInput from "./components/ReportNameInput";
 import ToggleButton from "./components/ToggleButton";
 import {EthernetPacket} from "./serializable_packet/link";
 import {ArpPacket, Ipv4Packet, Ipv6Packet} from "./serializable_packet/network";
-import {TcpPacket} from "./serializable_packet/transport";
+import {TcpPacket, UdpPacket, Icmpv6Packet, IcmpPacket, EchoReply, EchoRequest} from "./serializable_packet/transport";
 
 const darkTheme = createTheme({
     palette: {
@@ -93,7 +93,28 @@ function App() {
                         transport_layer = packet.networkLayerPacket.packet as TcpPacket;
                         break;
 
-                    /* ... */
+                    case "UdpPacket":
+                        transport_layer = packet.networkLayerPacket.packet as UdpPacket;
+                        break;
+
+                    case "Icmpv6Packet":
+                        transport_layer = packet.networkLayerPacket.packet as Icmpv6Packet;
+                        break;
+
+                    case "IcmpPacket":
+                        transport_layer = packet.networkLayerPacket.packet as IcmpPacket;
+                        break;
+
+                    case "EchoReplyPacket":
+                        transport_layer = packet.networkLayerPacket.packet as EchoReply;
+                        break;
+
+                    case "EchoRequestPacket":
+                        transport_layer = packet.networkLayerPacket.packet as EchoRequest;
+                        break;
+
+                    default:
+                        console.log("Malformed packet") // todo
                 }
 
                 setCapturedPackets(packets => {
