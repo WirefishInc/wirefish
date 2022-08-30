@@ -1,10 +1,12 @@
 pub mod network;
 pub mod transport;
+pub mod application;
 
 use pnet::packet::Packet;
 use pnet::{packet::ethernet::EthernetPacket, util::MacAddr};
 use serde::Serialize;
 
+use self::application::{SerializableHttpRequestPacket, SerializableHttpResponsePacket};
 use self::network::{SerializableArpPacket, SerializableIpv4Packet, SerializableIpv6Packet};
 use self::transport::{
     SerializableEchoReplyPacket, SerializableEchoRequestPacket, SerializableIcmpPacket,
@@ -17,6 +19,7 @@ pub struct ParsedPacket {
     link_layer_packet: Option<SerializablePacket>,
     network_layer_packet: Option<SerializablePacket>,
     transport_layer_packet: Option<SerializablePacket>,
+    application_layer_packet: Option<SerializablePacket>,
 }
 
 impl ParsedPacket {
@@ -25,6 +28,7 @@ impl ParsedPacket {
             link_layer_packet: None,
             network_layer_packet: None,
             transport_layer_packet: None,
+            application_layer_packet: None,
         }
     }
 
@@ -40,6 +44,10 @@ impl ParsedPacket {
         self.transport_layer_packet.as_ref()
     }
 
+    pub fn get_application_layer_packet(&self) -> Option<&SerializablePacket> {
+        self.application_layer_packet.as_ref()
+    }
+
     pub fn set_link_layer_packet(&mut self, link_layer_packet: Option<SerializablePacket>) {
         self.link_layer_packet = link_layer_packet;
     }
@@ -50,6 +58,10 @@ impl ParsedPacket {
 
     pub fn set_transport_layer_packet(&mut self, transport_layer_packet: Option<SerializablePacket>) {
         self.transport_layer_packet = transport_layer_packet;
+    }
+
+    pub fn set_application_layer_packet(&mut self, application_layer_packet: Option<SerializablePacket>) {
+        self.application_layer_packet = application_layer_packet;
     }
 }
 
@@ -66,6 +78,8 @@ pub enum SerializablePacket {
     Icmpv6Packet(SerializableIcmpv6Packet),
     TcpPacket(SerializableTcpPacket),
     UdpPacket(SerializableUdpPacket),
+    HttpRequestPacket(SerializableHttpRequestPacket),
+    HttpResponsePacket(SerializableHttpResponsePacket),
 
     MalformedPacket(String),
 }
