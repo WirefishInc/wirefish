@@ -1,6 +1,6 @@
-import {SerializablePacket} from "../types/sniffing";
+import {SerializableNetworkLayerPacket} from "../types/sniffing";
 
-export class ArpPacket implements SerializablePacket {
+export class ArpPacket implements SerializableNetworkLayerPacket {
     hardware_type: string;
     protocol_type: number;
     hw_addr_len: number;
@@ -11,6 +11,7 @@ export class ArpPacket implements SerializablePacket {
     target_hw_addr: string;
     target_proto_addr: string;
     payload: [];
+    type: string;
 
     constructor(
         hardware_type: string,
@@ -33,11 +34,12 @@ export class ArpPacket implements SerializablePacket {
         this.sender_proto_addr = sender_proto_addr;
         this.target_hw_addr = target_hw_addr;
         this.target_proto_addr = target_proto_addr;
-        this.payload = payload
+        this.payload = payload;
+        this.type = "Arp Packet"
     }
 }
 
-export class Ipv6Packet implements SerializablePacket{
+export class Ipv6Packet implements SerializableNetworkLayerPacket{
     version: number;
     traffic_class: number;
     flow_label: number;
@@ -47,6 +49,7 @@ export class Ipv6Packet implements SerializablePacket{
     source: string;
     destination: string;
     payload: [];
+    type: string;
 
     constructor(
         version: number,
@@ -68,11 +71,12 @@ export class Ipv6Packet implements SerializablePacket{
         this.source = source;
         this.destination = destination;
         this.payload = payload;
+        this.type = "Ipv6 Packet"
     }
 }
 
 
-export class Ipv4Packet implements SerializablePacket {
+export class Ipv4Packet implements SerializableNetworkLayerPacket {
     version: number;
     header_length: number;
     dscp: number;
@@ -87,6 +91,7 @@ export class Ipv4Packet implements SerializablePacket {
     source: string;
     destination: string;
     payload: [];
+    type: string;
 
     constructor(
         version: number,
@@ -118,5 +123,6 @@ export class Ipv4Packet implements SerializablePacket {
         this.source = source;
         this.destination = destination;
         this.payload = payload;
+        this.type = "Ipv4 Packet"
     }
 }

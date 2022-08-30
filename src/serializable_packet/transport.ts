@@ -1,6 +1,6 @@
-import {SerializablePacket} from "../types/sniffing";
+import {SerializableTransportLayerPacket} from "../types/sniffing";
 
-export class TcpPacket implements SerializablePacket {
+export class TcpPacket implements SerializableTransportLayerPacket {
     source: number;
     destination: number;
     sequence: number;
@@ -13,6 +13,7 @@ export class TcpPacket implements SerializablePacket {
     urgent_ptr: number;
     options: [];
     payload: [];
+    type: string;
 
     constructor(
         source: number,
@@ -40,15 +41,17 @@ export class TcpPacket implements SerializablePacket {
         this.urgent_ptr = urgent_ptr;
         this.options = options;
         this.payload = payload;
+        this.type = "Tcp Packet"
     }
 }
 
-export class UdpPacket implements SerializablePacket {
+export class UdpPacket implements SerializableTransportLayerPacket {
     source: number;
     destination: number;
     length: number;
     checksum: number;
     payload: [];
+    type: string;
 
     constructor(
         source: number,
@@ -62,14 +65,16 @@ export class UdpPacket implements SerializablePacket {
         this.length = length;
         this.checksum = checksum;
         this.payload = payload;
+        this.type ="Udp Packet"
     }
 }
 
-export class Icmpv6Packet implements SerializablePacket {
+export class Icmpv6Packet implements SerializableTransportLayerPacket {
     icmpv6_type: number;
     icmpv6_code: number;
     checksum: number;
     payload: [];
+    type: string;
 
     constructor(
         icmpv6_type: number,
@@ -81,14 +86,16 @@ export class Icmpv6Packet implements SerializablePacket {
         this.icmpv6_code = icmpv6_code;
         this.checksum = checksum;
         this.payload = payload;
+        this.type = "Icmpv6 Packet"
     }
 }
 
-export class IcmpPacket implements SerializablePacket {
+export class IcmpPacket implements SerializableTransportLayerPacket {
     icmp_type: number;
     icmp_code: number;
     checksum: number;
     payload: [];
+    type: string;
 
     constructor(
         icmp_type: number,
@@ -100,16 +107,18 @@ export class IcmpPacket implements SerializablePacket {
         this.icmp_code = icmp_code;
         this.checksum = checksum;
         this.payload = payload;
+        this.type = "Icmp packet"
     }
 }
 
-export class EchoReply implements SerializablePacket {
+export class EchoReply implements SerializableTransportLayerPacket {
     icmp_type: number;
     icmp_code: number;
     checksum: number;
     identifier: number;
     sequence_number: number;
-    payload: []
+    payload: [];
+    type: string;
 
     constructor(
         icmp_type: number,
@@ -125,16 +134,18 @@ export class EchoReply implements SerializablePacket {
         this.identifier = identifier;
         this.sequence_number = sequence_number;
         this.payload = payload;
+        this.type = "EchoReply Packet";
     }
 }
 
-export class EchoRequest implements SerializablePacket {
+export class EchoRequest implements SerializableTransportLayerPacket {
     icmp_type: number;
     icmp_code: number;
     checksum: number;
     identifier: number;
     sequence_number: number;
-    payload: []
+    payload: [];
+    type: string;
 
     constructor(
         icmp_type: number,
@@ -150,6 +161,7 @@ export class EchoRequest implements SerializablePacket {
         this.identifier = identifier;
         this.sequence_number = sequence_number;
         this.payload = payload;
+        this.type = "Echo Request Packet";
     }
 }
 

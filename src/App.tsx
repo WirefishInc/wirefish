@@ -6,7 +6,6 @@ import {PlayArrow, Stop, Pause, RestartAlt} from '@mui/icons-material';
 import {DataGrid, GridColDef} from '@mui/x-data-grid';
 import './index.css';
 import API from './API';
-import {Packet, TrafficType, SniffingStatus, SerializablePacket} from "./types/sniffing";
 import InterfaceInput from './components/InterfaceInput';
 import TimeIntervalInput from './components/TimeIntervalInput';
 import ReportFolderInput from "./components/ReportFolderInput";
@@ -15,6 +14,8 @@ import ToggleButton from "./components/ToggleButton";
 import {EthernetPacket} from "./serializable_packet/link";
 import {ArpPacket, Ipv4Packet, Ipv6Packet} from "./serializable_packet/network";
 import {TcpPacket, UdpPacket, Icmpv6Packet, IcmpPacket, EchoReply, EchoRequest} from "./serializable_packet/transport";
+import {Packet, SniffingStatus, SerializableNetworkLayerPacket,
+    SerializableTransportLayerPacket, SerializableLinkLayerPacket} from "./types/sniffing";
 
 const darkTheme = createTheme({
     palette: {
@@ -24,17 +25,16 @@ const darkTheme = createTheme({
 
 const columns: GridColDef[] = [
     {field: 'id', headerName: '#', width: 10},
-    {field: 'type', headerName: 'Type', width: 140},
-    {field: 'sourceMAC', headerName: 'Source MAC', width: 140},
-    {field: 'destinationMAC', headerName: 'Destination MAC', width: 140},
-    {field: 'sourceIP', headerName: 'Source IP', width: 120},
-    {field: 'destinationIP', headerName: 'Destination IP', width: 120},
-    {field: 'length', headerName: 'Lenght', width: 50},
-    {field: 'info', headerName: 'Info', width: 200},
+    {field: 'type', headerName: 'Type', width: 140, valueGetter: p => p.row.link_layer_packet.ethertype}, // TODO
+    {field: 'sourceMAC', headerName: 'Source MAC', width: 140, valueGetter: p => p.row.link_layer_packet.source},
+    {field: 'destinationMAC', headerName: 'Destination MAC', width: 140, valueGetter: p => p.row.link_layer_packet.destination},
+    {field: 'sourceIP', headerName: 'Source IP', width: 120, valueGetter: p => p.row.network_layer_packet.source},
+    {field: 'destinationIP', headerName: 'Destination IP', width: 120, valueGetter: p => p.row.network_layer_packet.destination},
+    {field: 'length', headerName: 'Lenght', width: 100, valueGetter: p => p.row.link_layer_packet.payload.length}, // TODO
+    {field: 'info', headerName: 'Info', width: 200, valueGetter: p => "info"}, // TODO
 ];
 
 function App() {
-
     let [interfaces, setInterfaces] = useState<string[] | null>(null);
     let [currentInterface, setCurrentInterface] = useState<string>("");
     let [sniffingStatus, setSniffingStatus] = useState<SniffingStatus>(SniffingStatus.Inactive);
@@ -46,7 +46,6 @@ function App() {
 
     useEffect(() => {
         const setup = async () => {
-
             /* Interfaces initialization */
             try {
                 const interfaces = await API.getInterfacesList();
@@ -58,73 +57,91 @@ function App() {
 
             /* Packet reception event */
             window.AwesomeEvent.listen("packet_received", (packet: any) => {
-                let link_layer : SerializablePacket;
-                let network_layer: SerializablePacket;
-                let transport_layer: SerializablePacket;
-
-                switch (packet.linkLayerPacket.type){
-                    case "EthernetPacket":
-                        link_layer = packet.linkLayerPacket.packet as EthernetPacket;
-                        break;
-
-                    default:
-                        console.log("Malformed packet") // todo
-                }
-
-                switch (packet.networkLayerPacket.type){
-                    case "ArpPacket":
-                        network_layer = packet.networkLayerPacket.packet as ArpPacket;
-                        break;
-
-                    case "Ipv4Packet":
-                        network_layer = packet.networkLayerPacket.packet as Ipv4Packet;
-                        break;
-
-                    case "Ipv6Packet":
-                        network_layer = packet.networkLayerPacket.packet as Ipv6Packet;
-                        break;
-
-                    default:
-                        console.log("Malformed packet") // todo
-                }
-
-                switch (packet.transportLayerPacket.type){
-                    case "TcpPacket":
-                        transport_layer = packet.networkLayerPacket.packet as TcpPacket;
-                        break;
-
-                    case "UdpPacket":
-                        transport_layer = packet.networkLayerPacket.packet as UdpPacket;
-                        break;
-
-                    case "Icmpv6Packet":
-                        transport_layer = packet.networkLayerPacket.packet as Icmpv6Packet;
-                        break;
-
-                    case "IcmpPacket":
-                        transport_layer = packet.networkLayerPacket.packet as IcmpPacket;
-                        break;
-
-                    case "EchoReplyPacket":
-                        transport_layer = packet.networkLayerPacket.packet as EchoReply;
-                        break;
-
-                    case "EchoRequestPacket":
-                        transport_layer = packet.networkLayerPacket.packet as EchoRequest;
-                        break;
-
-                    default:
-                        console.log("Malformed packet") // todo
-                }
+                let link_layer = make_link_level_packet(packet.linkLayerPacket);
+                let network_layer = make_network_level_packet(packet.networkLayerPacket);
+                let transport_layer = make_transport_level_packet(packet.transportLayerPacket);
 
                 setCapturedPackets(packets => {
-                    return [...packets, new Packet(link_layer, network_layer, transport_layer)];
+                    return [...packets, new Packet(packets.length, link_layer, network_layer, transport_layer )];
                 });
             });
         };
 
         setup();
     }, []);
+
+    const make_link_level_packet = (link: any) => {
+        let link_layer : SerializableLinkLayerPacket = {};
+
+        switch (link.type){
+            case "EthernetPacket":
+                link_layer = link.packet as EthernetPacket;
+                break;
+
+            default:
+                console.log("Malformed packet") // TODO
+        }
+
+        return link_layer;
+    }
+
+    const make_network_level_packet = (network: any) => {
+        let network_layer : SerializableNetworkLayerPacket = {};
+
+        switch (network.type){
+            case "ArpPacket":
+                network_layer = network.packet as ArpPacket;
+                break;
+
+            case "Ipv4Packet":
+                network_layer = network.packet as Ipv4Packet;
+                break;
+
+            case "Ipv6Packet":
+                network_layer = network.networkLayerPacket.packet as Ipv6Packet;
+                break;
+
+            default:
+                console.log("Malformed packet") // TODO
+        }
+
+        return network_layer;
+    }
+
+    const make_transport_level_packet = (transport: any) => {
+        let transport_layer : SerializableTransportLayerPacket = {};
+
+        switch (transport.type){
+            case "TcpPacket":
+                transport_layer = transport.packet as TcpPacket;
+                break;
+
+            case "UdpPacket":
+                transport_layer = transport.packet as UdpPacket;
+                break;
+
+            case "Icmpv6Packet":
+                transport_layer = transport.packet as Icmpv6Packet;
+                break;
+
+            case "IcmpPacket":
+                transport_layer = transport.packet as IcmpPacket;
+                break;
+
+            case "EchoReplyPacket":
+                transport_layer = transport.packet as EchoReply;
+                break;
+
+            case "EchoRequestPacket":
+                transport_layer = transport.packet as EchoRequest;
+                break;
+
+            default:
+                console.log("Malformed packet") // TODO
+        }
+
+        return transport_layer;
+    }
 
     const selectInterface = async (interfaceName: string) => {
         await API.selectInterface(interfaceName);
@@ -134,7 +151,7 @@ function App() {
     const stopSniffing = async () => {
         await API.stopSniffing();
         setSniffingStatus(SniffingStatus.Inactive);
-        console.log(capturedPackets) // todo: delete
+        console.log(capturedPackets) // TODO: delete
     }
 
     const startSniffing = async () => {
@@ -221,13 +238,11 @@ function App() {
                     </FormControl>
                 </Grid>
 
-                {/* Sniffing Results
+                {/* Sniffing Results */}
 
                 <Grid xs={12} item={true}>
                     <DataGrid style={{marginTop: "15px", minHeight: "250px"}} rows={capturedPackets} columns={columns}/>
                 </Grid>
-
-                */}
 
                 <Snackbar anchorOrigin={{vertical: "bottom", horizontal: "right"}} open={errorMessage.length > 0}
                           key={errorMessage} onClick={() => setErrorMessage("")}>
