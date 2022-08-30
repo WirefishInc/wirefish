@@ -63,27 +63,13 @@ function App() {
 
                 switch (packet.linkLayerPacket.type){
                     case "EthernetPacket":
-                        link_layer = new EthernetPacket(
-                            packet.linkLayerPacket.packet.destination,
-                            packet.linkLayerPacket.packet.source,
-                            packet.linkLayerPacket.packet.ethertype,
-                            packet.linkLayerPacket.packet.payload)
+                        link_layer = packet.linkLayerPacket.packet as EthernetPacket;
                         break;
                 }
 
                 switch (packet.networkLayerPacket.type){
                     case "ArpPacket":
-                        network_layer = new ArpPacket(
-                            packet.networkLayerPacket.packet.hardware_type,
-                            packet.networkLayerPacket.packet.protocol_type,
-                            packet.networkLayerPacket.packet.hw_addr_len,
-                            packet.networkLayerPacket.packet.proto_addr_len,
-                            packet.networkLayerPacket.packet.operation,
-                            packet.networkLayerPacket.packet.sender_hw_addr,
-                            packet.networkLayerPacket.packet.sender_proto_addr,
-                            packet.networkLayerPacket.packet.target_hw_addr,
-                            packet.networkLayerPacket.packet.target_proto_addr,
-                            packet.networkLayerPacket.packet.payload)
+                        network_layer = packet.networkLayerPacket.packet as ArpPacket;
                         break;
                 }
 
