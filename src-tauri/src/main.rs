@@ -1,5 +1,6 @@
 extern crate pnet;
 extern crate sniffer_parser;
+extern crate sudo;
 
 mod report;
 
@@ -38,7 +39,7 @@ impl SniffingInfo {
 async fn get_interfaces_list() -> Vec<String> {
     let interfaces = datalink::interfaces()
         .into_iter()
-        .map(|i| i.description)
+        .map(|i| if cfg!(target_os = "windows") { i.description } else { i.name } )
         .collect::<Vec<String>>();
     info!("Interfaces retrieved: {:#?}", interfaces);
 
@@ -50,7 +51,8 @@ async fn select_interface(
     state: tauri::State<'_, SniffingInfoState>,
     interface_name: String,
 ) -> Result<(), ()> {
-    let interface_names_match = |iface: &NetworkInterface| iface.description == interface_name;
+    let interface_names_match = |iface: &NetworkInterface|
+        if cfg!(target_os = "windows") { iface.description == interface_name } else { iface.name == interface_name};
 
     // Find the network interface with the provided name
     let interfaces = datalink::interfaces();
@@ -149,6 +151,7 @@ async fn stop_sniffing(state: tauri::State<'_, SniffingInfoState>) -> Result<(),
 fn main() {
     dotenv::dotenv().ok();
     env_logger::init();
+    sudo::escalate_if_needed();
 
     let awesome_rpc = AwesomeRpc::new(vec!["tauri://localhost", "http://localhost:*"]);
 
