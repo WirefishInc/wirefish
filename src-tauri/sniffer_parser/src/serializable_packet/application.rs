@@ -3,6 +3,14 @@ use std::str::from_utf8;
 use httparse::{Request, Response};
 use serde::Serialize;
 
+#[derive(Serialize, Debug)]
+pub enum HttpContentType {
+    Text(String),
+    Image(Vec<u8>),
+    Unknown(Vec<u8>),
+    None
+}
+
 /// HTTP Request Packet Representation
 
 #[derive(Serialize, Debug)]
@@ -11,10 +19,11 @@ pub struct SerializableHttpRequestPacket {
     pub path: String,
     pub version: u8,
     pub headers: Vec<(String, String)>,
+    pub payload: HttpContentType,
 }
 
-impl<'a, 'b> From<&Request<'a, 'b>> for SerializableHttpRequestPacket {
-    fn from(packet: &Request<'a, 'b>) -> Self {
+impl<'a, 'b> SerializableHttpRequestPacket {
+    pub fn new(packet: &Request<'a, 'b>, payload: HttpContentType) -> Self {
         SerializableHttpRequestPacket {
             method: packet.method.unwrap().to_owned(),
             path: packet.path.unwrap().to_owned(),
@@ -31,6 +40,7 @@ impl<'a, 'b> From<&Request<'a, 'b>> for SerializableHttpRequestPacket {
                     )
                 })
                 .collect(),
+            payload,
         }
     }
 }
@@ -43,10 +53,11 @@ pub struct SerializableHttpResponsePacket {
     pub code: u16,
     pub reason: String,
     pub headers: Vec<(String, String)>,
+    pub payload: HttpContentType,
 }
 
-impl<'a, 'b> From<&Response<'a, 'b>> for SerializableHttpResponsePacket {
-    fn from(packet: &Response<'a, 'b>) -> Self {
+impl<'a, 'b> SerializableHttpResponsePacket {
+    pub fn new(packet: &Response<'a, 'b>, payload: HttpContentType) -> Self {
         SerializableHttpResponsePacket {
             version: packet.version.unwrap(),
             code: packet.code.unwrap(),
@@ -63,6 +74,7 @@ impl<'a, 'b> From<&Response<'a, 'b>> for SerializableHttpResponsePacket {
                     )
                 })
                 .collect(),
+            payload,
         }
     }
 }

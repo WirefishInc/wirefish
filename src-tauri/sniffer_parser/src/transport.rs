@@ -6,7 +6,7 @@ use pnet::packet::udp::UdpPacket;
 
 use std::net::IpAddr;
 
-use crate::application::{handle_http_packet, HttpType, HTTP_PORT};
+use crate::application::{handle_http_packet, HttpPacketType, HTTP_PORT};
 use crate::serializable_packet::transport::{
     SerializableEchoReplyPacket, SerializableEchoRequestPacket, SerializableIcmpPacket,
     SerializableIcmpv6Packet, SerializableTcpPacket, SerializableUdpPacket,
@@ -70,7 +70,7 @@ pub fn handle_tcp_packet(
                 tcp.get_source(),
                 destination,
                 tcp.get_destination(),
-                HttpType::Request,
+                HttpPacketType::Request,
                 tcp.payload(),
                 parsed_packet,
             )
@@ -82,7 +82,7 @@ pub fn handle_tcp_packet(
                 tcp.get_source(),
                 destination,
                 tcp.get_destination(),
-                HttpType::Response,
+                HttpPacketType::Response,
                 tcp.payload(),
                 parsed_packet,
             )
