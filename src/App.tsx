@@ -1,21 +1,28 @@
 import {ThemeProvider, createTheme} from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import {useState, useEffect} from 'react';
-import {Alert, FormControl, Grid, Snackbar} from '@mui/material';
+import {useState, useEffect, FC} from 'react';
+import {
+    Accordion, AccordionDetails, AccordionSummary, Alert, Divider, Fab, FormControl, Grid, List, ListItem, Paper,
+    Snackbar, Stack, styled
+} from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {PlayArrow, Stop, Pause, RestartAlt} from '@mui/icons-material';
 import {DataGrid, GridColDef} from '@mui/x-data-grid';
 import './index.css';
 import API from './API';
 import InterfaceInput from './components/InterfaceInput';
 import TimeIntervalInput from './components/TimeIntervalInput';
+import CloseIcon from '@mui/icons-material/Close';
 import ReportFolderInput from "./components/ReportFolderInput";
 import ReportNameInput from "./components/ReportNameInput";
 import ToggleButton from "./components/ToggleButton";
 import {EthernetPacket} from "./serializable_packet/link";
 import {ArpPacket, Ipv4Packet, Ipv6Packet} from "./serializable_packet/network";
 import {TcpPacket, UdpPacket, Icmpv6Packet, IcmpPacket, EchoReply, EchoRequest} from "./serializable_packet/transport";
-import {Packet, SniffingStatus, SerializableNetworkLayerPacket,
-    SerializableTransportLayerPacket, SerializableLinkLayerPacket} from "./types/sniffing";
+import {
+    Packet, SniffingStatus, SerializableNetworkLayerPacket,
+    SerializableTransportLayerPacket, SerializableLinkLayerPacket
+} from "./types/sniffing";
 
 const darkTheme = createTheme({
     palette: {
@@ -27,9 +34,19 @@ const columns: GridColDef[] = [
     {field: 'id', headerName: '#', width: 10},
     {field: 'type', headerName: 'Type', width: 140, valueGetter: p => p.row.link_layer_packet.ethertype}, // TODO
     {field: 'sourceMAC', headerName: 'Source MAC', width: 140, valueGetter: p => p.row.link_layer_packet.source},
-    {field: 'destinationMAC', headerName: 'Destination MAC', width: 140, valueGetter: p => p.row.link_layer_packet.destination},
+    {
+        field: 'destinationMAC',
+        headerName: 'Destination MAC',
+        width: 140,
+        valueGetter: p => p.row.link_layer_packet.destination
+    },
     {field: 'sourceIP', headerName: 'Source IP', width: 120, valueGetter: p => p.row.network_layer_packet.source},
-    {field: 'destinationIP', headerName: 'Destination IP', width: 120, valueGetter: p => p.row.network_layer_packet.destination},
+    {
+        field: 'destinationIP',
+        headerName: 'Destination IP',
+        width: 120,
+        valueGetter: p => p.row.network_layer_packet.destination
+    },
     {field: 'length', headerName: 'Lenght', width: 100, valueGetter: p => p.row.link_layer_packet.payload.length}, // TODO
     {field: 'info', headerName: 'Info', width: 200, valueGetter: p => "info"}, // TODO
 ];
@@ -43,6 +60,7 @@ function App() {
     let [reportFileName, setReportFileName] = useState<string>("report");
     let [reportFolder, setReportFolder] = useState<string>("./");
     let [errorMessage, setErrorMessage] = useState<string>("");
+    let [selectedPacket, setSelectedPacket] = useState<Packet | null>(null);
 
     useEffect(() => {
         const setup = async () => {
@@ -62,7 +80,7 @@ function App() {
                 let transport_layer = make_transport_level_packet(packet.transportLayerPacket);
 
                 setCapturedPackets(packets => {
-                    return [...packets, new Packet(packets.length, link_layer, network_layer, transport_layer )];
+                    return [...packets, new Packet(packets.length, link_layer, network_layer, transport_layer)];
                 });
             });
         };
@@ -71,11 +89,17 @@ function App() {
     }, []);
 
     const make_link_level_packet = (link: any) => {
-        let link_layer : SerializableLinkLayerPacket = {};
+        let link_layer: SerializableLinkLayerPacket | null = null;
 
-        switch (link.type){
+        switch (link.type) {
             case "EthernetPacket":
-                link_layer = link.packet as EthernetPacket;
+                //link_layer = link.packet as EthernetPacket;
+                link_layer = new EthernetPacket(
+                    link.packet.destination,
+                    link.packet.source,
+                    link.packet.ethertype,
+                    link.packet.payload
+                )
                 break;
 
             default:
@@ -86,9 +110,9 @@ function App() {
     }
 
     const make_network_level_packet = (network: any) => {
-        let network_layer : SerializableNetworkLayerPacket = {};
+        let network_layer: SerializableNetworkLayerPacket = {};
 
-        switch (network.type){
+        switch (network.type) {
             case "ArpPacket":
                 network_layer = network.packet as ArpPacket;
                 break;
@@ -98,7 +122,7 @@ function App() {
                 break;
 
             case "Ipv6Packet":
-                network_layer = network.networkLayerPacket.packet as Ipv6Packet;
+                network_layer = network.packet as Ipv6Packet;
                 break;
 
             default:
@@ -109,9 +133,9 @@ function App() {
     }
 
     const make_transport_level_packet = (transport: any) => {
-        let transport_layer : SerializableTransportLayerPacket = {};
+        let transport_layer: SerializableTransportLayerPacket = {};
 
-        switch (transport.type){
+        switch (transport.type) {
             case "TcpPacket":
                 transport_layer = transport.packet as TcpPacket;
                 break;
@@ -185,6 +209,29 @@ function App() {
         else if (sniffingStatus === SniffingStatus.Active) await pauseSniffing();
     }
 
+    interface FieldProps {
+        packetInfo: [];
+    }
+
+    const Fields: FC<FieldProps> = ({packetInfo}) => {
+        let fields = [];
+
+        for (const el of packetInfo) {
+            fields.push(
+                <>
+                    <ListItem>
+                        <> {Object.keys(el)[0]} : {Object.values(el)[0]} </>
+                    </ListItem>
+                    <Divider/>
+                </>
+            )
+        }
+
+        return (
+            <>{fields}</>
+        );
+    };
+
     return (
         <ThemeProvider theme={darkTheme}>
             <CssBaseline/>
@@ -241,7 +288,9 @@ function App() {
                 {/* Sniffing Results */}
 
                 <Grid xs={12} item={true}>
-                    <DataGrid style={{marginTop: "15px", minHeight: "250px"}} rows={capturedPackets} columns={columns}/>
+                    <DataGrid style={{marginTop: "15px", minHeight: "250px"}}
+                              rows={capturedPackets} columns={columns}
+                              onCellClick={(ev) => setSelectedPacket(ev.row)}/>
                 </Grid>
 
                 <Snackbar anchorOrigin={{vertical: "bottom", horizontal: "right"}} open={errorMessage.length > 0}
@@ -251,9 +300,51 @@ function App() {
                     </Alert>
                 </Snackbar>
 
+                {/* Info selected Packet */}
+
+                {
+                    !selectedPacket ? null :
+                        <>
+                            <Fab onClick={() => setSelectedPacket(null)}><CloseIcon/></Fab>
+                            <Grid xs={12} item={true}>
+                                <Accordion>
+                                    <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
+                                        Link Layer
+                                    </AccordionSummary>
+                                    <AccordionDetails>
+                                        <List component="nav" aria-label="mailbox folders">
+                                            <Fields packetInfo={selectedPacket.link_layer_packet?.toDisplay()}/>
+                                        </List>
+                                    </AccordionDetails>
+                                </Accordion>
+                                <Accordion>
+                                    <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
+                                        Network Layer
+                                    </AccordionSummary>
+                                    <AccordionDetails>
+                                        <List component="nav" aria-label="mailbox folders">
+                                            <Fields packetInfo={[]}/>
+                                        </List>
+                                    </AccordionDetails>
+                                </Accordion>
+                                <Accordion>
+                                    <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
+                                        Transport Layer
+                                    </AccordionSummary>
+                                    <AccordionDetails>
+                                        <List component="nav" aria-label="mailbox folders">
+                                            <Fields packetInfo={[]}/>
+                                        </List>
+                                    </AccordionDetails>
+                                </Accordion>
+                            </Grid>
+                        </>
+                }
             </Grid>
         </ThemeProvider>
     );
+
+
 }
 
 export default App;

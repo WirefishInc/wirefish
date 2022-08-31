@@ -4,9 +4,9 @@ export enum SniffingStatus {
     Active
 }
 
-export interface SerializableTransportLayerPacket {}
-export interface SerializableNetworkLayerPacket {}
-export interface SerializableLinkLayerPacket {}
+export interface SerializableTransportLayerPacket {}// todo  toDisplay() : any }
+export interface SerializableNetworkLayerPacket {} // todo toDisplay() : any }
+export interface SerializableLinkLayerPacket { toDisplay() : any; getPayload() : number[] }
 
 /* ParsedPacket */
 
@@ -14,15 +14,15 @@ export class Packet {
     id:number;
    // type: string;
    // length: number;
-    link_layer_packet: SerializableLinkLayerPacket;
-    network_layer_packet: SerializableNetworkLayerPacket;
-    transport_layer_packet: SerializableTransportLayerPacket;
+    link_layer_packet: SerializableLinkLayerPacket | null;
+    network_layer_packet: SerializableNetworkLayerPacket | null;
+    transport_layer_packet: SerializableTransportLayerPacket | null;
 
     constructor(
         id: number,
-        link_layer_packet: SerializableLinkLayerPacket,
-        network_layer_packet: SerializableNetworkLayerPacket,
-        transport_layer_packet: SerializableTransportLayerPacket
+        link_layer_packet: SerializableLinkLayerPacket | null,
+        network_layer_packet: SerializableNetworkLayerPacket | null,
+        transport_layer_packet: SerializableTransportLayerPacket | null
     ) {
         this.id = id;
        // this.type =  //
