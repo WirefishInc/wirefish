@@ -23,8 +23,8 @@ import {
     Packet, SniffingStatus, SerializableNetworkLayerPacket,
     SerializableTransportLayerPacket, SerializableLinkLayerPacket
 } from "./types/sniffing";
-import HexViewer from "react-hexviewer-ts";
-import {inspect} from "util";
+
+// TODO IMPORTANT !!! ALL PACKETS IN TABLE DUPLICATED
 
 const darkTheme = createTheme({
     palette: {
@@ -77,9 +77,18 @@ function App() {
 
             /* Packet reception event */
             window.AwesomeEvent.listen("packet_received", (packet: any) => {
-                let link_layer = make_link_level_packet(packet.linkLayerPacket);
-                let network_layer = make_network_level_packet(packet.networkLayerPacket);
-                let transport_layer = make_transport_level_packet(packet.transportLayerPacket);
+                let link_layer: SerializableLinkLayerPacket | null;
+                let network_layer: SerializableNetworkLayerPacket | null;
+                let transport_layer: SerializableTransportLayerPacket | null;
+
+                if (packet.linkLayerPacket)
+                    link_layer = make_link_level_packet(packet.linkLayerPacket);
+
+                if (packet.networkLayerPacket)
+                    network_layer = make_network_level_packet(packet.networkLayerPacket);
+
+                if (packet.transportLayerPacket)
+                    transport_layer = make_transport_level_packet(packet.transportLayerPacket);
 
                 setCapturedPackets(packets => {
                     return [...packets, new Packet(packets.length, link_layer, network_layer, transport_layer)];
@@ -311,7 +320,7 @@ function App() {
         for (const el of packetInfo) {
             fields.push(
                 <>
-                    <ListItem><> {Object.keys(el)[0]} : {Object.values(el)[0]} </>
+                    <ListItem key={fields.length}><> {Object.keys(el)[0]} : {Object.values(el)[0]} </>
                     </ListItem>
                     <Divider/>
                 </>
@@ -396,38 +405,45 @@ function App() {
                 {
                     !selectedPacket ? null :
                         <>
-                            <Fab className={"close-btn"} size={"small"} onClick={() => setSelectedPacket(null)}><CloseIcon/></Fab>
+                            <Fab className={"close-btn"} size={"small"}
+                                 onClick={() => setSelectedPacket(null)}><CloseIcon/></Fab>
                             <Grid xs={12} item={true}>
-                                <Accordion>
-                                    <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
-                                        {selectedPacket.link_layer_packet?.toString()}
-                                    </AccordionSummary>
-                                    <AccordionDetails>
-                                        <List component="nav" aria-label="mailbox folders">
-                                            <Fields packetInfo={selectedPacket.link_layer_packet?.toDisplay()}/>
-                                        </List>
-                                    </AccordionDetails>
-                                </Accordion>
-                                <Accordion>
-                                    <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
-                                        {selectedPacket.network_layer_packet?.toString()}
-                                    </AccordionSummary>
-                                    <AccordionDetails>
-                                        <List component="nav" aria-label="mailbox folders">
-                                            <Fields packetInfo={selectedPacket.network_layer_packet?.toDisplay()}/>
-                                        </List>
-                                    </AccordionDetails>
-                                </Accordion>
-                                <Accordion>
-                                    <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
-                                        {selectedPacket.transport_layer_packet?.toString()}
-                                    </AccordionSummary>
-                                    <AccordionDetails>
-                                        <List component="nav" aria-label="mailbox folders">
-                                            <Fields packetInfo={selectedPacket.transport_layer_packet?.toDisplay()}/>
-                                        </List>
-                                    </AccordionDetails>
-                                </Accordion>
+                                {!selectedPacket.link_layer_packet ? null :
+                                    <Accordion>
+                                        <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
+                                            {selectedPacket.link_layer_packet?.toString()}
+                                        </AccordionSummary>
+                                        <AccordionDetails>
+                                            <List component="nav" aria-label="mailbox folders">
+                                                <Fields packetInfo={selectedPacket.link_layer_packet.toDisplay()}/>
+                                            </List>
+                                        </AccordionDetails>
+                                    </Accordion>
+                                }
+                                {!selectedPacket.network_layer_packet ? null :
+                                    <Accordion>
+                                        <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
+                                            {selectedPacket.network_layer_packet?.toString()}
+                                        </AccordionSummary>
+                                        <AccordionDetails>
+                                            <List component="nav" aria-label="mailbox folders">
+                                                <Fields packetInfo={selectedPacket.network_layer_packet.toDisplay()}/>
+                                            </List>
+                                        </AccordionDetails>
+                                    </Accordion>
+                                }
+                                {!selectedPacket.transport_layer_packet ? null :
+                                    <Accordion>
+                                        <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
+                                            {selectedPacket.transport_layer_packet?.toString()}
+                                        </AccordionSummary>
+                                        <AccordionDetails>
+                                            <List component="nav" aria-label="mailbox folders">
+                                                <Fields packetInfo={selectedPacket.transport_layer_packet.toDisplay()}/>
+                                            </List>
+                                        </AccordionDetails>
+                                    </Accordion>
+                                }
                             </Grid>
                         </>
                 }
