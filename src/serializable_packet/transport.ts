@@ -124,7 +124,7 @@ export class Icmpv6Packet implements SerializableTransportLayerPacket {
         this.icmpv6_code = icmpv6_code;
         this.checksum = checksum;
         this.payload = payload;
-        this.type = "Icmpv6 Packet"
+        this.type = "Internet Control Message Protocol v6"
     }
 
     public toDisplay() {
@@ -135,6 +135,10 @@ export class Icmpv6Packet implements SerializableTransportLayerPacket {
         packet_info.push( {"Checksum" : this.checksum});
         
         return packet_info;
+    }
+
+    public toString(): string {
+        return this.type
     }
 }
 
@@ -155,7 +159,7 @@ export class IcmpPacket implements SerializableTransportLayerPacket {
         this.icmp_code = icmp_code;
         this.checksum = checksum;
         this.payload = payload;
-        this.type = "Icmp packet"
+        this.type = "Internet Control Message Protocol"
     }
 
     public toDisplay() {
@@ -169,7 +173,7 @@ export class IcmpPacket implements SerializableTransportLayerPacket {
     }
 
     public toString(): string {
-        return "" // TODO
+        return this.type
     }
 }
 
@@ -196,7 +200,7 @@ export class EchoReply implements SerializableTransportLayerPacket {
         this.identifier = identifier;
         this.sequence_number = sequence_number;
         this.payload = payload;
-        this.type = "EchoReply Packet";
+        this.type = "Internet Control Message Protocol - Echo Reply";
     }
 
     public toDisplay() {
@@ -212,7 +216,7 @@ export class EchoReply implements SerializableTransportLayerPacket {
     }
 
     public toString(): string {
-        return "" // TODO
+        return this.type
     }
 }
 
@@ -239,7 +243,7 @@ export class EchoRequest implements SerializableTransportLayerPacket {
         this.identifier = identifier;
         this.sequence_number = sequence_number;
         this.payload = payload;
-        this.type = "Echo Request Packet";
+        this.type = "Internet Control Message Protocol - Echo Request";
     }
 
     public toDisplay() {
@@ -255,7 +259,7 @@ export class EchoRequest implements SerializableTransportLayerPacket {
     }
 
     public toString(): string {
-        return "" // TODO
+        return this.type
     }
 }
 

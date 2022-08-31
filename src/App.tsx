@@ -24,8 +24,6 @@ import {
     SerializableTransportLayerPacket, SerializableLinkLayerPacket
 } from "./types/sniffing";
 
-// TODO IMPORTANT !!! ALL PACKETS IN TABLE DUPLICATED
-
 const darkTheme = createTheme({
     palette: {
         mode: 'dark',
@@ -276,7 +274,6 @@ function App() {
     const stopSniffing = async () => {
         await API.stopSniffing();
         setSniffingStatus(SniffingStatus.Inactive);
-        console.log(capturedPackets) // TODO: delete
     }
 
     const startSniffing = async () => {
@@ -448,6 +445,10 @@ function App() {
                         </>
                 }
             </Grid>
+
+            {/* Payload (hex viewer) */}
+            // TODO
+
         </ThemeProvider>
     );
 }
