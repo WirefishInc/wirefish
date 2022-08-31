@@ -41,7 +41,30 @@ export class TcpPacket implements SerializableTransportLayerPacket {
         this.urgent_ptr = urgent_ptr;
         this.options = options;
         this.payload = payload;
-        this.type = "Tcp Packet"
+        this.type = "Transmission Control Protocol"
+    }
+
+    public toDisplay() {
+        let packet_info = [];
+
+        packet_info.push( {"Destination Port" : this.destination});
+        packet_info.push( {"Source Port" : this.source});
+        packet_info.push( {"Sequence" : this.sequence});
+        packet_info.push( {"Acknowledgment (ACK)" : this.acknowledgement}); 
+        packet_info.push( {"Data Offset" : this.data_offset}); 
+        packet_info.push( {"Reserved" : this.reserved}); 
+        packet_info.push( {"Flags" : this.flags}); 
+        packet_info.push( {"Windows" : this.window}); ;
+        packet_info.push( {"Checksum" : this.checksum}); 
+        packet_info.push( {"Urgent Pointer" : this.urgent_ptr}); 
+        packet_info.push( {"Options MAC" : this.options});
+
+        return packet_info;
+    }
+
+    public toString(): string {
+        return this.type+", Src Port: "+this.source+", Dst Port: "+this.destination+", Seq: "+this.sequence+
+            ", Ack: "+this.acknowledgement
     }
 }
 
@@ -65,7 +88,22 @@ export class UdpPacket implements SerializableTransportLayerPacket {
         this.length = length;
         this.checksum = checksum;
         this.payload = payload;
-        this.type ="Udp Packet"
+        this.type ="User Datagram Protocol"
+    }
+
+    public toDisplay() {
+        let packet_info = [];
+        
+        packet_info.push( {"Source" : this.source});
+        packet_info.push( {"Destination" : this.destination});
+        packet_info.push( {"Length" : this.length});
+        packet_info.push( {"Checksum" : this.checksum});
+        
+        return packet_info;
+    }
+
+    public toString(): string {
+        return this.type+", Src Port: "+this.source+", Dst Port: "+this.destination
     }
 }
 
@@ -88,6 +126,16 @@ export class Icmpv6Packet implements SerializableTransportLayerPacket {
         this.payload = payload;
         this.type = "Icmpv6 Packet"
     }
+
+    public toDisplay() {
+        let packet_info = [];
+
+        packet_info.push( {"ICMP v6 Type" : this.icmpv6_type});
+        packet_info.push( {"ICMP v6 Code" : this.icmpv6_code});
+        packet_info.push( {"Checksum" : this.checksum});
+        
+        return packet_info;
+    }
 }
 
 export class IcmpPacket implements SerializableTransportLayerPacket {
@@ -108,6 +156,20 @@ export class IcmpPacket implements SerializableTransportLayerPacket {
         this.checksum = checksum;
         this.payload = payload;
         this.type = "Icmp packet"
+    }
+
+    public toDisplay() {
+        let packet_info = [];
+        
+        packet_info.push( {"ICMP Type" : this.icmp_type});
+        packet_info.push( {"ICMP Code" : this.icmp_code});
+        packet_info.push( {"Checksum" : this.checksum});
+
+        return packet_info;
+    }
+
+    public toString(): string {
+        return "" // TODO
     }
 }
 
@@ -136,6 +198,22 @@ export class EchoReply implements SerializableTransportLayerPacket {
         this.payload = payload;
         this.type = "EchoReply Packet";
     }
+
+    public toDisplay() {
+        let packet_info = [];
+        
+        packet_info.push( {"ICMP Type" : this.icmp_type});
+        packet_info.push( {"ICMP Code" : this.icmp_code});
+        packet_info.push( {"Checksum" : this.checksum});
+        packet_info.push( {"Identifier" : this.identifier});
+        packet_info.push( {"Sequence Number" : this.sequence_number});
+        
+        return packet_info;
+    }
+
+    public toString(): string {
+        return "" // TODO
+    }
 }
 
 export class EchoRequest implements SerializableTransportLayerPacket {
@@ -162,6 +240,22 @@ export class EchoRequest implements SerializableTransportLayerPacket {
         this.sequence_number = sequence_number;
         this.payload = payload;
         this.type = "Echo Request Packet";
+    }
+
+    public toDisplay() {
+        let packet_info = [];
+        
+        packet_info.push( {"ICMP Type" : this.icmp_type});
+        packet_info.push( {"ICMP Code" : this.icmp_code});
+        packet_info.push( {"Checksum" : this.checksum});
+        packet_info.push( {"Identifier" : this.identifier});
+        packet_info.push( {"Sequence Number" : this.sequence_number});
+        
+        return packet_info;
+    }
+
+    public toString(): string {
+        return "" // TODO
     }
 }
 

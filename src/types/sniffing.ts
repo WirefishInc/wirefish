@@ -4,9 +4,9 @@ export enum SniffingStatus {
     Active
 }
 
-export interface SerializableTransportLayerPacket {}// todo  toDisplay() : any }
-export interface SerializableNetworkLayerPacket {} // todo toDisplay() : any }
-export interface SerializableLinkLayerPacket { toDisplay() : any; getPayload() : number[] }
+export interface SerializableTransportLayerPacket { toDisplay() : any, toString() : string }
+export interface SerializableNetworkLayerPacket { toDisplay() : any; toString() : string }
+export interface SerializableLinkLayerPacket { toDisplay() : any; toString() : string }
 
 /* ParsedPacket */
 

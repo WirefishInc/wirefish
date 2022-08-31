@@ -23,6 +23,8 @@ import {
     Packet, SniffingStatus, SerializableNetworkLayerPacket,
     SerializableTransportLayerPacket, SerializableLinkLayerPacket
 } from "./types/sniffing";
+import HexViewer from "react-hexviewer-ts";
+import {inspect} from "util";
 
 const darkTheme = createTheme({
     palette: {
@@ -110,19 +112,60 @@ function App() {
     }
 
     const make_network_level_packet = (network: any) => {
-        let network_layer: SerializableNetworkLayerPacket = {};
+        let network_layer: SerializableNetworkLayerPacket | null = null;
+
+        // TODO REFACTOR CONSTRUCTOR
 
         switch (network.type) {
             case "ArpPacket":
-                network_layer = network.packet as ArpPacket;
+                //network_layer = network.packet as ArpPacket;
+                network_layer = new ArpPacket(
+                    network.packet.hardware_type,
+                    network.packet.protocol_type,
+                    network.packet.hw_addr_len,
+                    network.packet.proto_addr_len,
+                    network.packet.operation,
+                    network.packet.sender_hw_addr,
+                    network.packet.sender_proto_addr,
+                    network.packet.target_hw_addr,
+                    network.packet.target_proto_addr,
+                    network.packet.payload
+                )
                 break;
 
             case "Ipv4Packet":
-                network_layer = network.packet as Ipv4Packet;
+                //network_layer = network.packet as Ipv4Packet;
+                network_layer = new Ipv4Packet(
+                    network.packet.version,
+                    network.packet.header_length,
+                    network.packet.dscp,
+                    network.packet.ecn,
+                    network.packet.total_length,
+                    network.packet.identification,
+                    network.packet.flags,
+                    network.packet.fragment_offset,
+                    network.packet.ttl,
+                    network.packet.next_level_protocol,
+                    network.packet.checksum,
+                    network.packet.source,
+                    network.packet.destination,
+                    network.packet.payload
+                )
                 break;
 
             case "Ipv6Packet":
-                network_layer = network.packet as Ipv6Packet;
+                //network_layer = network.packet as Ipv6Packet;
+                network_layer = new Ipv6Packet(
+                    network.packet.version,
+                    network.packet.traffic_class,
+                    network.packet.flow_label,
+                    network.packet.payload_length,
+                    network.packet.next_header,
+                    network.packet.hop_limit,
+                    network.packet.source,
+                    network.packet.destination,
+                    network.packet.payload
+                )
                 break;
 
             default:
@@ -133,31 +176,80 @@ function App() {
     }
 
     const make_transport_level_packet = (transport: any) => {
-        let transport_layer: SerializableTransportLayerPacket = {};
+        let transport_layer: SerializableTransportLayerPacket | null = null
 
         switch (transport.type) {
             case "TcpPacket":
-                transport_layer = transport.packet as TcpPacket;
+                //transport_layer = transport.packet as TcpPacket;
+                transport_layer = new TcpPacket(
+                    transport.packet.source,
+                    transport.packet.destination,
+                    transport.packet.sequence,
+                    transport.packet.acknowledgement,
+                    transport.packet.data_offset,
+                    transport.packet.reserved,
+                    transport.packet.flags,
+                    transport.packet.window,
+                    transport.packet.checksum,
+                    transport.packet.urgent_ptr,
+                    transport.packet.options,
+                    transport.packet.payload
+                )
                 break;
 
             case "UdpPacket":
-                transport_layer = transport.packet as UdpPacket;
+                //transport_layer = transport.packet as UdpPacket;
+                transport_layer = new UdpPacket(
+                    transport.packet.source,
+                    transport.packet.destination,
+                    transport.packet.length,
+                    transport.packet.checksum,
+                    transport.packet.payload
+                )
                 break;
 
             case "Icmpv6Packet":
-                transport_layer = transport.packet as Icmpv6Packet;
+                //transport_layer = transport.packet as Icmpv6Packet;
+                transport_layer = new Icmpv6Packet(
+                    transport.packet.icmpv6_type,
+                    transport.packet.icmpv6_code,
+                    transport.packet.checksum,
+                    transport.packet.payload
+                )
                 break;
 
             case "IcmpPacket":
-                transport_layer = transport.packet as IcmpPacket;
+                //transport_layer = transport.packet as IcmpPacket;
+                transport_layer = new IcmpPacket(
+                    transport.packet.icmp_type,
+                    transport.packet.icmp_code,
+                    transport.packet.checksum,
+                    transport.packet.payload
+                )
                 break;
 
             case "EchoReplyPacket":
-                transport_layer = transport.packet as EchoReply;
+                //transport_layer = transport.packet as EchoReply;
+                transport_layer = new EchoReply(
+                    transport.packet.icmp_type,
+                    transport.packet.icmp_code,
+                    transport.packet.checksum,
+                    transport.packet.identifier,
+                    transport.packet.sequence_number,
+                    transport.packet.payload
+                )
                 break;
 
             case "EchoRequestPacket":
-                transport_layer = transport.packet as EchoRequest;
+                //transport_layer = transport.packet as EchoRequest;
+                transport_layer = new EchoRequest(
+                    transport.packet.icmp_type,
+                    transport.packet.icmp_code,
+                    transport.packet.checksum,
+                    transport.packet.identifier,
+                    transport.packet.sequence_number,
+                    transport.packet.payload
+                )
                 break;
 
             default:
@@ -219,8 +311,7 @@ function App() {
         for (const el of packetInfo) {
             fields.push(
                 <>
-                    <ListItem>
-                        <> {Object.keys(el)[0]} : {Object.values(el)[0]} </>
+                    <ListItem><> {Object.keys(el)[0]} : {Object.values(el)[0]} </>
                     </ListItem>
                     <Divider/>
                 </>
@@ -305,11 +396,11 @@ function App() {
                 {
                     !selectedPacket ? null :
                         <>
-                            <Fab onClick={() => setSelectedPacket(null)}><CloseIcon/></Fab>
+                            <Fab className={"close-btn"} size={"small"} onClick={() => setSelectedPacket(null)}><CloseIcon/></Fab>
                             <Grid xs={12} item={true}>
                                 <Accordion>
                                     <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
-                                        Link Layer
+                                        {selectedPacket.link_layer_packet?.toString()}
                                     </AccordionSummary>
                                     <AccordionDetails>
                                         <List component="nav" aria-label="mailbox folders">
@@ -319,21 +410,21 @@ function App() {
                                 </Accordion>
                                 <Accordion>
                                     <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
-                                        Network Layer
+                                        {selectedPacket.network_layer_packet?.toString()}
                                     </AccordionSummary>
                                     <AccordionDetails>
                                         <List component="nav" aria-label="mailbox folders">
-                                            <Fields packetInfo={[]}/>
+                                            <Fields packetInfo={selectedPacket.network_layer_packet?.toDisplay()}/>
                                         </List>
                                     </AccordionDetails>
                                 </Accordion>
                                 <Accordion>
                                     <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
-                                        Transport Layer
+                                        {selectedPacket.transport_layer_packet?.toString()}
                                     </AccordionSummary>
                                     <AccordionDetails>
                                         <List component="nav" aria-label="mailbox folders">
-                                            <Fields packetInfo={[]}/>
+                                            <Fields packetInfo={selectedPacket.transport_layer_packet?.toDisplay()}/>
                                         </List>
                                     </AccordionDetails>
                                 </Accordion>
@@ -343,8 +434,6 @@ function App() {
             </Grid>
         </ThemeProvider>
     );
-
-
 }
 
 export default App;

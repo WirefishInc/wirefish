@@ -63,3 +63,9 @@ input.filename-input {
 .css-60ctgw-MuiFormControl-root {
     padding-right: 0;
 }
+
+button.close-btn {
+    margin-top: 40px;
+    margin-left: auto;
+    margin-right: auto;
+}
