@@ -12,3 +12,4 @@ pnet = { version = "0.30.0", features = ["serde"] }
 log = "0.4.0"
 erased-serde = { version = "0.3.23" }
 httparse = { version = "1.7.1"}
+mime = "0.3.16"
