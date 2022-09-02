@@ -5,9 +5,14 @@ use serde::Serialize;
 
 #[derive(Serialize, Debug)]
 pub enum HttpContentType {
-    Text(String),
+    TextCorrectlyDecoded(String),
+    TextMalformedDecoded(String),
+    TextDefaultDecoded(String),
+
     Image(Vec<u8>),
     Unknown(Vec<u8>),
+    Encoded(String, Vec<u8>),
+    Multipart(Vec<u8>),
     None
 }
 

@@ -6,11 +6,14 @@ use pnet::packet::udp::UdpPacket;
 
 use std::net::IpAddr;
 
-use crate::application::{handle_http_packet, HttpPacketType, HTTP_PORT};
+use crate::application::handle_application_protocol;
 use crate::serializable_packet::transport::{
     SerializableEchoReplyPacket, SerializableEchoRequestPacket, SerializableIcmpPacket,
     SerializableIcmpv6Packet, SerializableTcpPacket, SerializableUdpPacket,
 };
+
+const ACK_BIT_SHIFT: usize = 4;
+const FIN_BIT_SHIFT: usize = 0;
 
 use super::*;
 
@@ -64,30 +67,18 @@ pub fn handle_tcp_packet(
             SerializableTcpPacket::from(&tcp),
         )));
 
-        if tcp.get_destination() == HTTP_PORT {
-            handle_http_packet(
-                source,
-                tcp.get_source(),
-                destination,
-                tcp.get_destination(),
-                HttpPacketType::Request,
-                tcp.payload(),
-                parsed_packet,
-            )
-        }
+        let flags = tcp.get_flags();
+        let is_fin = (flags & (1 << ACK_BIT_SHIFT)) != 0 && (flags & (1 << FIN_BIT_SHIFT)) != 0;
 
-        if tcp.get_source() == HTTP_PORT {
-            handle_http_packet(
-                source,
-                tcp.get_source(),
-                destination,
-                tcp.get_destination(),
-                HttpPacketType::Response,
-                tcp.payload(),
-                parsed_packet,
-            )
-        }
-
+        handle_application_protocol(
+            source,
+            tcp.get_source(),
+            destination,
+            tcp.get_destination(),
+            is_fin,
+            tcp.payload(),
+            parsed_packet,
+        );
     } else {
         println!("[]: Malformed TCP Packet");
         parsed_packet.set_transport_layer_packet(Some(SerializablePacket::MalformedPacket(
