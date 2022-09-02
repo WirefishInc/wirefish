@@ -4,10 +4,10 @@ export class EthernetPacket implements SerializableLinkLayerPacket {
     destination: string;
     source: string;
     ethertype: string;
-    payload: [];
+    payload: number[];
     type: string;
 
-    constructor(destination: string, source: string, ethertype: string, payload: []) {
+    constructor(destination: string, source: string, ethertype: string, payload: number[]) {
         this.destination = destination;
         this.source = source;
         this.ethertype = ethertype;
@@ -27,5 +27,13 @@ export class EthernetPacket implements SerializableLinkLayerPacket {
 
     public toString() : string {
         return this.type+", src: "+this.source+", dst: "+this.destination
+    }
+
+    public getPayload() : number[] {
+        return this.payload;
+    }
+
+    public payloadToHex() : string[] {
+       return this.payload.reverse().map( (el:number) => el.toString(16)); // dec to hex
     }
 }

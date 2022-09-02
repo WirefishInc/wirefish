@@ -69,3 +69,12 @@ button.close-btn {
     margin-left: auto;
     margin-right: auto;
 }
+
+td.hex {
+    padding: 5px;
+}
+
+td.active {
+    background-color: yellow;
+    color: black;
+}

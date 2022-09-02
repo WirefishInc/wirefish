@@ -61,6 +61,7 @@ function App() {
     let [reportFolder, setReportFolder] = useState<string>("./");
     let [errorMessage, setErrorMessage] = useState<string>("");
     let [selectedPacket, setSelectedPacket] = useState<Packet | null>(null);
+    let [over, setOver] = useState<string | null>(null);
 
     useEffect(() => {
         const setup = async () => {
@@ -329,6 +330,53 @@ function App() {
         );
     };
 
+    interface HewViewerProps {
+        payload: string[];
+    }
+
+    const HewViewer: FC<HewViewerProps> = ({payload}) => {
+        let clone = Array.from(payload)
+        let rows = [];
+
+        while (clone.length) {
+            rows.push(clone.splice(0, 16))
+        }
+
+        return (
+            <table>
+                <tbody>
+                {rows.map((r, i) =>
+                    <tr>
+                        {
+                            r.map((el, j) => <td id={i.toString() + "" + j.toString()}
+                                                 onMouseOver={(ev) => {
+                                                     // @ts-ignore
+                                                     setOver(ev.target.id.toString())
+                                                 }}
+                                                 onMouseLeave={(ev) => {
+                                                     setOver("")
+                                                 }}
+                                                 className={over === i.toString() + "" + j.toString() ? "hex active" : "hex"}>{el}</td>)
+                        }
+                    </tr>
+                )}
+                </tbody>
+            </table>
+        )
+    }
+
+    function hex_to_ascii(byte: number) {
+        let char = "";
+
+        if (byte > 31 && byte < 127) {
+            char = String.fromCharCode(byte);
+        } else {
+            char = "·";
+        }
+
+        return char;
+    }
+
     return (
         <ThemeProvider theme={darkTheme}>
             <CssBaseline/>
@@ -444,13 +492,27 @@ function App() {
                             </Grid>
                         </>
                 }
+
+                {/* Payload (hex viewer) */}
+
+                <Grid container xs={12} item={true}>
+                    <Grid xs={6}>
+                        {selectedPacket?.link_layer_packet ?
+                            <HewViewer payload={selectedPacket.link_layer_packet.payloadToHex()}/> : null
+                        }
+                    </Grid>
+                    <Grid xs={6}>
+                        {selectedPacket?.link_layer_packet ?
+                            <HewViewer
+                                payload={selectedPacket?.link_layer_packet?.getPayload().map((el) => hex_to_ascii(el))}/> : null
+                        }
+                    </Grid>
+                </Grid>
+
             </Grid>
-
-            {/* Payload (hex viewer) */}
-            // TODO
-
         </ThemeProvider>
-    );
+    )
+        ;
 }
 
 export default App;
