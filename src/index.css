@@ -72,9 +72,22 @@ button.close-btn {
 
 td.hex {
     padding: 5px;
+    cursor: pointer;
+    font-size: 15px;
 }
 
 td.active {
     background-color: yellow;
     color: black;
+}
+
+div.payload {
+    margin-top: 20px;
+    margin-left: 17px;
+    background-color: #3b3b3b;
+}
+
+td.index {
+    font-weight: bold;
+    padding-right: 20px;
 }

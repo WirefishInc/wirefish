@@ -347,17 +347,19 @@ function App() {
                 <tbody>
                 {rows.map((r, i) =>
                     <tr>
+                        {<td className={"index"}>{"0x" + (i * 16).toString(16).toUpperCase()}</td>}
                         {
-                            r.map((el, j) => <td id={i.toString() + "" + j.toString()}
-                                                 onMouseOver={(ev) => {
-                                                     // @ts-ignore
-                                                     setOver(ev.target.id.toString())
-                                                 }}
-                                                 onMouseLeave={(ev) => {
-                                                     setOver("")
-                                                 }}
-                                                 className={over === i.toString() + "" + j.toString() ? "hex active" : "hex"}>{el}</td>)
-                        }
+                            r.map((el, j) =>
+                                <td id={(i*16+j).toString()}
+                                    onMouseOver={(ev) => {
+                                        // @ts-ignore
+                                        setOver(ev.target.id.toString())
+                                    }}
+                                    onMouseLeave={(ev) => {
+                                        setOver("")
+                                    }}
+                                    className={over === (i*16+j).toString() ? "hex active" : "hex"}>{el}</td>
+                            )}
                     </tr>
                 )}
                 </tbody>
@@ -493,21 +495,26 @@ function App() {
                         </>
                 }
 
-                {/* Payload (hex viewer) */}
+                {/* Payload (hex viewer)
+                TODO : fix bug table not responsive
+                */}
 
-                <Grid container xs={12} item={true}>
-                    <Grid xs={6}>
-                        {selectedPacket?.link_layer_packet ?
-                            <HewViewer payload={selectedPacket.link_layer_packet.payloadToHex()}/> : null
-                        }
+                {!selectedPacket ? null :
+                    <Grid className={"payload"} container xs={12} item={true}>
+                        <Grid xs={6}>
+                            {selectedPacket?.link_layer_packet ?
+                                <HewViewer
+                                    payload={selectedPacket.link_layer_packet.payloadToHex().map((el) => el.toUpperCase())}/> : null
+                            }
+                        </Grid>
+                        <Grid xs={6}>
+                            {selectedPacket?.link_layer_packet ?
+                                <HewViewer
+                                    payload={selectedPacket?.link_layer_packet?.getPayload().map((el) => hex_to_ascii(el))}/> : null
+                            }
+                        </Grid>
                     </Grid>
-                    <Grid xs={6}>
-                        {selectedPacket?.link_layer_packet ?
-                            <HewViewer
-                                payload={selectedPacket?.link_layer_packet?.getPayload().map((el) => hex_to_ascii(el))}/> : null
-                        }
-                    </Grid>
-                </Grid>
+                }
 
             </Grid>
         </ThemeProvider>
