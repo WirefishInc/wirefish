@@ -16,3 +16,4 @@ mime = "0.3.16"
 mime_multipart = "0.6.0"
 flate2 = "1.0.24"
 encoding_rs = "0.8.31"
+tls-parser =  { version = "0.11.0", features = ["serialize"]}
