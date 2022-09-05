@@ -54,14 +54,14 @@ pub fn handle_tcp_packet(
 ) {
     let tcp = TcpPacket::new(packet);
     if let Some(tcp) = tcp {
-        println!(
+        /* println!(
             "[]: TCP Packet: {}:{} > {}:{}; length: {}",
             source,
             tcp.get_source(),
             destination,
             tcp.get_destination(),
             packet.len()
-        );
+        ); */
 
         parsed_packet.set_transport_layer_packet(Some(SerializablePacket::TcpPacket(
             SerializableTcpPacket::from(&tcp),

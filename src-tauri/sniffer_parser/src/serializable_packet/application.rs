@@ -83,3 +83,5 @@ impl<'a, 'b> SerializableHttpResponsePacket {
         }
     }
 }
+
+// TLS Generic Packet Representation

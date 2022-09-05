@@ -6,6 +6,8 @@ use encoding_rs::Encoding;
 use flate2::bufread::{DeflateDecoder, GzDecoder, ZlibDecoder};
 use httparse::Header;
 use mime::Mime;
+use tls_parser::{TlsEncryptedContent, parse_tls_record_with_header, TlsRecordType};
+use tls_parser::{parse_tls_encrypted, parse_tls_plaintext, parse_tls_raw_record};
 
 use crate::serializable_packet::application::{
     HttpContentType, SerializableHttpRequestPacket, SerializableHttpResponsePacket,
@@ -13,8 +15,13 @@ use crate::serializable_packet::application::{
 use crate::serializable_packet::ParsedPacket;
 use crate::SerializablePacket;
 
-const HTTP_PORT: u16 = 80;
-const END_SEQUENCE_REV: &[u8] = "\n\r\n\r0".as_bytes();
+#[allow(non_snake_case)]
+mod WellKnownPorts {
+    pub const HTTP_PORT: u16 = 80;
+    pub const TLS_PORT: u16 = 443;
+}
+
+// HTTP ----------------------------------------------------------------------------------------------------------------
 
 #[allow(non_snake_case)]
 mod ContentEncoding {
@@ -51,23 +58,33 @@ pub fn handle_application_protocol(
     packet: &[u8],
     parsed_packet: &mut ParsedPacket,
 ) {
-    if source_port == HTTP_PORT || dest_port == HTTP_PORT {
-        let http_type = if dest_port == HTTP_PORT {
-            HttpPacketType::Request
-        } else {
-            HttpPacketType::Response
-        };
+    match (source_port, dest_port) {
+        (WellKnownPorts::HTTP_PORT, _) | (_, WellKnownPorts::HTTP_PORT) => {
+            let http_type = match dest_port {
+                WellKnownPorts::HTTP_PORT => HttpPacketType::Request,
+                _ => HttpPacketType::Response,
+            };
 
-        handle_http_packet(
+            handle_http_packet(
+                source_ip,
+                source_port,
+                dest_ip,
+                dest_port,
+                http_type,
+                is_fin,
+                packet,
+                parsed_packet,
+            )
+        }
+        (WellKnownPorts::TLS_PORT, _) | (_, WellKnownPorts::TLS_PORT) => handle_tls_packet(
             source_ip,
             source_port,
             dest_ip,
             dest_port,
-            http_type,
-            is_fin,
             packet,
             parsed_packet,
-        )
+        ),
+        _ => (),
     }
 }
 
@@ -86,7 +103,7 @@ pub fn handle_http_packet(
         let current_payload = parsers
             .entry(((source_ip, source_port), (dest_ip, dest_port)))
             .and_modify(|payload| payload.append(packet.to_vec().as_mut()))
-            .or_insert(vec![]);
+            .or_insert(packet.to_vec());
 
         let mut headers = [httparse::EMPTY_HEADER; 1024];
 
@@ -101,7 +118,7 @@ pub fn handle_http_packet(
                         let current_payload_size = current_payload.len() - start;
 
                         if packet_is_ended(&current_payload[start..], current_payload_size,
-                            request.headers, is_fin)
+                            request.headers, http_type, is_fin)
                         {
                             let parsed_payload = parse_http_payload(
                                 current_payload.clone(),
@@ -136,7 +153,7 @@ pub fn handle_http_packet(
                         let current_payload_size = current_payload.len() - start;
 
                         if packet_is_ended(&current_payload[start..], current_payload_size,
-                            response.headers, is_fin)
+                            response.headers, http_type, is_fin)
                         {
                             let parsed_payload = parse_http_payload(
                                 current_payload.clone(),
@@ -174,13 +191,17 @@ fn packet_is_ended(
     payload: &[u8],
     current_payload_size: usize,
     headers: &mut [Header],
+    http_type: HttpPacketType,
     is_fin_set: bool,
 ) -> bool {
     let length = get_header_value(HeaderNamesValues::CONTENT_LENGTH, headers);
     let transfer_encoding = get_header_value(HeaderNamesValues::TRANSFER_ENCODING, headers);
 
-    if length.is_none() && transfer_encoding.is_none() && is_fin_set {
-        return true;
+    if length.is_none() && transfer_encoding.is_none() {
+        return match http_type {
+            HttpPacketType::Request => true,
+            HttpPacketType::Response => is_fin_set,
+        }
     }
 
     // If Content-Lenght is equal
@@ -194,7 +215,7 @@ fn packet_is_ended(
         let mut i = 0;
 
         while i < last_bytes.len() {
-            let seq = END_SEQUENCE_REV.get(i);
+            let seq = "\n\r\n\r0".as_bytes().get(i);
             let pay = last_bytes.get(i);
 
             if seq.is_none() || pay.is_none() || seq.unwrap() != *pay.unwrap() {
@@ -267,6 +288,7 @@ fn merge_chunks(payload: Vec<u8>) -> Vec<u8> {
             index += 1;
         }
 
+        println!("Length: {}", length);
         let length = usize::from_str_radix(&length, 16).unwrap();
 
         // Skip \r\n
@@ -366,4 +388,194 @@ fn decode_payload<'a>(payload: &mut Vec<u8>, encoding: &'a str) -> Result<Vec<u8
     }
 
     Ok(final_decoded)
+}
+
+// TLS ----------------------------------------------------------------------------------------------------------------
+
+fn handle_tls_packet(
+    source_ip: IpAddr,
+    source_port: u16,
+    dest_ip: IpAddr,
+    dest_port: u16,
+    packet: &[u8],
+    parsed_packet: &mut ParsedPacket,
+) {
+    ACTIVE_PARSERS.with(|parsers| {
+        let mut parsers = parsers.borrow_mut();
+        let current_payload = parsers
+            .entry(((source_ip, source_port), (dest_ip, dest_port)))
+            .and_modify(|payload| payload.append(packet.to_vec().as_mut()))
+            .or_insert(packet.to_vec());
+
+        ////////////////////////////
+        
+        loop {
+            let result = parse_tls_raw_record(current_payload);
+            match result {
+                Ok((rem, record)) => {
+
+                    match record.hdr.record_type {
+                        TlsRecordType::ApplicationData => {
+                            let result = parse_tls_encrypted(current_payload);
+                            match result {
+                                Ok((rem, record)) => {
+                                    println!(
+                                        "[]: TLS Encrypted Packet: {}:{} > {}:{}; Version: {}, Record Type: {:?}, Len: {}",
+                                        source_ip, source_port, dest_ip, dest_port, record.hdr.version, record.hdr.record_type, record.hdr.len
+                                    );
+
+                                    if rem.is_empty() {
+                                        parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
+                                        break;
+                                    } else {
+                                        let end = current_payload.len() - rem.len();
+                                        current_payload.drain(..end);
+                                        continue;
+                                    }
+                                }
+                                Err(tls_parser::nom::Err::Incomplete(needed)) => {
+                                    println!("[ERROR] Incomplete TLS: {:?}", needed);
+                                    parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
+                                    break;
+                                }
+                                Err(tls_parser::nom::Err::Error(e)) => {
+                                    println!("[ERROR] Malformed TLS: {:?}", e.code);
+                                    parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
+                                    break;
+                                }
+                                Err(tls_parser::nom::Err::Failure(_)) => {
+                                    println!("[FAILURE] Malformed TLS");
+                                    parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
+                                    break;
+                                }
+                            }
+                        },
+                        _ =>  {
+                            let result = parse_tls_record_with_header(record.data, &record.hdr);
+                            match result {
+                                Ok((_, messages)) => {
+                                    for (i, msg) in messages.iter().enumerate() {
+                                        println!(
+                                            "[{i}]: TLS Record Packet: {}:{} > {}:{}; Version: {}, Record Type: {:?}, Len: {}, Payload: {:?}",
+                                            source_ip, source_port, dest_ip, dest_port, record.hdr.version, record.hdr.record_type, record.hdr.len, msg
+                                        );
+                                    }
+                                },
+                                Err(tls_parser::nom::Err::Incomplete(_)) => {
+                                    // Needs defragmentation
+                                    break;
+                                },
+                                Err(tls_parser::nom::Err::Error(e)) => {
+                                    println!("[ERROR] Malformed TLS: {:?}", e.code);
+                                    parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
+                                    break;
+                                }
+                                Err(tls_parser::nom::Err::Failure(_)) => {
+                                    println!("[FAILURE] Malformed TLS");
+                                    parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
+                                    break;
+                                }
+                            };
+
+                            if rem.is_empty() {
+                                parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
+                                break;
+                            } else {
+                                let end = current_payload.len() - rem.len();
+                                current_payload.drain(..end);
+                            }
+                        }
+                    }
+                },
+                Err(tls_parser::nom::Err::Incomplete(_)) => {
+                    break;
+                },
+                Err(tls_parser::nom::Err::Error(e)) => {
+                    println!("[INFO - ERROR] {}:{} > {}:{}; Malformed TLS: {:?}", source_ip, source_port, dest_ip, dest_port, e.code);
+                    parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
+                    break;
+                }
+                Err(tls_parser::nom::Err::Failure(_)) => {
+                    println!("[INFO - FAILURE] Malformed TLS");
+                    parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
+                    break;
+                }
+            }
+        }
+
+       /* while !current_payload.is_empty() {
+            let result = parse_tls_plaintext(current_payload);
+            match result {
+                Ok((rem, record)) => {
+                    for (i, msg) in record.msg.iter().enumerate() {
+                        println!(
+                            "[{i}]: TLS Record Packet: {}:{} > {}:{}; Version: {}, Record Type: {:?}, Len: {}, Payload: {:?}",
+                            source_ip, source_port, dest_ip, dest_port, record.hdr.version, record.hdr.record_type, record.hdr.len, msg
+                        );
+                    }
+    
+                    if rem.is_empty() {
+                        parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
+                        break;
+                    } else {
+                        let end = current_payload.len() - rem.len();
+                        current_payload.drain(..end);
+                        continue;
+                    }
+                },
+                Err(tls_parser::nom::Err::Incomplete(_)) => {
+                    break;
+                },
+                Err(tls_parser::nom::Err::Error(e)) => {
+                    match e.code {
+                        tls_parser::nom::error::ErrorKind::Many1 => (),
+                        _ => {
+                            println!("[INFO - ERROR] Malformed TLS: {:?}", e.code);
+                            parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
+                            break;
+                        }
+                    }
+                }
+                Err(tls_parser::nom::Err::Failure(_)) => {
+                    println!("[INFO - FAILURE] Malformed TLS");
+                    parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
+                    break;
+                }
+            }
+
+            let result = parse_tls_encrypted(current_payload);
+            match result {
+                Ok((rem, record)) => {
+                    println!(
+                        "[]: TLS Encrypted Packet: {}:{} > {}:{}; Version: {}, Record Type: {:?}, Len: {}",
+                        source_ip, source_port, dest_ip, dest_port, record.hdr.version, record.hdr.record_type, record.hdr.len
+                    );
+
+                    if rem.is_empty() {
+                        parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
+                        break;
+                    } else {
+                        let end = current_payload.len() - rem.len();
+                        current_payload.drain(..end);
+                        continue;
+                    }
+                }
+                Err(tls_parser::nom::Err::Incomplete(needed)) => {
+                    println!("[ERROR] Incomplete TLS: {:?}", needed);
+                    parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
+                    break;
+                }
+                Err(tls_parser::nom::Err::Error(e)) => {
+                    println!("[ERROR] Malformed TLS: {:?}", e.code);
+                    parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
+                    break;
+                }
+                Err(tls_parser::nom::Err::Failure(_)) => {
+                    println!("[FAILURE] Malformed TLS");
+                    parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
+                    break;
+                }
+            }            
+        } */
+    });
 }

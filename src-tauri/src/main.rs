@@ -8,7 +8,7 @@ use dotenv;
 use log::{error, info};
 
 use pnet::datalink::Channel::Ethernet;
-use pnet::datalink::{self, DataLinkReceiver, NetworkInterface};
+use pnet::datalink::{self, ChannelType, Config, DataLinkReceiver, NetworkInterface};
 use pnet::packet::ethernet::EthernetPacket;
 
 use std::sync::Arc;
@@ -64,8 +64,19 @@ async fn select_interface(
 
     info!("Interface selected: {}", interface_name);
 
+    let config = Config {
+        write_buffer_size: 16384,
+        read_buffer_size: 16384,
+        read_timeout: None,
+        write_timeout: None,
+        channel_type: ChannelType::Layer2,
+        bpf_fd_attempts: 1000,
+        linux_fanout: None,
+        promiscuous: true,
+    };
+
     // Create a new channel, dealing with layer 2 packets
-    let (_, rx) = match datalink::channel(&interface, Default::default()) {
+    let (_, rx) = match datalink::channel(&interface, config) {
         Ok(Ethernet(tx, rx)) => (tx, rx),
         Ok(_) => panic!("Unhandled channel type"),
         Err(e) => panic!(
