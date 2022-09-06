@@ -36,4 +36,12 @@ export class EthernetPacket implements SerializableLinkLayerPacket {
     public payloadToHex() : string[] {
        return this.payload.reverse().map( (el:number) => el.toString(16)); // dec to hex
     }
+
+    getDestination(): string {
+        return this.destination;
+    }
+
+    getSource(): string {
+        return this.source;
+    }
 }

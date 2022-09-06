@@ -7,9 +7,9 @@ export class ArpPacket implements SerializableNetworkLayerPacket {
     proto_addr_len: number;
     operation: string;
     sender_hw_addr: string;
-    sender_proto_addr: string; // todo -> stefano change in source
+    sender_proto_addr: string;
     target_hw_addr: string;
-    target_proto_addr: string; // todo -> stefano change in destination
+    target_proto_addr: string; 
     payload: [];
     type: string;
 
@@ -55,6 +55,14 @@ export class ArpPacket implements SerializableNetworkLayerPacket {
 
     public toString(): string {
         return this.type
+    }
+
+    getDestination(): string {
+        return this.target_proto_addr;
+    }
+
+    getSource(): string {
+        return this.sender_proto_addr;
     }
 }
 
@@ -110,6 +118,14 @@ export class Ipv6Packet implements SerializableNetworkLayerPacket{
 
     public toString(): string {
         return this.type+", Src: "+this.source+", Dst: "+this.destination
+    }
+
+    getDestination(): string {
+        return this.destination;
+    }
+
+    getSource(): string {
+        return this.source;
     }
 }
 
@@ -187,5 +203,13 @@ export class Ipv4Packet implements SerializableNetworkLayerPacket {
 
     public toString(): string {
         return this.type+", Src: "+this.source+", Dst: "+this.destination
+    }
+
+    getDestination(): string {
+        return this.destination;
+    }
+
+    getSource(): string {
+        return this.source;
     }
 }
