@@ -17,3 +17,4 @@ mime_multipart = "0.6.0"
 flate2 = "1.0.24"
 encoding_rs = "0.8.31"
 tls-parser =  { version = "0.11.0", features = ["serialize"]}
+x509-parser = "0.14.0"
