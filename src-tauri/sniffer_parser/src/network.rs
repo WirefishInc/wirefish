@@ -25,7 +25,7 @@ pub fn handle_ipv4_packet(ethernet: &EthernetPacket, parsed_packet: &mut ParsedP
             parsed_packet,
         );
     } else {
-        println!("[]: Malformed IPv4 Packet");
+        debug!("Malformed IPv4 Packet");
         parsed_packet.set_network_layer_packet(Some(SerializablePacket::MalformedPacket(
             "Malformed IPv4 Packet".to_string(),
         )));
@@ -46,7 +46,7 @@ pub fn handle_ipv6_packet(ethernet: &EthernetPacket, parsed_packet: &mut ParsedP
             parsed_packet,
         );
     } else {
-        println!("[]: Malformed IPv6 Packet");
+        debug!("[]: Malformed IPv6 Packet");
         parsed_packet.set_network_layer_packet(Some(SerializablePacket::MalformedPacket(
             "Malformed IPv6 Packet".to_string(),
         )));
@@ -56,8 +56,8 @@ pub fn handle_ipv6_packet(ethernet: &EthernetPacket, parsed_packet: &mut ParsedP
 pub fn handle_arp_packet(ethernet: &EthernetPacket, parsed_packet: &mut ParsedPacket) {
     let header = ArpPacket::new(ethernet.payload());
     if let Some(header) = header {
-        println!(
-            "[]: ARP packet: {}({}) > {}({}); operation: {:?}",
+        debug!(
+            "ARP packet: {}({}) > {}({}); operation: {:?}",
             ethernet.get_source(),
             header.get_sender_proto_addr(),
             ethernet.get_destination(),
@@ -69,7 +69,7 @@ pub fn handle_arp_packet(ethernet: &EthernetPacket, parsed_packet: &mut ParsedPa
             SerializableArpPacket::from(&header),
         )));
     } else {
-        println!("[]: Malformed ARP Packet");
+        debug!("Malformed ARP Packet");
         parsed_packet.set_network_layer_packet(Some(SerializablePacket::MalformedPacket(
             "Malformed ARP Packet".to_string(),
         )));

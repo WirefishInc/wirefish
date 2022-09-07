@@ -1,5 +1,8 @@
 use std::net::IpAddr;
 
+use log::debug;
+use log::error;
+use log::warn;
 use tls_parser::{parse_tls_raw_record, TlsRecordType, parse_tls_encrypted, parse_tls_record_with_header, TlsMessage, TlsMessageHandshake};
 
 use crate::ACTIVE_TLS_PARSERS;
@@ -37,8 +40,8 @@ pub fn handle_tls_packet(
                             let result = parse_tls_encrypted(current_payload);
                             match result {
                                 Ok((rem, record)) => {
-                                    println!(
-                                        "[]: TLS Encrypted Packet: {}:{} > {}:{}; Version: {}, Record Type: {:?}, Len: {}",
+                                    debug!(
+                                        "TLS Encrypted Packet: {}:{} > {}:{}; Version: {}, Record Type: {:?}, Len: {}",
                                         source_ip, source_port, dest_ip, dest_port, record.hdr.version, record.hdr.record_type, record.hdr.len
                                     );
 
@@ -60,17 +63,17 @@ pub fn handle_tls_packet(
                                     }
                                 }
                                 Err(tls_parser::nom::Err::Incomplete(needed)) => {
-                                    println!("[ERROR] Incomplete TLS: {:?}", needed);
+                                    warn!("Incomplete TLS: {:?}", needed);
                                     parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
                                     break;
                                 }
                                 Err(tls_parser::nom::Err::Error(e)) => {
-                                    println!("[ERROR] Malformed TLS: {:?}", e.code);
+                                    warn!("Malformed TLS: {:?}", e.code);
                                     parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
                                     break;
                                 }
                                 Err(tls_parser::nom::Err::Failure(_)) => {
-                                    println!("[FAILURE] Malformed TLS");
+                                    error!("Malformed TLS");
                                     parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
                                     break;
                                 }
@@ -81,7 +84,7 @@ pub fn handle_tls_packet(
                             match result {
                                 Ok((rem, messages)) => {
                                     for (i, msg) in messages.iter().enumerate() {
-                                        println!(
+                                        debug!(
                                             "[{i}]: TLS Record Packet: {}:{} > {}:{}; Version: {}, Record Type: {:?}, Len: {}, Payload: {:?}",
                                             source_ip, source_port, dest_ip, dest_port, record.hdr.version, record.hdr.record_type, record.hdr.len, msg
                                         );
@@ -106,12 +109,12 @@ pub fn handle_tls_packet(
                                     break;
                                 },
                                 Err(tls_parser::nom::Err::Error(e)) => {
-                                    println!("[ERROR] Malformed TLS: {:?}", e.code);
+                                    warn!("[ERROR] Malformed TLS: {:?}", e.code);
                                     parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
                                     break;
                                 }
                                 Err(tls_parser::nom::Err::Failure(_)) => {
-                                    println!("[FAILURE] Malformed TLS");
+                                    error!("[FAILURE] Malformed TLS");
                                     parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
                                     break;
                                 }
@@ -123,12 +126,12 @@ pub fn handle_tls_packet(
                     break;
                 },
                 Err(tls_parser::nom::Err::Error(e)) => {
-                    println!("[INFO - ERROR] {}:{} > {}:{}; Malformed TLS: {:?}", source_ip, source_port, dest_ip, dest_port, e.code);
+                    warn!("[INFO] {}:{} > {}:{}; Malformed TLS: {:?}", source_ip, source_port, dest_ip, dest_port, e.code);
                     parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
                     break;
                 }
                 Err(tls_parser::nom::Err::Failure(_)) => {
-                    println!("[INFO - FAILURE] Malformed TLS");
+                    warn!("[INFO] Malformed TLS");
                     parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
                     break;
                 }

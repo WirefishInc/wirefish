@@ -26,8 +26,8 @@ pub fn handle_udp_packet(
     let udp = UdpPacket::new(packet);
 
     if let Some(udp) = udp {
-        println!(
-            "[]: UDP Packet: {}:{} > {}:{}; length: {}",
+        debug!(
+            "UDP Packet: {}:{} > {}:{}; length: {}",
             source,
             udp.get_source(),
             destination,
@@ -39,7 +39,7 @@ pub fn handle_udp_packet(
             SerializableUdpPacket::from(&udp),
         )));
     } else {
-        println!("[]: Malformed UDP Packet");
+        debug!("Malformed UDP Packet");
         parsed_packet.set_transport_layer_packet(Some(SerializablePacket::MalformedPacket(
             "Malformed UDP Packet".to_string(),
         )));
@@ -54,14 +54,14 @@ pub fn handle_tcp_packet(
 ) {
     let tcp = TcpPacket::new(packet);
     if let Some(tcp) = tcp {
-        /* println!(
-            "[]: TCP Packet: {}:{} > {}:{}; length: {}",
+        debug!(
+            "TCP Packet: {}:{} > {}:{}; length: {}",
             source,
             tcp.get_source(),
             destination,
             tcp.get_destination(),
             packet.len()
-        ); */
+        );
 
         parsed_packet.set_transport_layer_packet(Some(SerializablePacket::TcpPacket(
             SerializableTcpPacket::from(&tcp),
@@ -80,7 +80,7 @@ pub fn handle_tcp_packet(
             parsed_packet,
         );
     } else {
-        println!("[]: Malformed TCP Packet");
+        debug!("Malformed TCP Packet");
         parsed_packet.set_transport_layer_packet(Some(SerializablePacket::MalformedPacket(
             "Malformed TCP Packet".to_string(),
         )));
@@ -104,8 +104,8 @@ pub fn handle_transport_protocol(
             handle_icmpv6_packet(source, destination, packet, parsed_packet)
         }
         _ => {
-            println!(
-                "[]: Unknown {} packet: {} > {}; protocol: {:?} length: {}",
+            debug!(
+                "Unknown {} packet: {} > {}; protocol: {:?} length: {}",
                 match source {
                     IpAddr::V4(..) => "IPv4",
                     _ => "IPv6",
@@ -130,8 +130,8 @@ pub fn handle_icmp_packet(
         match icmp_packet.get_icmp_type() {
             IcmpTypes::EchoReply => {
                 let echo_reply_packet = echo_reply::EchoReplyPacket::new(packet).unwrap();
-                println!(
-                    "[]: ICMP echo reply {} -> {} (seq={:?}, id={:?})",
+                debug!(
+                    "ICMP echo reply {} -> {} (seq={:?}, id={:?})",
                     source,
                     destination,
                     echo_reply_packet.get_sequence_number(),
@@ -146,8 +146,8 @@ pub fn handle_icmp_packet(
             }
             IcmpTypes::EchoRequest => {
                 let echo_request_packet = echo_request::EchoRequestPacket::new(packet).unwrap();
-                println!(
-                    "[]: ICMP echo request {} -> {} (seq={:?}, id={:?})",
+                debug!(
+                    "ICMP echo request {} -> {} (seq={:?}, id={:?})",
                     source,
                     destination,
                     echo_request_packet.get_sequence_number(),
@@ -161,8 +161,8 @@ pub fn handle_icmp_packet(
                 ));
             }
             _ => {
-                println!(
-                    "[]: ICMP packet {} -> {} (code={:?}, type={:?})",
+                debug!(
+                    "ICMP packet {} -> {} (code={:?}, type={:?})",
                     source,
                     destination,
                     icmp_packet.get_icmp_code(),
@@ -175,7 +175,7 @@ pub fn handle_icmp_packet(
             }
         }
     } else {
-        println!("[]: Malformed ICMP Packet");
+        debug!("Malformed ICMP Packet");
         parsed_packet.set_transport_layer_packet(Some(SerializablePacket::MalformedPacket(
             "Malformed ICMP Packet".to_string(),
         )));
@@ -190,8 +190,8 @@ pub fn handle_icmpv6_packet(
 ) {
     let icmpv6_packet = Icmpv6Packet::new(packet);
     if let Some(icmpv6_packet) = icmpv6_packet {
-        println!(
-            "[]: ICMPv6 packet {} -> {} (type={:?})",
+        debug!(
+            "ICMPv6 packet {} -> {} (type={:?})",
             source,
             destination,
             icmpv6_packet.get_icmpv6_type()
@@ -201,7 +201,7 @@ pub fn handle_icmpv6_packet(
             SerializableIcmpv6Packet::from(&icmpv6_packet),
         )));
     } else {
-        println!("[]: Malformed ICMPv6 Packet");
+        debug!("Malformed ICMPv6 Packet");
         parsed_packet.set_transport_layer_packet(Some(SerializablePacket::MalformedPacket(
             "Malformed ICMPv6 Packet".to_string(),
         )));

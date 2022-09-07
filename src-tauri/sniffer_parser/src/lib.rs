@@ -8,6 +8,7 @@ pub use crate::transport::*;
 
 mod serializable_packet;
 
+use log::debug;
 use pnet::packet::ethernet::{EtherTypes, EthernetPacket};
 use pnet::packet::Packet;
 use pnet::util::MacAddr;
@@ -74,8 +75,8 @@ pub fn parse_ethernet_frame(ethernet: &EthernetPacket) -> ParsedPacket {
         EtherTypes::Ipv6 => handle_ipv6_packet(ethernet, &mut parsed_packet),
         EtherTypes::Arp => handle_arp_packet(ethernet, &mut parsed_packet),
         _ => {
-            println!(
-                "[]: Unknown packet: {} > {}; ethertype: {:?} length: {}",
+            debug!(
+                "Unknown packet: {} > {}; ethertype: {:?} length: {}",
                 ethernet.get_source(),
                 ethernet.get_destination(),
                 ethernet.get_ethertype(),
