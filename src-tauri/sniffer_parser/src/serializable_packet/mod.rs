@@ -6,7 +6,7 @@ use pnet::packet::Packet;
 use pnet::{packet::ethernet::EthernetPacket, util::MacAddr};
 use serde::Serialize;
 
-use self::application::{SerializableHttpRequestPacket, SerializableHttpResponsePacket};
+use self::application::{SerializableHttpRequestPacket, SerializableHttpResponsePacket, SerializableTlsPacket};
 use self::network::{SerializableArpPacket, SerializableIpv4Packet, SerializableIpv6Packet};
 use self::transport::{
     SerializableEchoReplyPacket, SerializableEchoRequestPacket, SerializableIcmpPacket,
@@ -80,6 +80,7 @@ pub enum SerializablePacket {
     UdpPacket(SerializableUdpPacket),
     HttpRequestPacket(SerializableHttpRequestPacket),
     HttpResponsePacket(SerializableHttpResponsePacket),
+    TlsPacket(SerializableTlsPacket),
 
     MalformedPacket(String),
 }
