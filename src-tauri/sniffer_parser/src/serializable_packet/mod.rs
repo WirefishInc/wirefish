@@ -1,12 +1,14 @@
+pub mod application;
 pub mod network;
 pub mod transport;
-pub mod application;
 
 use pnet::packet::Packet;
 use pnet::{packet::ethernet::EthernetPacket, util::MacAddr};
 use serde::Serialize;
 
-use self::application::{SerializableHttpRequestPacket, SerializableHttpResponsePacket, SerializableTlsPacket};
+use self::application::{
+    SerializableHttpRequestPacket, SerializableHttpResponsePacket, SerializableTlsPacket,
+};
 use self::network::{SerializableArpPacket, SerializableIpv4Packet, SerializableIpv6Packet};
 use self::transport::{
     SerializableEchoReplyPacket, SerializableEchoRequestPacket, SerializableIcmpPacket,
@@ -56,11 +58,17 @@ impl ParsedPacket {
         self.network_layer_packet = network_layer_packet;
     }
 
-    pub fn set_transport_layer_packet(&mut self, transport_layer_packet: Option<SerializablePacket>) {
+    pub fn set_transport_layer_packet(
+        &mut self,
+        transport_layer_packet: Option<SerializablePacket>,
+    ) {
         self.transport_layer_packet = transport_layer_packet;
     }
 
-    pub fn set_application_layer_packet(&mut self, application_layer_packet: Option<SerializablePacket>) {
+    pub fn set_application_layer_packet(
+        &mut self,
+        application_layer_packet: Option<SerializablePacket>,
+    ) {
         self.application_layer_packet = application_layer_packet;
     }
 }
