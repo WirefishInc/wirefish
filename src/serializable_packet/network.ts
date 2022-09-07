@@ -9,7 +9,7 @@ export class ArpPacket implements SerializableNetworkLayerPacket {
     sender_hw_addr: string;
     sender_proto_addr: string;
     target_hw_addr: string;
-    target_proto_addr: string; 
+    target_proto_addr: string;
     payload: [];
     type: string;
 

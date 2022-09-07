@@ -1,8 +1,8 @@
 import {ThemeProvider, createTheme} from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import {useState, useEffect, FC} from 'react';
+import {useState, useEffect} from 'react';
 import {
-    Accordion, AccordionDetails, AccordionSummary, Alert, Divider, Fab, FormControl, Grid, List, ListItem, Snackbar
+    Accordion, AccordionDetails, AccordionSummary, Alert, Fab, FormControl, Grid, List, Snackbar
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {PlayArrow, Stop, Pause, RestartAlt} from '@mui/icons-material';
@@ -16,6 +16,8 @@ import ReportFolderInput from "./components/ReportFolderInput";
 import ReportNameInput from "./components/ReportNameInput";
 import ToggleButton from "./components/ToggleButton";
 import {SniffingStatus, GeneralPacket} from "./types/sniffing";
+import Fields from "./components/Fields";
+import HewViewer from "./components/HexViewer";
 
 const darkTheme = createTheme({
     palette: {
@@ -24,7 +26,7 @@ const darkTheme = createTheme({
 });
 
 const columns: GridColDef[] = [
-    {field: 'id', headerName: '#', width: 10},
+    {field: 'id', headerName: '#', width: 70},
     {field: 'type', headerName: 'Type', width: 140, valueGetter: p => p.row.type},
     {field: 'sourceMAC', headerName: 'Source MAC', width: 140, valueGetter: p => p.row.sourceMAC},
     {
@@ -45,8 +47,8 @@ const columns: GridColDef[] = [
         width: 120,
         valueGetter: p => p.row.destinationIP
     },
-    {field: 'length', headerName: 'Lenght', width: 100, valueGetter: p => p.row.packet.length},
-    {field: 'info', headerName: 'Info', width: 200, valueGetter: p => p.row.info},
+    {field: 'length', headerName: 'Lenght', width: 100, valueGetter: p => p.row.length},
+    {field: 'info', headerName: 'Info', width: 600, valueGetter: p => p.row.info},
 ];
 
 function App() {
@@ -122,77 +124,6 @@ function App() {
     const pauseResumeSniffing = async () => {
         if (sniffingStatus === SniffingStatus.Paused) await resumeSniffing();
         else if (sniffingStatus === SniffingStatus.Active) await pauseSniffing();
-    }
-
-    interface FieldProps {
-        packetInfo: [];
-    }
-
-    const Fields: FC<FieldProps> = ({packetInfo}) => {
-        let fields = [];
-
-        for (const el of packetInfo) {
-            fields.push(
-                <>
-                    <ListItem key={fields.length}><> {Object.keys(el)[0]} : {Object.values(el)[0]} </>
-                    </ListItem>
-                    <Divider/>
-                </>
-            )
-        }
-
-        return (
-            <>{fields}</>
-        );
-    };
-
-    interface HewViewerProps {
-        payload: string[];
-    }
-
-    const HewViewer: FC<HewViewerProps> = ({payload}) => {
-        let clone = Array.from(payload)
-        let rows = [];
-
-        while (clone.length) {
-            rows.push(clone.splice(0, 16))
-        }
-
-        return (
-            <table>
-                <tbody>
-                {rows.map((r, i) =>
-                    <tr>
-                        {<td className={"index"}>{"0x" + (i * 16).toString(16).toUpperCase()}</td>}
-                        {
-                            r.map((el, j) =>
-                                <td id={(i * 16 + j).toString()}
-                                    onMouseOver={(ev) => {
-                                        // @ts-ignore
-                                        setOver(ev.target.id.toString())
-                                    }}
-                                    onMouseLeave={(ev) => {
-                                        setOver("")
-                                    }}
-                                    className={over === (i * 16 + j).toString() ? "hex active" : "hex"}>{el}</td>
-                            )}
-                    </tr>
-                )}
-                </tbody>
-            </table>
-        )
-    }
-
-    function hex_to_ascii(byte: number) {
-        let char = "";
-
-        if (byte > 31 && byte < 127) {
-            char = String.fromCharCode(byte);
-        } else {
-            char = "·";
-        }
-
-        return char;
     }
 
     return (
@@ -314,32 +245,18 @@ function App() {
                         </>
                 }
 
-                {/* Payload (hex viewer)
-                TODO : fix bug table not responsive
-                TODO: refactor components in other file
-                */}
+                {/* Payload (hex viewer) */}
 
                 {!selectedPacket ? null :
-                    <Grid className={"payload"} container xs={12} item={true}>
-                        <Grid xs={6}>
-                            {selectedPacket?.packet.link_layer_packet ?
-                                <HewViewer
-                                    payload={selectedPacket.packet.link_layer_packet.payloadToHex().map((el) => el.toUpperCase())}/> : null
-                            }
-                        </Grid>
-                        <Grid xs={6}>
-                            {selectedPacket?.packet.link_layer_packet ?
-                                <HewViewer
-                                    payload={selectedPacket?.packet.link_layer_packet?.getPayload().map((el) => hex_to_ascii(el))}/> : null
-                            }
-                        </Grid>
-                    </Grid>
-                }
+                    <HewViewer
+                        over={over}
+                        setOver={setOver}
+                        payload={!selectedPacket.packet.link_layer_packet ? [] : selectedPacket.packet.link_layer_packet.getPayload()}/>}
 
             </Grid>
         </ThemeProvider>
-    )
-        ;
+    );
+
 }
 
 export default App;

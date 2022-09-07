@@ -1,5 +1,8 @@
 import {SerializableTransportLayerPacket} from "../types/sniffing";
 
+/* rev */
+const TCPflags = ["FIN", "SYN", "RST", "PSH", "ACK", "URG", "ECN", "CWR", "Nonce", "Reserved"]
+
 export class TcpPacket implements SerializableTransportLayerPacket {
     source: number;
     destination: number;
@@ -44,27 +47,50 @@ export class TcpPacket implements SerializableTransportLayerPacket {
         this.type = "Transmission Control Protocol"
     }
 
+    getType(): string {
+        return "TCP";
+    }
+
+    getInfo(): string {
+        return this.source + " -> " + this.destination + " " + this.getFlags(this.flags) + " " +
+            "Seq=" + this.sequence + " Ack=" + this.acknowledgement + " " +
+            "Win=" + this.window + " Len=" + this.payload.length;
+    }
+
+    getFlags(flags: number): string {
+        let f = flags.toString(2);
+
+        let res = "[";
+
+        for (let i = f.length - 1; i >= 0; i--) {
+            if (f[i] === "1")
+                res += TCPflags[i] + ",";
+        }
+
+        return res.slice(0, -1) + "]";
+    }
+
     public toDisplay() {
         let packet_info = [];
 
-        packet_info.push( {"Destination Port" : this.destination});
-        packet_info.push( {"Source Port" : this.source});
-        packet_info.push( {"Sequence" : this.sequence});
-        packet_info.push( {"Acknowledgment (ACK)" : this.acknowledgement}); 
-        packet_info.push( {"Data Offset" : this.data_offset}); 
-        packet_info.push( {"Reserved" : this.reserved}); 
-        packet_info.push( {"Flags" : this.flags}); 
-        packet_info.push( {"Windows" : this.window}); ;
-        packet_info.push( {"Checksum" : this.checksum}); 
-        packet_info.push( {"Urgent Pointer" : this.urgent_ptr}); 
-        packet_info.push( {"Options MAC" : this.options});
+        packet_info.push({"Destination Port": this.destination});
+        packet_info.push({"Source Port": this.source});
+        packet_info.push({"Sequence": this.sequence});
+        packet_info.push({"Acknowledgment (ACK)": this.acknowledgement});
+        packet_info.push({"Data Offset": this.data_offset});
+        packet_info.push({"Reserved": this.reserved});
+        packet_info.push({"Flags": this.flags});
+        packet_info.push({"Windows": this.window});
+        packet_info.push({"Checksum": this.checksum});
+        packet_info.push({"Urgent Pointer": this.urgent_ptr});
+        packet_info.push({"Options MAC": this.options});
 
         return packet_info;
     }
 
     public toString(): string {
-        return this.type+", Src Port: "+this.source+", Dst Port: "+this.destination+", Seq: "+this.sequence+
-            ", Ack: "+this.acknowledgement
+        return this.type + ", Src Port: " + this.source + ", Dst Port: " + this.destination + ", Seq: " + this.sequence +
+            ", Ack: " + this.acknowledgement
     }
 }
 
@@ -88,24 +114,33 @@ export class UdpPacket implements SerializableTransportLayerPacket {
         this.length = length;
         this.checksum = checksum;
         this.payload = payload;
-        this.type ="User Datagram Protocol"
+        this.type = "User Datagram Protocol"
     }
 
     public toDisplay() {
         let packet_info = [];
-        
-        packet_info.push( {"Source" : this.source});
-        packet_info.push( {"Destination" : this.destination});
-        packet_info.push( {"Length" : this.length});
-        packet_info.push( {"Checksum" : this.checksum});
-        
+
+        packet_info.push({"Source": this.source});
+        packet_info.push({"Destination": this.destination});
+        packet_info.push({"Length": this.length});
+        packet_info.push({"Checksum": this.checksum});
+
         return packet_info;
     }
 
     public toString(): string {
-        return this.type+", Src Port: "+this.source+", Dst Port: "+this.destination
+        return this.type + ", Src Port: " + this.source + ", Dst Port: " + this.destination
+    }
+
+    getInfo(): string {
+        return this.source + " -> " + this.destination + " Len=" + this.payload.length;
+    }
+
+    getType(): string {
+        return "UDP";
     }
 }
+
 
 export class Icmpv6Packet implements SerializableTransportLayerPacket {
     icmpv6_type: number;
@@ -130,15 +165,23 @@ export class Icmpv6Packet implements SerializableTransportLayerPacket {
     public toDisplay() {
         let packet_info = [];
 
-        packet_info.push( {"ICMP v6 Type" : this.icmpv6_type});
-        packet_info.push( {"ICMP v6 Code" : this.icmpv6_code});
-        packet_info.push( {"Checksum" : this.checksum});
-        
+        packet_info.push({"ICMP v6 Type": this.icmpv6_type});
+        packet_info.push({"ICMP v6 Code": this.icmpv6_code});
+        packet_info.push({"Checksum": this.checksum});
+
         return packet_info;
     }
 
     public toString(): string {
         return this.type
+    }
+
+    getInfo(): string {
+        return ""; // TODO
+    }
+
+    getType(): string {
+        return "ICMPv6";
     }
 }
 
@@ -164,16 +207,24 @@ export class IcmpPacket implements SerializableTransportLayerPacket {
 
     public toDisplay() {
         let packet_info = [];
-        
-        packet_info.push( {"ICMP Type" : this.icmp_type});
-        packet_info.push( {"ICMP Code" : this.icmp_code});
-        packet_info.push( {"Checksum" : this.checksum});
+
+        packet_info.push({"ICMP Type": this.icmp_type});
+        packet_info.push({"ICMP Code": this.icmp_code});
+        packet_info.push({"Checksum": this.checksum});
 
         return packet_info;
     }
 
     public toString(): string {
         return this.type
+    }
+
+    getInfo(): string {
+        return ""; // TODO
+    }
+
+    getType(): string {
+        return "ICMP";
     }
 }
 
@@ -205,18 +256,26 @@ export class EchoReply implements SerializableTransportLayerPacket {
 
     public toDisplay() {
         let packet_info = [];
-        
-        packet_info.push( {"ICMP Type" : this.icmp_type});
-        packet_info.push( {"ICMP Code" : this.icmp_code});
-        packet_info.push( {"Checksum" : this.checksum});
-        packet_info.push( {"Identifier" : this.identifier});
-        packet_info.push( {"Sequence Number" : this.sequence_number});
-        
+
+        packet_info.push({"ICMP Type": this.icmp_type});
+        packet_info.push({"ICMP Code": this.icmp_code});
+        packet_info.push({"Checksum": this.checksum});
+        packet_info.push({"Identifier": this.identifier});
+        packet_info.push({"Sequence Number": this.sequence_number});
+
         return packet_info;
     }
 
     public toString(): string {
         return this.type
+    }
+
+    getInfo(): string {
+        return ""; // TODO
+    }
+
+    getType(): string {
+        return ""; // TODO
     }
 }
 
@@ -248,18 +307,26 @@ export class EchoRequest implements SerializableTransportLayerPacket {
 
     public toDisplay() {
         let packet_info = [];
-        
-        packet_info.push( {"ICMP Type" : this.icmp_type});
-        packet_info.push( {"ICMP Code" : this.icmp_code});
-        packet_info.push( {"Checksum" : this.checksum});
-        packet_info.push( {"Identifier" : this.identifier});
-        packet_info.push( {"Sequence Number" : this.sequence_number});
-        
+
+        packet_info.push({"ICMP Type": this.icmp_type});
+        packet_info.push({"ICMP Code": this.icmp_code});
+        packet_info.push({"Checksum": this.checksum});
+        packet_info.push({"Identifier": this.identifier});
+        packet_info.push({"Sequence Number": this.sequence_number});
+
         return packet_info;
     }
 
     public toString(): string {
         return this.type
+    }
+
+    getInfo(): string {
+        return ""; // TODO
+    }
+
+    getType(): string {
+        return ""; // TODO
     }
 }
 

@@ -11,6 +11,8 @@ export enum SniffingStatus {
 export interface SerializableTransportLayerPacket {
     toDisplay(): any;
     toString(): string;
+    getType(): string;
+    getInfo(): string;
 }
 
 export interface SerializableNetworkLayerPacket {
@@ -24,7 +26,6 @@ export interface SerializableLinkLayerPacket {
     toDisplay(): any;
     toString(): string;
     getPayload(): number[];
-    payloadToHex() : string[];
     getSource(): string;
     getDestination(): string;
 }
@@ -51,8 +52,8 @@ export class GeneralPacket {
         network_layer = make_network_level_packet(packet.networkLayerPacket);
         transport_layer = make_transport_level_packet(packet.transportLayerPacket);
 
-        this.type = "type"; // todo
-        this.info = "info"; // todo
+        this.type = transport_layer ? transport_layer.getType() : ""; // todo last when add application layer
+        this.info = transport_layer ? transport_layer.getInfo() : ""; // todo last when add application layer
         this.sourceMAC = link_layer ? link_layer.getSource() : "";
         this.destinationMAC = link_layer ? link_layer.getDestination() : "";
         this.sourceIP = network_layer ? network_layer.getSource() : "";
