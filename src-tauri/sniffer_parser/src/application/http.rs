@@ -3,6 +3,7 @@ use std::{io::Read, net::IpAddr};
 use encoding_rs::Encoding;
 use flate2::bufread::{DeflateDecoder, GzDecoder, ZlibDecoder};
 use httparse::Header;
+use log::{debug};
 use mime::Mime;
 
 use crate::{
@@ -55,8 +56,8 @@ pub fn handle_http_packet(
                                 request.headers,
                             );
 
-                            println!(
-                                "[]: HTTP Request Packet: {:?} {:?} {:?}; Headers: {:?}; Payload: {:?}",
+                            debug!(
+                                "HTTP Request Packet: {:?} {:?} {:?}; Headers: {:?}; Payload: {:?}",
                                 request.method, request.path, request.version, request.headers, parsed_payload
                             );
 
@@ -90,8 +91,8 @@ pub fn handle_http_packet(
                                 response.headers,
                             );
 
-                            println!(
-                                "[]: HTTP Response Packet: {:?} {:?} {:?}; Headers: {:?}; Payload: {:?}",
+                            debug!(
+                                "HTTP Response Packet: {:?} {:?} {:?}; Headers: {:?}; Payload: {:?}",
                                 response.version, response.code, response.reason, response.headers, parsed_payload
                             );
 
@@ -217,7 +218,6 @@ fn merge_chunks(payload: Vec<u8>) -> Vec<u8> {
             index += 1;
         }
 
-        println!("Length: {}", length);
         let length = usize::from_str_radix(&length, 16).unwrap();
 
         // Skip \r\n

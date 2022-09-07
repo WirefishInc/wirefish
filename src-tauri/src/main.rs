@@ -5,7 +5,9 @@ extern crate sudo;
 mod report;
 
 use dotenv;
+use env_logger::Builder;
 use log::{error, info};
+use std::io::Write;
 
 use pnet::datalink::Channel::Ethernet;
 use pnet::datalink::{self, ChannelType, Config, DataLinkReceiver, NetworkInterface};
@@ -140,7 +142,7 @@ async fn start_sniffing(
                 }
             }
 
-            drop(sniffing_state);
+            // drop(sniffing_state);
         }
     });
 
@@ -161,8 +163,18 @@ async fn stop_sniffing(state: tauri::State<'_, SniffingInfoState>) -> Result<(),
 
 fn main() {
     dotenv::dotenv().ok();
-    env_logger::init();
-    sudo::escalate_if_needed();
+    if !cfg!(target_os = "windows") {
+        sudo::escalate_if_needed();
+    }
+
+    // env_logger::init();
+
+    let mut builder = Builder::from_default_env();
+    builder
+        .format(|buf, r| {
+            writeln!(buf, "[{}] {}", buf.default_styled_level(r.level()), r.args())
+        })
+        .init();
 
     let awesome_rpc = AwesomeRpc::new(vec!["tauri://localhost", "http://localhost:*"]);
 

@@ -1,7 +1,7 @@
 use pnet::packet::icmp::echo_reply::EchoReplyPacket;
 use pnet::packet::icmp::echo_request::EchoRequestPacket;
-use pnet::packet::icmp::IcmpPacket;
-use pnet::packet::icmpv6::Icmpv6Packet;
+use pnet::packet::icmp::{IcmpPacket, IcmpTypes};
+use pnet::packet::icmpv6::{Icmpv6Packet, Icmpv6Types};
 use pnet::packet::tcp::TcpPacket;
 use pnet::packet::udp::UdpPacket;
 use pnet::packet::Packet;
@@ -67,11 +67,11 @@ impl<'a> From<&UdpPacket<'a>> for SerializableUdpPacket {
     }
 }
 
-/// UDP Packet Representation
+/// ICMPv6 Packet Representation
 
 #[derive(Serialize, Debug)]
 pub struct SerializableIcmpv6Packet {
-    pub icmpv6_type: u8,
+    pub icmpv6_type: String,
     pub icmpv6_code: u8,
     pub checksum: u16,
     pub payload: Vec<u8>,
@@ -80,7 +80,23 @@ pub struct SerializableIcmpv6Packet {
 impl<'a> From<&Icmpv6Packet<'a>> for SerializableIcmpv6Packet {
     fn from(packet: &Icmpv6Packet<'a>) -> Self {
         SerializableIcmpv6Packet {
-            icmpv6_type: packet.get_icmpv6_type().0,
+            icmpv6_type: {
+                let icmp_type = packet.get_icmpv6_type();
+                match icmp_type {
+                    Icmpv6Types::DestinationUnreachable => format!("DestinationUnreachable ({})", icmp_type.0),
+                    Icmpv6Types::PacketTooBig => format!("PacketTooBig ({})", icmp_type.0),
+                    Icmpv6Types::TimeExceeded => format!("TimeExceeded ({})", icmp_type.0),
+                    Icmpv6Types::ParameterProblem => format!("ParameterProblem ({})", icmp_type.0),
+                    Icmpv6Types::EchoRequest => format!("EchoRequest ({})", icmp_type.0),
+                    Icmpv6Types::EchoReply => format!("EchoReply ({})", icmp_type.0),
+                    Icmpv6Types::RouterSolicit => format!("RouterSolicit ({})", icmp_type.0),
+                    Icmpv6Types::RouterAdvert => format!("RouterAdvert ({})", icmp_type.0),
+                    Icmpv6Types::NeighborSolicit => format!("NeighborSolicit ({})", icmp_type.0),
+                    Icmpv6Types::NeighborAdvert => format!("NeighborAdvert ({})", icmp_type.0),
+                    Icmpv6Types::Redirect => format!("Redirect ({})", icmp_type.0),
+                    _ => format!("Unknown ({})", icmp_type.0),
+                }
+            },
             icmpv6_code: packet.get_icmpv6_code().0,
             checksum: packet.get_checksum(),
             payload: packet.payload().to_vec(),
@@ -92,7 +108,7 @@ impl<'a> From<&Icmpv6Packet<'a>> for SerializableIcmpv6Packet {
 
 #[derive(Serialize, Debug)]
 pub struct SerializableIcmpPacket {
-    pub icmp_type: u8,
+    pub icmp_type: String,
     pub icmp_code: u8,
     pub checksum: u16,
     pub payload: Vec<u8>,
@@ -101,7 +117,28 @@ pub struct SerializableIcmpPacket {
 impl<'a> From<&IcmpPacket<'a>> for SerializableIcmpPacket {
     fn from(packet: &IcmpPacket<'a>) -> Self {
         SerializableIcmpPacket {
-            icmp_type: packet.get_icmp_type().0,
+            icmp_type: {
+                let icmp_type = packet.get_icmp_type();
+                match icmp_type {
+                    IcmpTypes::EchoReply => format!("EchoReply ({})", icmp_type.0),
+                    IcmpTypes::DestinationUnreachable => format!("DestinationUnreachable ({})", icmp_type.0),
+                    IcmpTypes::SourceQuench => format!("SourceQuench ({})", icmp_type.0),
+                    IcmpTypes::RedirectMessage => format!("RedirectMessage ({})", icmp_type.0),
+                    IcmpTypes::EchoRequest => format!("EchoRequest ({})", icmp_type.0),
+                    IcmpTypes::RouterAdvertisement => format!("RouterAdvertisement ({})", icmp_type.0),
+                    IcmpTypes::RouterSolicitation => format!("RouterSolicitation ({})", icmp_type.0),
+                    IcmpTypes::TimeExceeded => format!("TimeExceeded ({})", icmp_type.0),
+                    IcmpTypes::ParameterProblem => format!("ParameterProblem ({})", icmp_type.0),
+                    IcmpTypes::Timestamp => format!("Timestamp ({})", icmp_type.0),
+                    IcmpTypes::TimestampReply => format!("TimestampReply ({})", icmp_type.0),
+                    IcmpTypes::InformationRequest => format!("InformationRequest ({})", icmp_type.0),
+                    IcmpTypes::InformationReply => format!("InformationReply ({})", icmp_type.0),
+                    IcmpTypes::AddressMaskRequest => format!("AddressMaskRequest ({})", icmp_type.0),
+                    IcmpTypes::AddressMaskReply => format!("AddressMaskReply ({})", icmp_type.0),
+                    IcmpTypes::Traceroute => format!("Traceroute ({})", icmp_type.0),
+                    _ => format!("Unknown ({})", icmp_type.0),
+                }
+            },
             icmp_code: packet.get_icmp_code().0,
             checksum: packet.get_checksum(),
             payload: packet.payload().to_vec(),
