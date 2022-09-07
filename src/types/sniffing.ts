@@ -1,6 +1,7 @@
 import {EchoReply, EchoRequest, IcmpPacket, Icmpv6Packet, TcpPacket, UdpPacket} from "../serializable_packet/transport";
 import {EthernetPacket} from "../serializable_packet/link";
 import {ArpPacket, Ipv4Packet, Ipv6Packet} from "../serializable_packet/network";
+import {HttpRequestPacket, HttpResponsePacket, TlsPacket} from "../serializable_packet/application";
 
 export enum SniffingStatus {
     Inactive,
@@ -10,24 +11,48 @@ export enum SniffingStatus {
 
 export interface SerializableTransportLayerPacket {
     toDisplay(): any;
+
     toString(): string;
+
     getType(): string;
+
     getInfo(): string;
 }
 
 export interface SerializableNetworkLayerPacket {
     toDisplay(): any;
+
     toString(): string;
+
     getSource(): string;
+
     getDestination(): string;
+
+    getType(): string;
+
+    getInfo(): string;
 }
 
 export interface SerializableLinkLayerPacket {
     toDisplay(): any;
+
     toString(): string;
+
     getPayload(): number[];
+
     getSource(): string;
+
     getDestination(): string;
+}
+
+export interface SerializableApplicationLayerPacket {
+    toDisplay(): any;
+
+    toString(): string;
+
+    getType(): string;
+
+    getInfo(): string;
 }
 
 export class GeneralPacket {
@@ -47,20 +72,36 @@ export class GeneralPacket {
         let link_layer: SerializableLinkLayerPacket | null = null;
         let network_layer: SerializableNetworkLayerPacket | null = null;
         let transport_layer: SerializableTransportLayerPacket | null = null;
+        let application_layer: SerializableApplicationLayerPacket | null = null;
 
         link_layer = make_link_level_packet(packet.linkLayerPacket);
         network_layer = make_network_level_packet(packet.networkLayerPacket);
         transport_layer = make_transport_level_packet(packet.transportLayerPacket);
+        application_layer = make_application_level(packet.applicationLayerPacket);
 
-        this.type = transport_layer ? transport_layer.getType() : ""; // todo last when add application layer
-        this.info = transport_layer ? transport_layer.getInfo() : ""; // todo last when add application layer
+        if (application_layer) {
+            this.type = application_layer.getType();
+            this.info = application_layer.getInfo();
+
+        } else if (transport_layer) {
+            this.type = transport_layer.getType();
+            this.info = transport_layer.getInfo();
+
+        } else {
+            this.type = network_layer ? network_layer.getType() : "";
+            this.info = network_layer ? network_layer.getInfo() : "";
+        }
+
         this.sourceMAC = link_layer ? link_layer.getSource() : "";
         this.destinationMAC = link_layer ? link_layer.getDestination() : "";
         this.sourceIP = network_layer ? network_layer.getSource() : "";
         this.destinationIP = network_layer ? network_layer.getDestination() : "";
         this.length = link_layer ? link_layer.getPayload().length : 0;
-        this.packet = new Packet(link_layer, network_layer, transport_layer);
+
+        this.packet = new Packet(link_layer, network_layer, transport_layer, application_layer);
     }
+
+    // todo: remove "?" adding malformed packet
 
 }
 
@@ -70,15 +111,18 @@ export class Packet {
     link_layer_packet: SerializableLinkLayerPacket | null;
     network_layer_packet: SerializableNetworkLayerPacket | null;
     transport_layer_packet: SerializableTransportLayerPacket | null;
+    application_layer_packet: SerializableTransportLayerPacket | null;
 
     constructor(
         link_layer_packet: SerializableLinkLayerPacket | null,
         network_layer_packet: SerializableNetworkLayerPacket | null,
-        transport_layer_packet: SerializableTransportLayerPacket | null
+        transport_layer_packet: SerializableTransportLayerPacket | null,
+        application_layer_packet: SerializableTransportLayerPacket | null
     ) {
         this.link_layer_packet = link_layer_packet;
         this.network_layer_packet = network_layer_packet;
         this.transport_layer_packet = transport_layer_packet;
+        this.application_layer_packet = application_layer_packet;
     }
 }
 
@@ -240,4 +284,45 @@ const make_network_level_packet = (network: any) => {
     }
 
     return network_layer;
+}
+
+const make_application_level = (application: any) => {
+    if (!application) return null;
+    let application_layer: SerializableApplicationLayerPacket | null = null;
+
+    switch (application.type) {
+        case "TlsPacket":
+            application_layer = new TlsPacket(
+                application.packet.version,
+                application.packet.messages,
+                application.packet.length
+            )
+            break;
+
+        case "HttpRequestPacket":
+            console.log("aaaaa")
+            application_layer = new HttpRequestPacket(
+                application.packet.method,
+                application.packet.path,
+                application.packet.version,
+                application.packet.headers,
+                application.packet.payload
+            )
+            break;
+
+        case "HttpResponsePacket":
+            application_layer = new HttpResponsePacket(
+                application.packet.version,
+                application.packet.code,
+                application.packet.reason,
+                application.packet.headers,
+                application.packet.payload
+            )
+            break;
+
+        default:
+            console.log("Malformed packet") // TODO
+    }
+
+    return application_layer;
 }

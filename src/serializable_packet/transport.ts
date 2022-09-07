@@ -143,14 +143,14 @@ export class UdpPacket implements SerializableTransportLayerPacket {
 
 
 export class Icmpv6Packet implements SerializableTransportLayerPacket {
-    icmpv6_type: number;
+    icmpv6_type: string;
     icmpv6_code: number;
     checksum: number;
     payload: [];
     type: string;
 
     constructor(
-        icmpv6_type: number,
+        icmpv6_type: string,
         icmpv6_code: number,
         checksum: number,
         payload: []
@@ -177,7 +177,7 @@ export class Icmpv6Packet implements SerializableTransportLayerPacket {
     }
 
     getInfo(): string {
-        return ""; // TODO
+        return this.icmpv6_type
     }
 
     getType(): string {
@@ -186,14 +186,14 @@ export class Icmpv6Packet implements SerializableTransportLayerPacket {
 }
 
 export class IcmpPacket implements SerializableTransportLayerPacket {
-    icmp_type: number;
+    icmp_type: string;
     icmp_code: number;
     checksum: number;
     payload: [];
     type: string;
 
     constructor(
-        icmp_type: number,
+        icmp_type: string,
         icmp_code: number,
         checksum: number,
         payload: []
@@ -220,7 +220,7 @@ export class IcmpPacket implements SerializableTransportLayerPacket {
     }
 
     getInfo(): string {
-        return ""; // TODO
+        return this.icmp_type
     }
 
     getType(): string {
@@ -229,7 +229,7 @@ export class IcmpPacket implements SerializableTransportLayerPacket {
 }
 
 export class EchoReply implements SerializableTransportLayerPacket {
-    icmp_type: number;
+    icmp_type: string;
     icmp_code: number;
     checksum: number;
     identifier: number;
@@ -238,7 +238,7 @@ export class EchoReply implements SerializableTransportLayerPacket {
     type: string;
 
     constructor(
-        icmp_type: number,
+        icmp_type: string,
         icmp_code: number,
         checksum: number,
         identifier: number,
@@ -271,16 +271,16 @@ export class EchoReply implements SerializableTransportLayerPacket {
     }
 
     getInfo(): string {
-        return ""; // TODO
+        return this.icmp_type
     }
 
     getType(): string {
-        return ""; // TODO
+        return "Echo Reply";
     }
 }
 
 export class EchoRequest implements SerializableTransportLayerPacket {
-    icmp_type: number;
+    icmp_type: string;
     icmp_code: number;
     checksum: number;
     identifier: number;
@@ -289,7 +289,7 @@ export class EchoRequest implements SerializableTransportLayerPacket {
     type: string;
 
     constructor(
-        icmp_type: number,
+        icmp_type: string,
         icmp_code: number,
         checksum: number,
         identifier: number,
@@ -322,11 +322,11 @@ export class EchoRequest implements SerializableTransportLayerPacket {
     }
 
     getInfo(): string {
-        return ""; // TODO
+        return "Echo Request";
     }
 
     getType(): string {
-        return ""; // TODO
+        return this.icmp_type
     }
 }
 

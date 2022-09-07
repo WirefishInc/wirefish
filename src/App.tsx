@@ -25,6 +25,7 @@ const darkTheme = createTheme({
     },
 });
 
+// todo fix col dimension
 const columns: GridColDef[] = [
     {field: 'id', headerName: '#', width: 70},
     {field: 'type', headerName: 'Type', width: 140, valueGetter: p => p.row.type},
@@ -237,6 +238,19 @@ function App() {
                                             <List component="nav" aria-label="mailbox folders">
                                                 <Fields
                                                     packetInfo={selectedPacket.packet.transport_layer_packet.toDisplay()}/>
+                                            </List>
+                                        </AccordionDetails>
+                                    </Accordion>
+                                }
+                                {!selectedPacket.packet.application_layer_packet ? null :
+                                    <Accordion>
+                                        <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
+                                            {selectedPacket.packet.application_layer_packet?.toString()}
+                                        </AccordionSummary>
+                                        <AccordionDetails>
+                                            <List component="nav" aria-label="mailbox folders">
+                                                <Fields
+                                                    packetInfo={selectedPacket.packet.application_layer_packet.toDisplay()}/>
                                             </List>
                                         </AccordionDetails>
                                     </Accordion>
