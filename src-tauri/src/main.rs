@@ -164,7 +164,7 @@ async fn stop_sniffing(state: tauri::State<'_, SniffingInfoState>) -> Result<(),
 fn main() {
     dotenv::dotenv().ok();
     if !cfg!(target_os = "windows") {
-        sudo::escalate_if_needed();
+        // sudo::escalate_if_needed();
     }
 
     // env_logger::init();

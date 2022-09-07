@@ -223,6 +223,9 @@ mod tests {
     use pnet::packet::udp::UdpPacket;
     use pnet::packet::Packet;
 
+    use crate::serializable_packet::transport::icmp_type_to_string;
+    use crate::serializable_packet::transport::icmpv6_type_to_string;
+
     use super::*;
 
     #[test]
@@ -388,7 +391,7 @@ mod tests {
         if let SerializablePacket::IcmpPacket(new_icmp_packet) =
             parsed_packet.get_transport_layer_packet().unwrap()
         {
-            assert_eq!(new_icmp_packet.icmp_type, icmp_packet.get_icmp_type().0);
+            assert_eq!(new_icmp_packet.icmp_type, icmp_type_to_string(icmp_packet.get_icmp_type()));
             assert_eq!(new_icmp_packet.icmp_code, icmp_packet.get_icmp_code().0);
             assert_eq!(new_icmp_packet.checksum, icmp_packet.get_checksum());
             assert_eq!(new_icmp_packet.payload, icmp_packet.payload().to_vec());
@@ -413,7 +416,7 @@ mod tests {
         {
             assert_eq!(
                 new_icmpv6_packet.icmpv6_type,
-                icmpv6_packet.get_icmpv6_type().0
+                icmpv6_type_to_string(icmpv6_packet.get_icmpv6_type())
             );
             assert_eq!(
                 new_icmpv6_packet.icmpv6_code,

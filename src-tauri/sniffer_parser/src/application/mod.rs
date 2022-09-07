@@ -8,9 +8,9 @@ pub mod http;
 pub mod tls;
 
 thread_local!(
-    pub static ACTIVE_HTTP_PARSERS: RefCell<HashMap<((IpAddr, u16), (IpAddr, u16)), Vec<u8>>> =
+    pub(crate) static ACTIVE_HTTP_PARSERS: RefCell<HashMap<((IpAddr, u16), (IpAddr, u16)), Vec<u8>>> =
         RefCell::new(HashMap::new());
-    pub static ACTIVE_TLS_PARSERS: RefCell<HashMap<((IpAddr, u16), (IpAddr, u16)), Vec<u8>>> =
+    pub(crate) static ACTIVE_TLS_PARSERS: RefCell<HashMap<((IpAddr, u16), (IpAddr, u16)), Vec<u8>>> =
         RefCell::new(HashMap::new());
 );
 
