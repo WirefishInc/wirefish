@@ -2,22 +2,26 @@ use std::{cell::RefCell, collections::HashMap, net::IpAddr};
 
 use crate::serializable_packet::ParsedPacket;
 
-use self::{http::handle_http_packet, tls::handle_tls_packet};
+use self::{dns::handle_dns_packet, http::handle_http_packet, tls::handle_tls_packet};
 
+pub mod dns;
 pub mod http;
 pub mod tls;
 
 thread_local!(
-    pub(crate) static ACTIVE_HTTP_PARSERS: RefCell<HashMap<((IpAddr, u16), (IpAddr, u16)), Vec<u8>>> =
-        RefCell::new(HashMap::new());
-    pub(crate) static ACTIVE_TLS_PARSERS: RefCell<HashMap<((IpAddr, u16), (IpAddr, u16)), Vec<u8>>> =
-        RefCell::new(HashMap::new());
+    pub(crate) static ACTIVE_HTTP_PARSERS: RefCell<
+        HashMap<((IpAddr, u16), (IpAddr, u16)), Vec<u8>>,
+    > = RefCell::new(HashMap::new());
+    pub(crate) static ACTIVE_TLS_PARSERS: RefCell<
+        HashMap<((IpAddr, u16), (IpAddr, u16)), Vec<u8>>,
+    > = RefCell::new(HashMap::new());
 );
 
 #[allow(non_snake_case)]
 mod WellKnownPorts {
     pub const HTTP_PORT: u16 = 80;
     pub const TLS_PORT: u16 = 443;
+    pub const DNS_PORT: u16 = 53;
 }
 
 // HTTP ----------------------------------------------------------------------------------------------------------------
@@ -71,6 +75,14 @@ pub fn handle_application_protocol(
             )
         }
         (WellKnownPorts::TLS_PORT, _) | (_, WellKnownPorts::TLS_PORT) => handle_tls_packet(
+            source_ip,
+            source_port,
+            dest_ip,
+            dest_port,
+            packet,
+            parsed_packet,
+        ),
+        (WellKnownPorts::DNS_PORT, _) | (_, WellKnownPorts::DNS_PORT) => handle_dns_packet(
             source_ip,
             source_port,
             dest_ip,

@@ -1,9 +1,15 @@
-use std::str::from_utf8;
+use std::{
+    net::{Ipv4Addr, Ipv6Addr},
+    str::from_utf8,
+};
 
+use dns_parser::{Header as DnsHeader, Packet as DnsPacket, Question, RData, ResourceRecord};
 use httparse::{Request, Response};
 use serde::Serialize;
 use tls_parser::{
-    parse_dh_params, parse_tls_extensions, TlsCertificateContents, TlsCertificateRequestContents,
+    parse_dh_params, parse_ec_parameters, parse_ecdh_params, parse_tls_extensions, ECParameters,
+    ECParametersContent, ECPoint, ExplicitPrimeContent, NamedGroup, ServerDHParams,
+    ServerECDHParams, TlsCertificateContents, TlsCertificateRequestContents,
     TlsCertificateStatusContents, TlsClientHelloContents, TlsClientKeyExchangeContents,
     TlsHelloRetryRequestContents, TlsMessageAlert, TlsMessageHeartbeat, TlsNewSessionTicketContent,
     TlsNextProtocolContent, TlsServerHelloContents, TlsServerHelloV13Draft18Contents,
@@ -335,11 +341,20 @@ impl CertificateRequestMessage {
 
 // TODO: CertificateStatusMessage
 #[derive(Serialize, Debug)]
-pub struct CertificateStatusMessage {}
+pub struct CertificateStatusMessage {
+    pub status_type: String,
+    pub data: Vec<u8>,
+}
 
 impl CertificateStatusMessage {
-    pub fn new(_: &TlsCertificateStatusContents) -> Self {
-        CertificateStatusMessage {}
+    pub fn new(packet: &TlsCertificateStatusContents) -> Self {
+        CertificateStatusMessage {
+            status_type: match packet.status_type {
+                1 => "OCSP (1)".to_owned(),
+                n => format!("Unknown ({})", n),
+            },
+            data: packet.blob.to_vec(),
+        }
     }
 }
 
@@ -357,32 +372,59 @@ impl CertificateVerifyMessage {
 }
 
 #[derive(Serialize, Debug)]
+#[serde(tag = "type", content = "parameters")]
+pub enum ClientParameters {
+    Dh(ServerDhParameters),
+    Ec(ServerEcParameters),
+    Ecdh(ClientEcdhParameters),
+    Unknown(Vec<u8>),
+}
+
+#[derive(Serialize, Debug)]
+pub struct ClientEcdhParameters {
+    pub point: Vec<u8>,
+}
+
+impl ClientEcdhParameters {
+    pub fn new(ec: &ECPoint) -> Self {
+        ClientEcdhParameters {
+            point: ec.point.to_vec(),
+        }
+    }
+}
+
+#[derive(Serialize, Debug)]
 pub struct ClientKeyExchangeMessage {
-    pub algo_type: String,
-    pub data: Vec<u8>,
+    pub parameters: ClientParameters,
 }
 
 impl ClientKeyExchangeMessage {
     pub fn new(message: &TlsClientKeyExchangeContents) -> Self {
-        let algo_type: String;
-        let data: Vec<u8>;
-
         match message {
-            TlsClientKeyExchangeContents::Dh(key) => {
-                algo_type = "Diffie-Hellman".to_owned();
-                data = key.to_vec();
+            TlsClientKeyExchangeContents::Dh(dh) => {
+                return ClientKeyExchangeMessage {
+                    parameters: ClientParameters::Dh(ServerDhParameters::new(
+                        &parse_dh_params(dh).unwrap().1,
+                    )),
+                }
             }
-            TlsClientKeyExchangeContents::Ecdh(point) => {
-                algo_type = "ECDH".to_owned();
-                data = point.point.to_vec();
+            TlsClientKeyExchangeContents::Ecdh(ecdh) => {
+                return ClientKeyExchangeMessage {
+                    parameters: ClientParameters::Ecdh(ClientEcdhParameters::new(ecdh)),
+                }
             }
-            TlsClientKeyExchangeContents::Unknown(some_data) => {
-                algo_type = "Unknown".to_owned();
-                data = some_data.to_vec();
-            }
-        };
+            TlsClientKeyExchangeContents::Unknown(content) => {
+                if let Ok((_, ec)) = parse_ec_parameters(content) {
+                    return ClientKeyExchangeMessage {
+                        parameters: ClientParameters::Ec(ServerEcParameters::new(&ec)),
+                    };
+                }
 
-        ClientKeyExchangeMessage { algo_type, data }
+                return ClientKeyExchangeMessage {
+                    parameters: ClientParameters::Unknown(content.to_vec()),
+                };
+            }
+        }
     }
 }
 
@@ -485,34 +527,136 @@ impl ServerHelloV13Draft18Message {
 }
 
 #[derive(Serialize, Debug)]
-pub struct ServerKeyExchangeMessage {
+#[serde(tag = "type", content = "parameters")]
+pub enum ServerParameters {
+    Dh(ServerDhParameters),
+    Ec(ServerEcParameters),
+    Ecdh(ServerEcdhParameters),
+    Unknown(Vec<u8>),
+}
+
+#[derive(Serialize, Debug)]
+pub struct ServerEcdhParameters {
+    pub public_point: Vec<u8>,
+    pub curve: ServerEcParameters,
+}
+
+impl ServerEcdhParameters {
+    pub fn new(params: &ServerECDHParams) -> Self {
+        ServerEcdhParameters {
+            public_point: params.public.point.to_vec(),
+            curve: ServerEcParameters::new(&params.curve_params),
+        }
+    }
+}
+
+#[derive(Serialize, Debug)]
+pub struct ServerDhParameters {
     pub prime_modulus: Vec<u8>,
     pub generator: Vec<u8>,
     pub public_value: Vec<u8>,
 }
 
+impl ServerDhParameters {
+    fn new(params: &ServerDHParams) -> Self {
+        ServerDhParameters {
+            prime_modulus: params.dh_p.to_vec(),
+            generator: params.dh_g.to_vec(),
+            public_value: params.dh_ys.to_vec(),
+        }
+    }
+}
+
+#[derive(Serialize, Debug)]
+pub enum CustomEcContent {
+    ExplicitPrime(CustomExplicitPrime),
+    NamedGroup(CustomNamedGroup),
+}
+
+#[derive(Serialize, Debug)]
+pub struct CustomNamedGroup {
+    pub group: String,
+}
+
+impl CustomNamedGroup {
+    fn new(group: &NamedGroup) -> Self {
+        CustomNamedGroup {
+            group: format!("{:?}", group),
+        }
+    }
+}
+
+#[derive(Serialize, Debug)]
+pub struct CustomExplicitPrime {
+    pub prime_p: Vec<u8>,
+    pub curve: (Vec<u8>, Vec<u8>),
+    pub base_point: Vec<u8>,
+    pub order: Vec<u8>,
+    pub cofactor: Vec<u8>,
+}
+
+impl CustomExplicitPrime {
+    fn new(content: &ExplicitPrimeContent) -> Self {
+        CustomExplicitPrime {
+            prime_p: content.prime_p.to_vec(),
+            curve: (content.curve.a.to_vec(), content.curve.b.to_vec()),
+            base_point: content.base.point.to_vec(),
+            order: content.order.to_vec(),
+            cofactor: content.cofactor.to_vec(),
+        }
+    }
+}
+
+#[derive(Serialize, Debug)]
+pub struct ServerEcParameters {
+    pub ec_type: String,
+    pub ec_content: CustomEcContent,
+}
+
+impl ServerEcParameters {
+    fn new(params: &ECParameters) -> Self {
+        ServerEcParameters {
+            ec_type: params.curve_type.to_string(),
+            ec_content: match &params.params_content {
+                ECParametersContent::ExplicitPrime(content) => {
+                    CustomEcContent::ExplicitPrime(CustomExplicitPrime::new(&content))
+                }
+                ECParametersContent::NamedGroup(content) => {
+                    CustomEcContent::NamedGroup(CustomNamedGroup::new(&content))
+                }
+            },
+        }
+    }
+}
+
+#[derive(Serialize, Debug)]
+pub struct ServerKeyExchangeMessage {
+    pub parameters: ServerParameters,
+}
+
 impl ServerKeyExchangeMessage {
     pub fn new(message: &TlsServerKeyExchangeContents) -> Self {
-        let prime_modulus: Vec<u8>;
-        let generator: Vec<u8>;
-        let public_value: Vec<u8>;
-
-        let dh = parse_dh_params(message.parameters);
-        if let Ok((_, dh)) = dh {
-            prime_modulus = dh.dh_p.to_vec();
-            generator = dh.dh_g.to_vec();
-            public_value = dh.dh_ys.to_vec();
-        } else {
-            prime_modulus = Vec::new();
-            generator = Vec::new();
-            public_value = Vec::new();
+        if let Ok((_, ecdh)) = parse_ecdh_params(message.parameters) {
+            return ServerKeyExchangeMessage {
+                parameters: ServerParameters::Ecdh(ServerEcdhParameters::new(&ecdh)),
+            };
         }
 
-        ServerKeyExchangeMessage {
-            prime_modulus,
-            generator,
-            public_value,
+        if let Ok((_, dh)) = parse_dh_params(message.parameters) {
+            return ServerKeyExchangeMessage {
+                parameters: ServerParameters::Dh(ServerDhParameters::new(&dh)),
+            };
         }
+
+        if let Ok((_, ec)) = parse_ec_parameters(message.parameters) {
+            return ServerKeyExchangeMessage {
+                parameters: ServerParameters::Ec(ServerEcParameters::new(&ec)),
+            };
+        }
+
+        return ServerKeyExchangeMessage {
+            parameters: ServerParameters::Unknown(message.parameters.to_vec()),
+        };
     }
 }
 
@@ -540,4 +684,239 @@ impl CustomApplicationDataMessage {
             data: message.to_vec(),
         }
     }
+}
+
+/// DNS Packet Rapresentation
+
+#[derive(Serialize, Debug)]
+pub struct SerializableDnsPacket {
+    pub header: CustomDnsHeader,
+    pub questions: Vec<CustomQuestion>,
+    pub answers: Vec<CustomResourceRecord>,
+    pub nameservers: Vec<CustomResourceRecord>,
+    pub additional: Vec<CustomResourceRecord>,
+}
+
+impl<'a> From<&DnsPacket<'a>> for SerializableDnsPacket {
+    fn from(dns_packet: &DnsPacket<'a>) -> Self {
+        SerializableDnsPacket {
+            header: CustomDnsHeader::from(&dns_packet.header),
+            questions: dns_packet
+                .questions
+                .iter()
+                .map(|q| CustomQuestion::from(q))
+                .collect(),
+            answers: dns_packet
+                .answers
+                .iter()
+                .map(|r| CustomResourceRecord::from(r))
+                .collect(),
+            nameservers: dns_packet
+                .nameservers
+                .iter()
+                .map(|r| CustomResourceRecord::from(r))
+                .collect(),
+            additional: dns_packet
+                .additional
+                .iter()
+                .map(|r| CustomResourceRecord::from(r))
+                .collect(),
+        }
+    }
+}
+
+#[derive(Serialize, Debug)]
+pub struct CustomQuestion {
+    pub query_name: String,
+    pub prefer_unicast: bool,
+    pub query_type: String,
+    pub query_class: String,
+}
+
+impl From<&Question<'_>> for CustomQuestion {
+    fn from(question: &Question<'_>) -> Self {
+        CustomQuestion {
+            query_name: question.qname.to_string(),
+            prefer_unicast: question.prefer_unicast,
+            query_type: format!("{:?}", question.qtype),
+            query_class: format!("{:?}", question.qclass),
+        }
+    }
+}
+
+#[derive(Serialize, Debug)]
+pub struct CustomDnsHeader {
+    pub id: u16,
+    pub query: bool,
+    pub opcode: String,
+    pub authoritative: bool,
+    pub truncated: bool,
+    pub recursion_desired: bool,
+    pub recursion_available: bool,
+    pub authenticated_data: bool,
+    pub checking_disabled: bool,
+    pub response_code: String,
+    pub num_questions: u16,
+    pub num_answers: u16,
+    pub num_nameservers: u16,
+    pub num_additional: u16,
+}
+
+impl From<&DnsHeader> for CustomDnsHeader {
+    fn from(header: &DnsHeader) -> Self {
+        CustomDnsHeader {
+            id: header.id,
+            query: header.query,
+            opcode: format!("{:?}", header.opcode),
+            authoritative: header.authoritative,
+            truncated: header.truncated,
+            recursion_desired: header.recursion_desired,
+            recursion_available: header.recursion_available,
+            authenticated_data: header.authenticated_data,
+            checking_disabled: header.checking_disabled,
+            response_code: format!("{:?}", header.response_code),
+            num_questions: header.questions,
+            num_answers: header.answers,
+            num_nameservers: header.nameservers,
+            num_additional: header.additional,
+        }
+    }
+}
+
+#[derive(Serialize, Debug)]
+pub struct CustomResourceRecord {
+    pub name: String,
+    pub multicast_unique: bool,
+    pub class: String,
+    pub ttl: u32,
+    pub data: CustomResourceData,
+}
+
+impl From<&ResourceRecord<'_>> for CustomResourceRecord {
+    fn from(rr: &ResourceRecord<'_>) -> Self {
+        CustomResourceRecord {
+            name: rr.name.to_string(),
+            multicast_unique: rr.multicast_unique,
+            class: format!("{:?}", rr.cls),
+            ttl: rr.ttl,
+            data: CustomResourceData::from(&rr.data),
+        }
+    }
+}
+
+#[derive(Serialize, Debug)]
+#[serde(tag = "type")]
+pub enum CustomResourceData {
+    A(A),
+    AAAA(Aaaa),
+    CNAME(Cname),
+    MX(Mx),
+    NS(Ns),
+    PTR(Ptr),
+    SOA(Soa),
+    SRV(Srv),
+    TXT(Txt),
+    Unknown(Unknown),
+}
+
+impl From<&RData<'_>> for CustomResourceData {
+    fn from(data: &RData<'_>) -> Self {
+        match data {
+            RData::A(a) => CustomResourceData::A(A { address: a.0 }),
+            RData::AAAA(aaaa) => CustomResourceData::AAAA(Aaaa { address: aaaa.0 }),
+            RData::CNAME(cname) => CustomResourceData::CNAME(Cname {
+                name: cname.0.to_string(),
+            }),
+            RData::MX(mx) => CustomResourceData::MX(Mx {
+                preference: mx.preference,
+                exchange: mx.preference.to_string(),
+            }),
+            RData::NS(ns) => CustomResourceData::NS(Ns {
+                name: ns.0.to_string(),
+            }),
+            RData::PTR(ptr) => CustomResourceData::PTR(Ptr {
+                name: ptr.0.to_string(),
+            }),
+            RData::SOA(soa) => CustomResourceData::SOA(Soa {
+                primary_ns: soa.primary_ns.to_string(),
+                mailbox: soa.mailbox.to_string(),
+                serial: soa.serial,
+                refresh: soa.refresh,
+                retry: soa.retry,
+                expire: soa.expire,
+                minimum_ttl: soa.minimum_ttl,
+            }),
+            RData::SRV(srv) => CustomResourceData::SRV(Srv {
+                priority: srv.priority,
+                weight: srv.weight,
+                port: srv.port,
+                target: srv.target.to_string(),
+            }),
+            RData::TXT(txt) => CustomResourceData::TXT(Txt {
+                data: txt.iter().fold(vec![], |mut acc, x| {
+                    acc.extend_from_slice(x);
+                    acc
+                }),
+            }),
+            RData::Unknown(unknown) => CustomResourceData::Unknown(Unknown {
+                data: unknown.to_vec(),
+            }),
+        }
+    }
+}
+
+#[derive(Serialize, Debug)]
+pub struct A {
+    pub address: Ipv4Addr,
+}
+
+#[derive(Serialize, Debug)]
+pub struct Aaaa {
+    pub address: Ipv6Addr,
+}
+#[derive(Serialize, Debug)]
+pub struct Cname {
+    pub name: String,
+}
+#[derive(Serialize, Debug)]
+pub struct Mx {
+    pub preference: u16,
+    pub exchange: String,
+}
+#[derive(Serialize, Debug)]
+pub struct Ns {
+    pub name: String,
+}
+#[derive(Serialize, Debug)]
+pub struct Ptr {
+    pub name: String,
+}
+
+#[derive(Serialize, Debug)]
+pub struct Soa {
+    pub primary_ns: String,
+    pub mailbox: String,
+    pub serial: u32,
+    pub refresh: u32,
+    pub retry: u32,
+    pub expire: u32,
+    pub minimum_ttl: u32,
+}
+
+#[derive(Serialize, Debug)]
+pub struct Srv {
+    pub priority: u16,
+    pub weight: u16,
+    pub port: u16,
+    pub target: String,
+}
+
+#[derive(Serialize, Debug)]
+pub struct Txt {
+    pub data: Vec<u8>,
+}
+
+#[derive(Serialize, Debug)]
+pub struct Unknown {
+    pub data: Vec<u8>,
 }

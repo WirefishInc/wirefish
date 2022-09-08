@@ -18,3 +18,5 @@ flate2 = "1.0.24"
 encoding_rs = "0.8.31"
 tls-parser =  { version = "0.11.0", features = ["serialize"]}
 x509-parser = "0.14.0"
+dns-parser = "0.8.0"
+simple-dns = "0.4.7"
