@@ -1,7 +1,7 @@
 use pnet::packet::icmp::echo_reply::EchoReplyPacket;
 use pnet::packet::icmp::echo_request::EchoRequestPacket;
-use pnet::packet::icmp::{IcmpPacket, IcmpTypes, IcmpType};
-use pnet::packet::icmpv6::{Icmpv6Packet, Icmpv6Types, Icmpv6Type};
+use pnet::packet::icmp::{IcmpPacket, IcmpType, IcmpTypes};
+use pnet::packet::icmpv6::{Icmpv6Packet, Icmpv6Type, Icmpv6Types};
 use pnet::packet::tcp::TcpPacket;
 use pnet::packet::udp::UdpPacket;
 use pnet::packet::Packet;
@@ -102,7 +102,7 @@ pub fn icmpv6_type_to_string(icmp_type: Icmpv6Type) -> String {
         Icmpv6Types::NeighborAdvert => format!("NeighborAdvert ({})", icmp_type.0),
         Icmpv6Types::Redirect => format!("Redirect ({})", icmp_type.0),
         _ => format!("Unknown ({})", icmp_type.0),
-    }
+    };
 }
 
 /// ICMP Packet Representation
@@ -145,7 +145,7 @@ pub fn icmp_type_to_string(icmp_type: IcmpType) -> String {
         IcmpTypes::AddressMaskReply => format!("AddressMaskReply ({})", icmp_type.0),
         IcmpTypes::Traceroute => format!("Traceroute ({})", icmp_type.0),
         _ => format!("Unknown ({})", icmp_type.0),
-    }
+    };
 }
 
 /// ICMP Echo Reply Packet Representation

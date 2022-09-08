@@ -38,6 +38,16 @@ pub fn handle_udp_packet(
         parsed_packet.set_transport_layer_packet(Some(SerializablePacket::UdpPacket(
             SerializableUdpPacket::from(&udp),
         )));
+
+        handle_application_protocol(
+            source,
+            udp.get_source(),
+            destination,
+            udp.get_destination(),
+            false,
+            udp.payload(),
+            parsed_packet,
+        );
     } else {
         debug!("Malformed UDP Packet");
         parsed_packet.set_transport_layer_packet(Some(SerializablePacket::MalformedPacket(
@@ -213,7 +223,8 @@ mod tests {
     use std::net::IpAddr;
     use std::net::Ipv4Addr;
 
-    use pnet::packet::icmp::IcmpPacket;
+    use pnet::packet::icmp::IcmpType;
+    use pnet::packet::icmp::MutableIcmpPacket;
     use pnet::packet::icmpv6::echo_reply::Icmpv6Codes;
     use pnet::packet::icmpv6::Icmpv6Types;
     use pnet::packet::icmpv6::MutableIcmpv6Packet;
@@ -241,14 +252,31 @@ mod tests {
             &mut parsed_packet,
         );
 
-        if let SerializablePacket::UdpPacket(new_udp_packet) =
-            parsed_packet.get_transport_layer_packet().unwrap()
-        {
-            assert_eq!(new_udp_packet.source, udp_packet.get_source());
-            assert_eq!(new_udp_packet.destination, udp_packet.get_destination());
-            assert_eq!(new_udp_packet.length, udp_packet.get_length());
-            assert_eq!(new_udp_packet.checksum, udp_packet.get_checksum());
-            assert_eq!(new_udp_packet.payload, udp_packet.payload().to_vec());
+        match parsed_packet.get_transport_layer_packet().unwrap() {
+            SerializablePacket::UdpPacket(new_udp_packet) => {
+                assert_eq!(new_udp_packet.source, udp_packet.get_source());
+                assert_eq!(new_udp_packet.destination, udp_packet.get_destination());
+                assert_eq!(new_udp_packet.length, udp_packet.get_length());
+                assert_eq!(new_udp_packet.checksum, udp_packet.get_checksum());
+                assert_eq!(new_udp_packet.payload, udp_packet.payload().to_vec());
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn malformed_udp_packet() {
+        let mut parsed_packet = ParsedPacket::new();
+        handle_udp_packet(
+            IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
+            IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),
+            &[],
+            &mut parsed_packet,
+        );
+
+        match parsed_packet.get_transport_layer_packet().unwrap() {
+            SerializablePacket::MalformedPacket(str) => assert_eq!(str, "Malformed UDP Packet"),
+            _ => unreachable!(),
         }
     }
 
@@ -265,24 +293,41 @@ mod tests {
             &mut parsed_packet,
         );
 
-        if let SerializablePacket::TcpPacket(new_tcp_packet) =
-            parsed_packet.get_transport_layer_packet().unwrap()
-        {
-            assert_eq!(new_tcp_packet.source, tcp_packet.get_source());
-            assert_eq!(new_tcp_packet.destination, tcp_packet.get_destination());
-            assert_eq!(new_tcp_packet.sequence, tcp_packet.get_sequence());
-            assert_eq!(
-                new_tcp_packet.acknowledgement,
-                tcp_packet.get_acknowledgement()
-            );
-            assert_eq!(new_tcp_packet.data_offset, tcp_packet.get_data_offset());
-            assert_eq!(new_tcp_packet.reserved, tcp_packet.get_reserved());
-            assert_eq!(new_tcp_packet.flags, tcp_packet.get_flags());
-            assert_eq!(new_tcp_packet.window, tcp_packet.get_window());
-            assert_eq!(new_tcp_packet.checksum, tcp_packet.get_checksum());
-            assert_eq!(new_tcp_packet.urgent_ptr, tcp_packet.get_urgent_ptr());
-            assert_eq!(new_tcp_packet.options, tcp_packet.get_options_raw());
-            assert_eq!(new_tcp_packet.payload, tcp_packet.payload().to_vec());
+        match parsed_packet.get_transport_layer_packet().unwrap() {
+            SerializablePacket::TcpPacket(new_tcp_packet) => {
+                assert_eq!(new_tcp_packet.source, tcp_packet.get_source());
+                assert_eq!(new_tcp_packet.destination, tcp_packet.get_destination());
+                assert_eq!(new_tcp_packet.sequence, tcp_packet.get_sequence());
+                assert_eq!(
+                    new_tcp_packet.acknowledgement,
+                    tcp_packet.get_acknowledgement()
+                );
+                assert_eq!(new_tcp_packet.data_offset, tcp_packet.get_data_offset());
+                assert_eq!(new_tcp_packet.reserved, tcp_packet.get_reserved());
+                assert_eq!(new_tcp_packet.flags, tcp_packet.get_flags());
+                assert_eq!(new_tcp_packet.window, tcp_packet.get_window());
+                assert_eq!(new_tcp_packet.checksum, tcp_packet.get_checksum());
+                assert_eq!(new_tcp_packet.urgent_ptr, tcp_packet.get_urgent_ptr());
+                assert_eq!(new_tcp_packet.options, tcp_packet.get_options_raw());
+                assert_eq!(new_tcp_packet.payload, tcp_packet.payload().to_vec());
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn malformed_tcp_packet() {
+        let mut parsed_packet = ParsedPacket::new();
+        handle_tcp_packet(
+            IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
+            IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),
+            &[],
+            &mut parsed_packet,
+        );
+
+        match parsed_packet.get_transport_layer_packet().unwrap() {
+            SerializablePacket::MalformedPacket(str) => assert_eq!(str, "Malformed TCP Packet"),
+            _ => unreachable!(),
         }
     }
 
@@ -299,33 +344,34 @@ mod tests {
             &mut parsed_packet,
         );
 
-        if let SerializablePacket::EchoReplyPacket(new_echo_reply_packet) =
-            parsed_packet.get_transport_layer_packet().unwrap()
-        {
-            assert_eq!(
-                new_echo_reply_packet.icmp_type,
-                echo_reply_packet.get_icmp_type().0
-            );
-            assert_eq!(
-                new_echo_reply_packet.icmp_code,
-                echo_reply_packet.get_icmp_code().0
-            );
-            assert_eq!(
-                new_echo_reply_packet.checksum,
-                echo_reply_packet.get_checksum()
-            );
-            assert_eq!(
-                new_echo_reply_packet.identifier,
-                echo_reply_packet.get_identifier()
-            );
-            assert_eq!(
-                new_echo_reply_packet.sequence_number,
-                echo_reply_packet.get_sequence_number()
-            );
-            assert_eq!(
-                new_echo_reply_packet.payload,
-                echo_reply_packet.payload().to_vec()
-            );
+        match parsed_packet.get_transport_layer_packet().unwrap() {
+            SerializablePacket::EchoReplyPacket(new_echo_reply_packet) => {
+                assert_eq!(
+                    new_echo_reply_packet.icmp_type,
+                    echo_reply_packet.get_icmp_type().0
+                );
+                assert_eq!(
+                    new_echo_reply_packet.icmp_code,
+                    echo_reply_packet.get_icmp_code().0
+                );
+                assert_eq!(
+                    new_echo_reply_packet.checksum,
+                    echo_reply_packet.get_checksum()
+                );
+                assert_eq!(
+                    new_echo_reply_packet.identifier,
+                    echo_reply_packet.get_identifier()
+                );
+                assert_eq!(
+                    new_echo_reply_packet.sequence_number,
+                    echo_reply_packet.get_sequence_number()
+                );
+                assert_eq!(
+                    new_echo_reply_packet.payload,
+                    echo_reply_packet.payload().to_vec()
+                );
+            }
+            _ => unreachable!(),
         }
     }
 
@@ -345,40 +391,43 @@ mod tests {
             &mut parsed_packet,
         );
 
-        if let SerializablePacket::EchoRequestPacket(new_echo_reply_packet) =
-            parsed_packet.get_transport_layer_packet().unwrap()
-        {
-            assert_eq!(
-                new_echo_reply_packet.icmp_type,
-                echo_request_packet.get_icmp_type().0
-            );
-            assert_eq!(
-                new_echo_reply_packet.icmp_code,
-                echo_request_packet.get_icmp_code().0
-            );
-            assert_eq!(
-                new_echo_reply_packet.checksum,
-                echo_request_packet.get_checksum()
-            );
-            assert_eq!(
-                new_echo_reply_packet.identifier,
-                echo_request_packet.get_identifier()
-            );
-            assert_eq!(
-                new_echo_reply_packet.sequence_number,
-                echo_request_packet.get_sequence_number()
-            );
-            assert_eq!(
-                new_echo_reply_packet.payload,
-                echo_request_packet.payload().to_vec()
-            );
+        match parsed_packet.get_transport_layer_packet().unwrap() {
+            SerializablePacket::EchoRequestPacket(new_echo_reply_packet) => {
+                assert_eq!(
+                    new_echo_reply_packet.icmp_type,
+                    echo_request_packet.get_icmp_type().0
+                );
+                assert_eq!(
+                    new_echo_reply_packet.icmp_code,
+                    echo_request_packet.get_icmp_code().0
+                );
+                assert_eq!(
+                    new_echo_reply_packet.checksum,
+                    echo_request_packet.get_checksum()
+                );
+                assert_eq!(
+                    new_echo_reply_packet.identifier,
+                    echo_request_packet.get_identifier()
+                );
+                assert_eq!(
+                    new_echo_reply_packet.sequence_number,
+                    echo_request_packet.get_sequence_number()
+                );
+                assert_eq!(
+                    new_echo_reply_packet.payload,
+                    echo_request_packet.payload().to_vec()
+                );
+            }
+            _ => unreachable!(),
         }
     }
 
     #[test]
     fn unrecognized_icmp_packet() {
         let mut icmp_buffer = [0u8; 42];
-        let icmp_packet = IcmpPacket::new(&mut icmp_buffer).unwrap();
+
+        let mut icmp_packet = MutableIcmpPacket::new(&mut icmp_buffer).unwrap();
+        icmp_packet.set_icmp_type(IcmpType(99));
 
         let mut parsed_packet = ParsedPacket::new();
         handle_icmp_packet(
@@ -388,13 +437,33 @@ mod tests {
             &mut parsed_packet,
         );
 
-        if let SerializablePacket::IcmpPacket(new_icmp_packet) =
-            parsed_packet.get_transport_layer_packet().unwrap()
-        {
-            assert_eq!(new_icmp_packet.icmp_type, icmp_type_to_string(icmp_packet.get_icmp_type()));
-            assert_eq!(new_icmp_packet.icmp_code, icmp_packet.get_icmp_code().0);
-            assert_eq!(new_icmp_packet.checksum, icmp_packet.get_checksum());
-            assert_eq!(new_icmp_packet.payload, icmp_packet.payload().to_vec());
+        match parsed_packet.get_transport_layer_packet().unwrap() {
+            SerializablePacket::IcmpPacket(new_icmp_packet) => {
+                assert_eq!(
+                    new_icmp_packet.icmp_type,
+                    icmp_type_to_string(icmp_packet.get_icmp_type())
+                );
+                assert_eq!(new_icmp_packet.icmp_code, icmp_packet.get_icmp_code().0);
+                assert_eq!(new_icmp_packet.checksum, icmp_packet.get_checksum());
+                assert_eq!(new_icmp_packet.payload, icmp_packet.payload().to_vec());
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn malformed_icmp_packet() {
+        let mut parsed_packet = ParsedPacket::new();
+        handle_icmp_packet(
+            IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
+            IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),
+            &[],
+            &mut parsed_packet,
+        );
+
+        match parsed_packet.get_transport_layer_packet().unwrap() {
+            SerializablePacket::MalformedPacket(str) => assert_eq!(str, "Malformed ICMP Packet"),
+            _ => unreachable!(),
         }
     }
 
@@ -411,19 +480,36 @@ mod tests {
             &mut parsed_packet,
         );
 
-        if let SerializablePacket::Icmpv6Packet(new_icmpv6_packet) =
-            parsed_packet.get_transport_layer_packet().unwrap()
-        {
-            assert_eq!(
-                new_icmpv6_packet.icmpv6_type,
-                icmpv6_type_to_string(icmpv6_packet.get_icmpv6_type())
-            );
-            assert_eq!(
-                new_icmpv6_packet.icmpv6_code,
-                icmpv6_packet.get_icmpv6_code().0
-            );
-            assert_eq!(new_icmpv6_packet.checksum, icmpv6_packet.get_checksum());
-            assert_eq!(new_icmpv6_packet.payload, icmpv6_packet.payload().to_vec());
+        match parsed_packet.get_transport_layer_packet().unwrap() {
+            SerializablePacket::Icmpv6Packet(new_icmpv6_packet) => {
+                assert_eq!(
+                    new_icmpv6_packet.icmpv6_type,
+                    icmpv6_type_to_string(icmpv6_packet.get_icmpv6_type())
+                );
+                assert_eq!(
+                    new_icmpv6_packet.icmpv6_code,
+                    icmpv6_packet.get_icmpv6_code().0
+                );
+                assert_eq!(new_icmpv6_packet.checksum, icmpv6_packet.get_checksum());
+                assert_eq!(new_icmpv6_packet.payload, icmpv6_packet.payload().to_vec());
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn malformed_icmpv6_packet() {
+        let mut parsed_packet = ParsedPacket::new();
+        handle_icmpv6_packet(
+            IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
+            IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),
+            &[],
+            &mut parsed_packet,
+        );
+
+        match parsed_packet.get_transport_layer_packet().unwrap() {
+            SerializablePacket::MalformedPacket(str) => assert_eq!(str, "Malformed ICMPv6 Packet"),
+            _ => unreachable!(),
         }
     }
 

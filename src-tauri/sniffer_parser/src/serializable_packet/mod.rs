@@ -7,7 +7,8 @@ use pnet::{packet::ethernet::EthernetPacket, util::MacAddr};
 use serde::Serialize;
 
 use self::application::{
-    SerializableHttpRequestPacket, SerializableHttpResponsePacket, SerializableTlsPacket,
+    SerializableDnsPacket, SerializableHttpRequestPacket, SerializableHttpResponsePacket,
+    SerializableTlsPacket,
 };
 use self::network::{SerializableArpPacket, SerializableIpv4Packet, SerializableIpv6Packet};
 use self::transport::{
@@ -89,8 +90,10 @@ pub enum SerializablePacket {
     HttpRequestPacket(SerializableHttpRequestPacket),
     HttpResponsePacket(SerializableHttpResponsePacket),
     TlsPacket(SerializableTlsPacket),
+    DnsPacket(SerializableDnsPacket),
 
     MalformedPacket(String),
+    UnknownPacket(SerializableUnknownPacket),
 }
 
 /// Ethernet Packet Representation
@@ -103,8 +106,6 @@ pub struct SerializableEthernetPacket {
     pub payload: Vec<u8>,
 }
 
-// impl SerializablePacket for SerializableEthernetPacket {}
-
 impl<'a> From<&EthernetPacket<'a>> for SerializableEthernetPacket {
     fn from(packet: &EthernetPacket<'a>) -> Self {
         SerializableEthernetPacket {
@@ -112,6 +113,27 @@ impl<'a> From<&EthernetPacket<'a>> for SerializableEthernetPacket {
             source: packet.get_source(),
             ethertype: packet.get_ethertype().to_string(),
             payload: packet.payload().to_vec(),
+        }
+    }
+}
+
+/// Unknown Packet Representation
+
+#[derive(Serialize, Debug)]
+pub struct SerializableUnknownPacket {
+    pub destination: MacAddr,
+    pub source: MacAddr,
+    pub ethertype: String,
+    pub length: usize,
+}
+
+impl<'a> From<&EthernetPacket<'a>> for SerializableUnknownPacket {
+    fn from(packet: &EthernetPacket<'a>) -> Self {
+        SerializableUnknownPacket {
+            destination: packet.get_destination(),
+            source: packet.get_source(),
+            ethertype: packet.get_ethertype().to_string(),
+            length: packet.packet().len(),
         }
     }
 }

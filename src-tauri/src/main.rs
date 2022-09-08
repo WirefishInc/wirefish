@@ -23,7 +23,7 @@ use std::sync::Arc;
 use std::cell::RefCell;
 use tauri_awesome_rpc::{AwesomeEmit, AwesomeRpc};
 
-use sniffer_parser::{parse_ethernet_frame, serializable_packet::{SerializablePacket, ParsedPacket}};
+use sniffer_parser::{parse_ethernet_frame, cleanup_sniffing_state, serializable_packet::{SerializablePacket, ParsedPacket}};
 
 struct SniffingInfoState(Arc<Mutex<SniffingInfo>>); // TODO: I think it would be better to have a mutex for the interface and one for the hashmap
 struct SniffingInfo {
@@ -125,7 +125,7 @@ async fn start_sniffing(
     );
 
     let ss = Arc::clone(&state.0);
-    async_runtime::spawn(async move {
+    tauri::async_runtime::spawn(async move {
         loop {
             let mut sniffing_state = ss.lock().await;
 
@@ -217,7 +217,9 @@ async fn stop_sniffing(state: tauri::State<'_, SniffingInfoState>) -> Result<(),
     sniffing_state.is_sniffing = false;
 
     // TODO: Empty sniffing_state.exchanged_packets on stop (not on pause)
-
+    
+    cleanup_sniffing_state();
+    
     info!(
         "[{}] Sniffing stopped",
         sniffing_state.interface_name.as_ref().unwrap()
