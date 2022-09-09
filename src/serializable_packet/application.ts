@@ -1,5 +1,13 @@
 import {SerializableApplicationLayerPacket} from "../types/sniffing";
-import {CustomTlsMessages} from "./tls";
+import {
+    ChangeCipherSpecMessage,
+    CustomAlertMessage,
+    CustomApplicationDataMessage,
+    CustomEncryptedMessage,
+    CustomHandshakeMessage,
+    CustomHeartbeatMessage,
+    CustomTlsMessages
+} from "./tls";
 
 export class TlsPacket implements SerializableApplicationLayerPacket {
     version: string;
@@ -14,29 +22,58 @@ export class TlsPacket implements SerializableApplicationLayerPacket {
         this.type = "Transport Layer Security"
     }
 
-    // todo
-    setMessages(messages: any[]): CustomTlsMessages[] {
-        return []
+    private setMessages(messages: any[]): CustomTlsMessages[] {
+        let result: CustomTlsMessages[] = [];
+
+        messages.forEach((message) => {
+            switch (message.type) {
+                case "Handshake":
+                    // todo
+                    break;
+                case "Alert":
+                    result.push(new CustomAlertMessage(message.severity, message.description))
+                    break;
+                case "ApplicationData":
+                    result.push(new CustomApplicationDataMessage(message.data))
+                    break;
+                case "Heartbeat":
+                    result.push(new CustomHeartbeatMessage(message.heartbeat_type, message.payload, message.payload_len))
+                    break;
+                case "Encrypted":
+                    result.push(new CustomEncryptedMessage(message.data))
+                    break;
+                case "ChangeCipherSpec":
+                    result.push(new ChangeCipherSpecMessage())
+                    break;
+            }
+
+        })
+
+        return result;
     }
 
     // todo
+    // @ts-ignore ! remove it
+    private make_sub_type_packet() : CustomHandshakeMessage {
+    }
+
     getInfo(): string {
-        return "";
+        let res = "";
+
+        this.messages.forEach( (message) => {
+            res += message.getType()+", ";
+        })
+
+        return res.slice(0,-2);
     }
 
     getType(): string {
         return this.version;
     }
 
-    // to do: all messagges array
+    // todo: get all messagges
     toDisplay() {
-        let packet_info = [];
-
-        packet_info.push({"Version": this.version});
-        packet_info.push({"Length": this.length});
-        packet_info.push({"Messages": this.messages.toString()});
-
-        return packet_info;
+        return []
     }
 
     toString(): string {

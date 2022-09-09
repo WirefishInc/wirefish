@@ -300,7 +300,6 @@ const make_application_level = (application: any) => {
             break;
 
         case "HttpRequestPacket":
-            console.log("aaaaa")
             application_layer = new HttpRequestPacket(
                 application.packet.method,
                 application.packet.path,

@@ -136,6 +136,7 @@ export class Ipv6Packet implements SerializableNetworkLayerPacket{
         return this.source;
     }
 
+    // TODO !
     getInfo(): string {
         return "";
     }
@@ -229,6 +230,7 @@ export class Ipv4Packet implements SerializableNetworkLayerPacket {
         return this.source;
     }
 
+    // TODO !
     getInfo(): string {
         return "";
     }
