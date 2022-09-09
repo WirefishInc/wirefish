@@ -16,8 +16,8 @@ async function getInterfacesList(): Promise<string[]> {
     return invoke('get_interfaces_list')
 }
 
-async function generateReport(reportPath: string): Promise<boolean> {
-    return invoke('generate_report', {reportPath})
+async function generateReport(reportPath: string, firstGeneration: boolean): Promise<boolean> {
+    return invoke('generate_report', {reportPath, firstGeneration})
 }
 
 const API = {

@@ -15,30 +15,21 @@ use pnet::packet::ethernet::EthernetPacket;
 
 use tauri::async_runtime::Mutex;
 use tauri::{async_runtime, State, Manager, Window, Wry};
-use pnet::packet::ethernet::EtherTypes::{Ipv4, Ipv6};
-use pnet::packet::{MutablePacket, Packet};
-use pnet::packet::ipv4::Ipv4Packet;
-use pnet::packet::ipv6::Ipv6Packet;
-use crate::pnet::packet::PacketSize;
-use crate::report::report::write_report;
-use report::report::data::{SourceDestination, PacketExchange};
+use report::{write_report, data::{SourceDestination, PacketExchange}};
 use std::collections::HashMap;
-use chrono::{Local};
-use std::fs;
+use chrono::Local;
 
-use serde_json::json;
-use std::fmt::{Display, Formatter};
-use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
-use std::thread::JoinHandle;
+use std::cell::RefCell;
 use tauri_awesome_rpc::{AwesomeEmit, AwesomeRpc};
 
-use sniffer_parser::parse_ethernet_frame;
+use sniffer_parser::{parse_ethernet_frame, serializable_packet::{SerializablePacket, ParsedPacket}};
 
-struct SniffingInfoState(Arc<Mutex<SniffingInfo>>);
+struct SniffingInfoState(Arc<Mutex<SniffingInfo>>); // TODO: I think it would be better to have a mutex for the interface and one for the hashmap
 struct SniffingInfo {
     interface_channel: Option<Box<dyn DataLinkReceiver>>,
     interface_name: Option<String>,
+    exchanged_packets: RefCell<HashMap<SourceDestination, PacketExchange>>,
     is_sniffing: bool,
 }
 
@@ -47,6 +38,7 @@ impl SniffingInfo {
         SniffingInfo {
             interface_channel: None,
             interface_name: None,
+            exchanged_packets: RefCell::new(HashMap::<SourceDestination, PacketExchange>::new()),
             is_sniffing: false,
         }
     }
@@ -132,10 +124,6 @@ async fn start_sniffing(
         sniffing_state.interface_name.as_ref().unwrap()
     );
 
-    // Remove old report file
-    fs::remove_file(&report_path);
-    let mut packets = HashMap::<SourceDestination, PacketExchange>::new();
-
     let ss = Arc::clone(&state.0);
     async_runtime::spawn(async move {
         loop {
@@ -149,6 +137,20 @@ async fn start_sniffing(
                 Ok(packet) => {
                     let ethernet_packet = EthernetPacket::new(packet).unwrap();
                     let new_packet = parse_ethernet_frame(&ethernet_packet);
+
+                    /* Save packet in HashMap */
+                    let now = Local::now();
+                    let sender_receiver = get_sender_receiver(&new_packet);
+                    let mut transmitted_bytes = 0;
+                    let mut protocol = String::from("-");
+                    if let SerializablePacket::EthernetPacket(link_packet) = new_packet.get_link_layer_packet().unwrap() {
+                        transmitted_bytes = link_packet.payload.len();
+                        protocol = link_packet.ethertype.clone();
+                    }
+                    sniffing_state.exchanged_packets.borrow_mut()
+                        .entry(sender_receiver)
+                        .and_modify(|exchange| exchange.add_packet(protocol.clone(), transmitted_bytes, now))
+                        .or_insert(PacketExchange::new(protocol, transmitted_bytes, now));
 
                     window
                         .state::<AwesomeEmit>()
@@ -168,10 +170,54 @@ async fn start_sniffing(
     Ok(())
 }
 
+fn get_sender_receiver(packet: &ParsedPacket) -> SourceDestination {
+    let mut network_source = String::from("-");
+    let mut network_destination = String::from("-");
+    let mut transport_source = String::from("-");
+    let mut transport_destination = String::from("-");
+    let network_packet_wrapper = packet.get_network_layer_packet();
+    if network_packet_wrapper.is_some() {
+        match network_packet_wrapper.unwrap() {
+            SerializablePacket::ArpPacket(network_packet) => {
+                network_source = network_packet.sender_proto_addr.to_string();
+                network_destination = network_packet.target_proto_addr.to_string();
+            },
+            SerializablePacket::Ipv4Packet(network_packet) => {
+                network_source = network_packet.source.to_string();
+                network_destination = network_packet.destination.to_string();
+            },
+            SerializablePacket::Ipv6Packet(network_packet) => {
+                network_source = network_packet.source.to_string();
+                network_destination = network_packet.destination.to_string();
+            },
+            _ => {}
+        }
+    }
+    let transport_packet_wrapper = packet.get_transport_layer_packet();
+    if transport_packet_wrapper.is_some() {
+        match transport_packet_wrapper.unwrap() {
+            SerializablePacket::TcpPacket(transport_packet) => {
+                transport_source = transport_packet.source.to_string();
+                transport_destination = transport_packet.destination.to_string();
+            },
+            SerializablePacket::UdpPacket(transport_packet) => {
+                transport_source = transport_packet.source.to_string();
+                transport_destination = transport_packet.destination.to_string();
+            },
+            _ => {}
+        }
+    }
+    // Todo: Handle arp packets source and destination
+    SourceDestination::new(network_source, network_destination, transport_source, transport_destination)
+}
+
 #[tauri::command]
 async fn stop_sniffing(state: tauri::State<'_, SniffingInfoState>) -> Result<(), ()> {
     let mut sniffing_state = state.0.lock().await;
     sniffing_state.is_sniffing = false;
+
+    // TODO: Empty sniffing_state.exchanged_packets on stop (not on pause)
+
     info!(
         "[{}] Sniffing stopped",
         sniffing_state.interface_name.as_ref().unwrap()
@@ -181,8 +227,16 @@ async fn stop_sniffing(state: tauri::State<'_, SniffingInfoState>) -> Result<(),
 }
 
 #[tauri::command]
-async fn generate_report(state: tauri::State<'_, SniffingInfoState>, report_path: String) -> bool {
-
+async fn generate_report(state: tauri::State<'_, SniffingInfoState>, report_path: String, first_generation: bool) -> Result<bool, String> {
+    let sniffing_state = state.0.lock().await;
+    let exchanged_packets = sniffing_state.exchanged_packets.take();
+    drop(sniffing_state);
+    let sniffing_state2 = state.0.lock().await;
+    let result = write_report(&report_path, exchanged_packets, first_generation);
+    return match result {
+        Err(why) => Err(why.to_string()),
+        Ok(_) => Ok(true)
+    }
 }
 
 fn main() {
@@ -213,6 +267,7 @@ fn main() {
             start_sniffing,
             stop_sniffing,
             get_interfaces_list,
+            generate_report,
             select_interface
         ])
         .run(tauri::generate_context!())

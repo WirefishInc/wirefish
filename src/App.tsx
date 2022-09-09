@@ -1,6 +1,6 @@
 import {createTheme, ThemeProvider} from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import {useState, useEffect} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
     Accordion, AccordionDetails, AccordionSummary, Alert, Fab, FormControl, Grid, List, Snackbar
 } from '@mui/material';
@@ -9,7 +9,7 @@ import {Pause, PlayArrow, RestartAlt, Stop} from '@mui/icons-material';
 import {DataGrid, GridColDef} from '@mui/x-data-grid';
 import './index.css';
 import API from './API';
-import {SniffingStatus, GeneralPacket} from "./types/sniffing";
+import {SniffingStatus, GeneralPacket, FeedbackMessage} from "./types/sniffing";
 import InterfaceInput from './components/InterfaceInput';
 import TimeIntervalInput from './components/TimeIntervalInput';
 import CloseIcon from '@mui/icons-material/Close';
@@ -52,6 +52,8 @@ const columns: GridColDef[] = [
 ];
 
 function App() {
+
+    const resetFeedback = {text: "", isError: false, duration: 0};
     let [interfaces, setInterfaces] = useState<string[] | null>(null);
     let [currentInterface, setCurrentInterface] = useState<string>("");
     let [sniffingStatus, setSniffingStatus] = useState<SniffingStatus>(SniffingStatus.Inactive);
@@ -59,12 +61,13 @@ function App() {
     let [reportUpdateTime, setReportUpdateTime] = useState<number>(30);
     let [reportFileName, setReportFileName] = useState<string>("report");
     let [reportFolder, setReportFolder] = useState<string>("./");
-    let [errorMessage, setErrorMessage] = useState<string>("");
     let [selectedPacket, setSelectedPacket] = useState<GeneralPacket | null>(null);
     let [over, setOver] = useState<string | null>(null);
     let [reportTimer, setReportTimer] = useState<null | ReturnType<typeof setInterval>>(null);
     let [timerStartTime, setTimerStartTime] = useState<number>(0);
     let [timerRemainingTime, setTimerRemainingTime] = useState<number>(0);
+    let [firstReportGeneration, setFirstReportGeneration] = useState<boolean>(true);
+    let [feedbackMessage, setFeedbackMessage] = useState<FeedbackMessage>(resetFeedback);
 
     useEffect(() => {
         const setup = async () => {
@@ -73,8 +76,11 @@ function App() {
                 const interfaces = await API.getInterfacesList();
                 setInterfaces(interfaces);
             } catch (exception) {
-                setErrorMessage("Unable to retrieve interfaces, try running this App as administrator");
-                console.log(exception);
+                setFeedbackMessage({
+                    isError: true,
+                    duration: -1,
+                    text: "Unable to retrieve interfaces, try running this App as administrator"
+                });
             }
 
             /* Packet reception event */
@@ -90,10 +96,21 @@ function App() {
 
     const generateReport = async () => {
         try {
-            await API.generateReport(`${reportFileName}.txt`);
-            // TODO: show success message
+            setTimerStartTime(Date.now());
+            await API.generateReport(`${reportFolder}${reportFileName}.txt`, firstReportGeneration);
+            if (firstReportGeneration)
+                setFirstReportGeneration(false);
+            setFeedbackMessage({
+                isError: false,
+                duration: 5000,
+                text: "Report generated"
+            });
         } catch (exception) {
-            // TODO: show error message
+            setFeedbackMessage({
+                isError: true,
+                duration: 8000,
+                text: "There was an error trying to generate the report: " + exception
+            });
         }
     }
 
@@ -113,6 +130,7 @@ function App() {
         if (reportTimer)
             clearInterval(reportTimer);
         await API.stopSniffing();
+        setFirstReportGeneration(true);
         setSniffingStatus(SniffingStatus.Inactive);
     }
 
@@ -127,8 +145,8 @@ function App() {
     const pauseSniffing = async () => {
         if (sniffingStatus !== SniffingStatus.Active) return;
         if (reportTimer) {
-            setTimerRemainingTime(reportUpdateTime - (Date.now() - timerStartTime));
             clearInterval(reportTimer);
+            setTimerRemainingTime(reportUpdateTime - (Date.now() - timerStartTime));
         }
         await API.stopSniffing();
         setSniffingStatus(SniffingStatus.Paused);
@@ -212,12 +230,20 @@ function App() {
                               onCellClick={(ev) => setSelectedPacket(ev.row)}/>
                 </Grid>
 
-                <Snackbar anchorOrigin={{vertical: "bottom", horizontal: "right"}} open={errorMessage.length > 0}
-                          key={errorMessage} onClick={() => setErrorMessage("")}>
-                    <Alert severity="error">
-                        {errorMessage}
+                <Snackbar anchorOrigin={{vertical: "bottom", horizontal: "right"}}
+                          open={feedbackMessage.text.length > 0}
+                          key={feedbackMessage.text}
+                          autoHideDuration={feedbackMessage.duration}
+                          message={feedbackMessage.text}
+                          onClick={() => setFeedbackMessage(resetFeedback)}
+                          onClose={(event: React.SyntheticEvent | Event, reason?: string) => {if (reason === 'clickaway') return; setFeedbackMessage(resetFeedback);}}
+                    >
+                    <Alert severity={feedbackMessage.isError ? 'error' : 'success'}>
+                        {feedbackMessage.text}
                     </Alert>
-                </Snackbar>
+            </Snackbar>
+
+
 
                 {/* Info selected Packet */}
 

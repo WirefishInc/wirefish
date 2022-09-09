@@ -7,7 +7,7 @@ use std::ffi::OsStr;
 use chrono::Local;
 
 /// Appends data to a report file, creates the file if it doesn't exist
-pub fn write_report(output_path: &str, data: &mut HashMap<SourceDestination, PacketExchange>) -> Result<(), io::Error> {
+pub fn write_report(output_path: &str, mut data: HashMap<SourceDestination, PacketExchange>, first_generation: bool) -> Result<bool, io::Error> {
     let path = Path::new(output_path);
     let file_exists = path.is_file();
     let file_extension = path.extension();
@@ -23,6 +23,9 @@ pub fn write_report(output_path: &str, data: &mut HashMap<SourceDestination, Pac
         if !parent_directory.is_dir() {
             fs::create_dir_all(parent_directory)?;
         }
+    } else if first_generation {
+        // Remove old report file
+        fs::remove_file(&output_path)?;
     }
 
     // Open file in append mode, create it if it doesn't exist
@@ -33,12 +36,15 @@ pub fn write_report(output_path: &str, data: &mut HashMap<SourceDestination, Pac
     let mut writer = BufWriter::new(file);
 
     // Write report metadata
-    let transmitted_bytes = data.values().map(|exchange| exchange.transmitted_bytes).reduce(|accum, item| accum + item).unwrap();
+    let transmitted_bytes = match data.values().map(|exchange| exchange.transmitted_bytes).reduce(|accum, item| accum + item) {
+        Some(bytes) => bytes,
+        None => 0
+    };
     writer.write_all(("-".repeat(50) + "\n\n").as_bytes())?;
     writer.write_all((">> Updated at: ".to_owned() + &Local::now().format("%Y-%m-%d %H:%M:%S").to_string() + "\n").as_bytes())?;
     writer.write_all((">> Collected entries: ".to_owned() + &data.len().to_string() + "\n").as_bytes())?;
     writer.write_all((">> Total Bytes transmitted: ".to_owned() + &transmitted_bytes.to_string() + "\n\n").as_bytes())?;
-    writer.write_all("Source Ip \t\t\t\t\t\t\t\t    Destination Ip  \t\t\t\t\t\t    Source Port Destination Port		Data Exchanged	First Data Exchange\t\tLast Data Exchange".as_bytes())?;
+    writer.write_all("Source Ip \t\t\t\t\t\t\t\t    Destination Ip  \t\t\t\t\t\t    Source Port Destination Port		Data Exchanged	First Data Exchange\t\tLast Data Exchange\n".as_bytes())?;
 
     // Write packets exchange data
     for (source_destination, exchange) in data.drain() {
@@ -46,7 +52,7 @@ pub fn write_report(output_path: &str, data: &mut HashMap<SourceDestination, Pac
     }
     writer.write_all(b"\n")?;
 
-    Ok(())
+    Ok(true)
 }
 
 pub mod data {
@@ -54,7 +60,7 @@ pub mod data {
     use chrono::{DateTime, Local};
     use std::cmp;
 
-    #[derive(PartialEq, Eq, Hash)]
+    #[derive(PartialEq, Eq, Hash, Debug)]
     pub struct SourceDestination {
         ip_source: String,
         ip_destination: String,
@@ -62,6 +68,7 @@ pub mod data {
         port_destination: String,
     }
 
+    #[derive(Debug)]
     pub struct PacketExchange {
         protocols: HashSet<String>,
         pub transmitted_bytes: usize,

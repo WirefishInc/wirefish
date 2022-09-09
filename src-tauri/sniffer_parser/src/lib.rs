@@ -6,7 +6,7 @@ pub use crate::application::*;
 pub use crate::network::*;
 pub use crate::transport::*;
 
-mod serializable_packet;
+pub mod serializable_packet;
 
 use log::debug;
 use pnet::packet::ethernet::{EtherTypes, EthernetPacket};

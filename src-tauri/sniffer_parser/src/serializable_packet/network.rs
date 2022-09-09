@@ -83,20 +83,20 @@ impl<'a> From<&Ipv6Packet<'a>> for SerializableIpv6Packet {
 
 #[derive(Serialize, Debug)]
 pub struct SerializableIpv4Packet {
-    version: u8,
-    header_length: u8,
-    dscp: u8,
-    ecn: u8,
-    total_length: u16,
-    identification: u16,
-    flags: u8,
-    fragment_offset: u16,
-    ttl: u8,
-    next_level_protocol: String,
-    checksum: u16,
-    source: Ipv4Addr,
-    destination: Ipv4Addr,
-    payload: Vec<u8>,
+    pub version: u8,
+    pub header_length: u8,
+    pub dscp: u8,
+    pub ecn: u8,
+    pub total_length: u16,
+    pub identification: u16,
+    pub flags: u8,
+    pub fragment_offset: u16,
+    pub ttl: u8,
+    pub next_level_protocol: String,
+    pub checksum: u16,
+    pub source: Ipv4Addr,
+    pub destination: Ipv4Addr,
+    pub payload: Vec<u8>,
 }
 
 impl<'a> From<&Ipv4Packet<'a>> for SerializableIpv4Packet {
