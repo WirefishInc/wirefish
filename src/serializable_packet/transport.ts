@@ -1,6 +1,5 @@
 import {SerializableTransportLayerPacket} from "../types/sniffing";
 
-/* rev */
 const TCPflags = ["FIN", "SYN", "RST", "PSH", "ACK", "URG", "ECN", "CWR", "Nonce", "Reserved"]
 
 export class TcpPacket implements SerializableTransportLayerPacket {

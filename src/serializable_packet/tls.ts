@@ -9,6 +9,7 @@ export interface CustomTlsMessages {
 }
 
 // todo fields too long (fix css) ex. client hello cyphers
+// todo fix fields [] toDisplay
 
 /* type */
 
@@ -271,8 +272,7 @@ export class ServerHelloMessage extends CustomHandshakeMessage {
     }
 }
 
-// TODO CHECK
-export class Certificate extends CustomHandshakeMessage {
+class Certificate {
     signature_algorithm: string;
     signature_value: number[];
     serial: string;
@@ -281,7 +281,6 @@ export class Certificate extends CustomHandshakeMessage {
     subject_uid: string;
     validity: string;
     version: string;
-    type: string;
     //subject_pki: string;
 
     constructor(
@@ -294,7 +293,6 @@ export class Certificate extends CustomHandshakeMessage {
         validity: string,
         version: string,
     ) {
-        super();
         this.signature_algorithm = signature_algorithm;
         this.signature_value = signature_value;
         this.serial = serial;
@@ -303,22 +301,21 @@ export class Certificate extends CustomHandshakeMessage {
         this.subject_uid = subject_uid;
         this.validity = validity;
         this.version = version;
-        this.type = "Certificate"
     }
 
-    // todo
     toDisplay(): any {
-        return [];
-    }
+        let packet_info = [];
 
-    toString(): string {
-        let res = super.toString();
+        packet_info.push({"Signature Algorithm": this.version});
+        packet_info.push({"Signature Value": this.signature_value});
+        packet_info.push({"Serial": this.serial});
+        packet_info.push({"Issuer Id": this.issuer_uid});
+        packet_info.push({"Subject": this.subject});
+        packet_info.push({"Subject Id": this.subject_uid});
+        packet_info.push({"Validity": this.validity});
+        packet_info.push({"Version": this.version});
 
-        return res + "Protocol: Certificate";
-    }
-
-    getType(): string {
-        return this.type
+        return packet_info;
     }
 }
 
@@ -328,19 +325,35 @@ export class CertificateMessage extends CustomHandshakeMessage {
 
     constructor(certificates: Certificate[]) {
         super();
-        this.certificates = certificates;
-        this.type = "Certificate Message"
+        let res : Certificate[] = [];
+        certificates.forEach( (c) => {
+            res.push( new Certificate(
+                c.signature_algorithm,
+                c.signature_value,
+                c.serial,
+                c.issuer_uid,
+                c.subject,
+                c.subject_uid,
+                c.validity,
+                c.version
+            ))
+        })
+        this.certificates = res;
+        this.type = "Certificate"
     }
 
-    // todo
     toDisplay(): any {
-        return [];
+        let packet_info: any[] = [];
+
+        this.certificates.forEach( (c) => packet_info.push(c.toDisplay()))
+
+        return packet_info;
     }
 
     toString(): string {
         let res = super.toString();
 
-        return res + "Protocol: Certificate Message";
+        return res + "Protocol: Certificate";
     }
 
     getType(): string {
@@ -378,7 +391,7 @@ export class CertificateRequestMessage extends CustomHandshakeMessage {
 }
 
 export class CertificateStatusMessage extends CustomHandshakeMessage {
-    // TODO
+    // TODO CertificateStatusMessage
 }
 
 export class CertificateVerifyMessage extends CustomHandshakeMessage {

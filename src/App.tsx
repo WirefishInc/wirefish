@@ -18,6 +18,9 @@ import ToggleButton from "./components/ToggleButton";
 import {SniffingStatus, GeneralPacket} from "./types/sniffing";
 import {Fields, TlsFields} from "./components/Fields";
 import HewViewer from "./components/HexViewer";
+import InputLabel from '@mui/material/InputLabel';
+import MenuItem from '@mui/material/MenuItem';
+import Select from '@mui/material/Select';
 
 const darkTheme = createTheme({
     palette: {
@@ -62,6 +65,7 @@ function App() {
     let [errorMessage, setErrorMessage] = useState<string>("");
     let [selectedPacket, setSelectedPacket] = useState<GeneralPacket | null>(null);
     let [over, setOver] = useState<string | null>(null);
+    let [filter, setFilter] = useState<string>("ALL");
 
     useEffect(() => {
         const setup = async () => {
@@ -126,6 +130,37 @@ function App() {
         else if (sniffingStatus === SniffingStatus.Active) await pauseSniffing();
     }
 
+    // TODO: more filters
+    const packetFilter = (packet: GeneralPacket) => {
+        switch (filter) {
+            case 'ALL':
+                return true
+
+            case 'TLS':
+                return packet.type === 'TLS'
+
+            case 'TCP':
+                return packet.type === 'TCP'
+
+            case 'UDP':
+                return packet.type === 'UDP'
+
+            case 'ICMPv6':
+                return packet.type === 'ICMPv6'
+
+            case 'ICMP':
+                return packet.type === 'ICMP'
+
+            case 'ARP':
+                return packet.type === 'ARP'
+
+            case 'HTTP':
+                return packet.type === 'HTTP'
+
+            default:
+                return true
+        }
+    }
     return (
         <ThemeProvider theme={darkTheme}>
             <CssBaseline/>
@@ -179,11 +214,34 @@ function App() {
                     </FormControl>
                 </Grid>
 
+                {/* Filter */}
+                <Grid xs={12} item={true} className={"container-center"}>
+                    <FormControl >
+                        <InputLabel id="select-label">Type</InputLabel>
+                        <Select
+                            labelId="select-label"
+                            id="select"
+                            value={filter}
+                            label="Type"
+                            onChange={(ev) => setFilter(ev.target.value)}
+                        >
+                            <MenuItem value={"ALL"}>All packet</MenuItem>
+                            <MenuItem value={"TLS"}>TLS packet</MenuItem>
+                            <MenuItem value={"TCP"}>TCP packet</MenuItem>
+                            <MenuItem value={"UDP"}>UDP packet</MenuItem>
+                            <MenuItem value={"ICMPv6"}>ICMPv6 packet</MenuItem>
+                            <MenuItem value={"ICMP"}>ICMP packet</MenuItem>
+                            <MenuItem value={"ARP"}>ARP packet</MenuItem>
+                            <MenuItem value={"HTTP"}>HTTP packet</MenuItem>
+                        </Select>
+                    </FormControl>
+                </Grid>
+
                 {/* Sniffing Results */}
 
                 <Grid xs={12} item={true}>
                     <DataGrid style={{marginTop: "15px", minHeight: "250px"}}
-                              rows={capturedPackets} columns={columns}
+                              rows={capturedPackets.filter(packetFilter)} columns={columns}
                               onCellClick={(ev) => setSelectedPacket(ev.row)}/>
                 </Grid>
 
@@ -249,7 +307,7 @@ function App() {
                                         <AccordionDetails>
                                             <List component="nav" aria-label="mailbox folders">
                                                 {
-                                                    selectedPacket.packet.application_layer_packet.toString() !== "Transport Layer Security" ?
+                                                    selectedPacket.packet.application_layer_packet.getType() !== "TLS" ?
                                                         <Fields
                                                             packetInfo={selectedPacket.packet.application_layer_packet.toDisplay()}/>
                                                         :

@@ -136,9 +136,8 @@ export class Ipv6Packet implements SerializableNetworkLayerPacket{
         return this.source;
     }
 
-    // TODO (can a packet with last layer network (ip) exists?)
     getInfo(): string {
-        return "";
+        return "Internet Protocol Version 6";
     }
 
     getType(): string {
@@ -230,9 +229,8 @@ export class Ipv4Packet implements SerializableNetworkLayerPacket {
         return this.source;
     }
 
-    // TODO (can a packet with last layer network (ip) exists?)
     getInfo(): string {
-        return "";
+        return "Internet Protocol Version 4";
     }
 
     getType(): string {

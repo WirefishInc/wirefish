@@ -1,6 +1,7 @@
-import {SerializableApplicationLayerPacket} from "../types/sniffing";
+import {MalformedPacket, SerializableApplicationLayerPacket} from "../types/sniffing";
 import {
-    CertificateRequestMessage,
+    CertificateMessage,
+    CertificateRequestMessage, CertificateStatusMessage,
     CertificateVerifyMessage,
     ChangeCipherSpecMessage,
     ClientHelloMessage,
@@ -29,7 +30,7 @@ export class TlsPacket implements SerializableApplicationLayerPacket {
         this.version = version;
         this.messages = this.setMessages(messages);
         this.length = length;
-        this.type = "Transport Layer Security"
+        this.type = "TLS"
     }
 
     private setMessages(messages: any[]): CustomTlsMessages[] {
@@ -58,7 +59,7 @@ export class TlsPacket implements SerializableApplicationLayerPacket {
                         result.push(packet)
                     break;
                 default:
-                // TODO: manage default
+                    result.push(new MalformedPacket())
             }
         })
 
@@ -93,13 +94,13 @@ export class TlsPacket implements SerializableApplicationLayerPacket {
                 )
                 break;
             case "Certificate":
-                // TODO: certificate message
+                result = new CertificateMessage(p.certificates);
                 break;
             case "CertificateRequest":
                 result = new CertificateRequestMessage(p.sig_hash_algos)
                 break;
             case "CertificateStatus":
-                // TODO: certificate status miss
+                result = new CertificateStatusMessage()
                 break;
             case "CertificateVerify":
                 result = new CertificateVerifyMessage(p.data)
@@ -160,7 +161,7 @@ export class TlsPacket implements SerializableApplicationLayerPacket {
                 )
                 break;
             default:
-            // TODO: manage default
+                result = new MalformedPacket();
         }
 
         return result;
@@ -177,7 +178,7 @@ export class TlsPacket implements SerializableApplicationLayerPacket {
     }
 
     getType(): string {
-        return this.version;
+        return this.type;
     }
 
     toDisplay() {
@@ -185,7 +186,7 @@ export class TlsPacket implements SerializableApplicationLayerPacket {
     }
 
     toString(): string {
-        return this.type
+        return this.version+" Transport Layer Security"
     }
 }
 

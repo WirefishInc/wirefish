@@ -10,6 +10,8 @@ export enum SniffingStatus {
 }
 
 export interface SerializableTransportLayerPacket {
+    type: string;
+
     toDisplay(): any;
 
     toString(): string;
@@ -20,6 +22,8 @@ export interface SerializableTransportLayerPacket {
 }
 
 export interface SerializableNetworkLayerPacket {
+    type: string;
+
     toDisplay(): any;
 
     toString(): string;
@@ -34,6 +38,8 @@ export interface SerializableNetworkLayerPacket {
 }
 
 export interface SerializableLinkLayerPacket {
+    type: string;
+
     toDisplay(): any;
 
     toString(): string;
@@ -46,6 +52,8 @@ export interface SerializableLinkLayerPacket {
 }
 
 export interface SerializableApplicationLayerPacket {
+    type: string;
+
     toDisplay(): any;
 
     toString(): string;
@@ -69,10 +77,10 @@ export class GeneralPacket {
     constructor(id: number, packet: any) {
         this.id = id;
 
-        let link_layer: SerializableLinkLayerPacket | null = null;
-        let network_layer: SerializableNetworkLayerPacket | null = null;
-        let transport_layer: SerializableTransportLayerPacket | null = null;
-        let application_layer: SerializableApplicationLayerPacket | null = null;
+        let link_layer: SerializableLinkLayerPacket | MalformedPacket;
+        let network_layer: SerializableNetworkLayerPacket | MalformedPacket;
+        let transport_layer: SerializableTransportLayerPacket | MalformedPacket | null;
+        let application_layer: SerializableApplicationLayerPacket | MalformedPacket | null;
 
         link_layer = make_link_level_packet(packet.linkLayerPacket);
         network_layer = make_network_level_packet(packet.networkLayerPacket);
@@ -88,21 +96,18 @@ export class GeneralPacket {
             this.info = transport_layer.getInfo();
 
         } else {
-            this.type = network_layer ? network_layer.getType() : "";
-            this.info = network_layer ? network_layer.getInfo() : "";
+            this.type = network_layer.getType();
+            this.info = network_layer.getInfo();
         }
 
-        this.sourceMAC = link_layer ? link_layer.getSource() : "";
-        this.destinationMAC = link_layer ? link_layer.getDestination() : "";
-        this.sourceIP = network_layer ? network_layer.getSource() : "";
-        this.destinationIP = network_layer ? network_layer.getDestination() : "";
-        this.length = link_layer ? link_layer.getPayload().length : 0;
+        this.sourceMAC = link_layer.getSource();
+        this.destinationMAC = link_layer.getDestination();
+        this.sourceIP = network_layer.getSource();
+        this.destinationIP = network_layer.getDestination();
+        this.length = link_layer.getPayload().length;
 
         this.packet = new Packet(link_layer, network_layer, transport_layer, application_layer);
     }
-
-    // todo: try to remove "?" when adding malformed packet
-
 }
 
 /* ParsedPacket */
@@ -128,7 +133,7 @@ export class Packet {
 
 const make_transport_level_packet = (transport: any) => {
     if (!transport) return null;
-    let transport_layer: SerializableTransportLayerPacket | null = null
+    let transport_layer: SerializableTransportLayerPacket | MalformedPacket;
 
     switch (transport.type) {
         case "TcpPacket":
@@ -199,15 +204,15 @@ const make_transport_level_packet = (transport: any) => {
             break;
 
         default:
-            console.log("Malformed packet") // TODO
+            transport_layer = new MalformedPacket();
     }
 
     return transport_layer;
 }
 
 const make_link_level_packet = (link: any) => {
-    if (!link) return null;
-    let link_layer: SerializableLinkLayerPacket | null = null;
+    //if (!link) return null;
+    let link_layer: SerializableLinkLayerPacket | MalformedPacket;
 
     switch (link.type) {
         case "EthernetPacket":
@@ -220,15 +225,15 @@ const make_link_level_packet = (link: any) => {
             break;
 
         default:
-            console.log("Malformed packet") // TODO
+            link_layer = new MalformedPacket();
     }
 
     return link_layer;
 }
 
 const make_network_level_packet = (network: any) => {
-    if (!network) return null;
-    let network_layer: SerializableNetworkLayerPacket | null = null;
+    //if (!network) return null;
+    let network_layer: SerializableNetworkLayerPacket | MalformedPacket;
 
     switch (network.type) {
         case "ArpPacket":
@@ -280,7 +285,7 @@ const make_network_level_packet = (network: any) => {
             break;
 
         default:
-            console.log("Malformed packet") // TODO
+            network_layer = new MalformedPacket();
     }
 
     return network_layer;
@@ -288,7 +293,7 @@ const make_network_level_packet = (network: any) => {
 
 const make_application_level = (application: any) => {
     if (!application) return null;
-    let application_layer: SerializableApplicationLayerPacket | null = null;
+    let application_layer: SerializableApplicationLayerPacket | MalformedPacket;
 
     switch (application.type) {
         case "TlsPacket":
@@ -320,8 +325,44 @@ const make_application_level = (application: any) => {
             break;
 
         default:
-            console.log("Malformed packet") // TODO
+            application_layer = new MalformedPacket();
     }
 
     return application_layer;
+}
+
+export class MalformedPacket {
+    type: string;
+
+    constructor() {
+        this.type = "Malformed Packet"
+    }
+
+    toDisplay() {
+        return []
+    }
+
+    toString(): string {
+        return this.type
+    }
+
+    getType(): string {
+        return this.type
+    }
+
+    getInfo(): string {
+        return this.type
+    }
+
+    getSource(): string {
+        return ""
+    }
+
+    getDestination(): string {
+        return ""
+    }
+
+    getPayload(): number[] {
+        return []
+    }
 }
