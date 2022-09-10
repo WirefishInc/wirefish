@@ -38,7 +38,7 @@ const HewViewer: FC<HewViewerProps> = ({payload, over, setOver}) => {
         ascii_rows.push(ascii_payload.splice(0, 16))
     }
 
-    // TODO: make table responsive (or fix width)
+    // TODO: make table responsive (content exceed when resize table)
 
     return (
         <Grid className={"payload"} container xs={12} item={true}>

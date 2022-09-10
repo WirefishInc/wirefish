@@ -1,12 +1,22 @@
 import {SerializableApplicationLayerPacket} from "../types/sniffing";
 import {
+    CertificateRequestMessage,
+    CertificateVerifyMessage,
     ChangeCipherSpecMessage,
+    ClientHelloMessage,
+    ClientKeyExchangeMessage,
     CustomAlertMessage,
     CustomApplicationDataMessage,
     CustomEncryptedMessage,
     CustomHandshakeMessage,
     CustomHeartbeatMessage,
-    CustomTlsMessages
+    CustomTlsMessages,
+    EndOfEarlyData,
+    FinishedMessage,
+    HelloRequest,
+    HelloRetryRequestMessage,
+    KeyUpdate, NewSessionTicketMessage, NextProtocolMessage, ServerDoneMessage,
+    ServerHelloMessage, ServerHelloV13Draft18Message, ServerKeyExchangeMessage
 } from "./tls";
 
 export class TlsPacket implements SerializableApplicationLayerPacket {
@@ -27,9 +37,6 @@ export class TlsPacket implements SerializableApplicationLayerPacket {
 
         messages.forEach((message) => {
             switch (message.type) {
-                case "Handshake":
-                    // todo
-                    break;
                 case "Alert":
                     result.push(new CustomAlertMessage(message.severity, message.description))
                     break;
@@ -45,35 +52,136 @@ export class TlsPacket implements SerializableApplicationLayerPacket {
                 case "ChangeCipherSpec":
                     result.push(new ChangeCipherSpecMessage())
                     break;
+                case "Handshake":
+                    let packet = TlsPacket.set_subtype_packet(message);
+                    if (packet)
+                        result.push(packet)
+                    break;
+                default:
+                // TODO: manage default
             }
-
         })
 
         return result;
     }
 
-    // todo
-    // @ts-ignore ! remove it
-    private make_sub_type_packet() : CustomHandshakeMessage {
+    private static set_subtype_packet(message: any): CustomHandshakeMessage | null {
+        let result: CustomHandshakeMessage | null = null;
+        let p = message.content;
+
+        switch (message.subType) {
+            case "ClientHello":
+                result = new ClientHelloMessage(
+                    p.version,
+                    p.rand_time,
+                    p.rand_data,
+                    p.session_id,
+                    p.ciphers,
+                    p.compressions,
+                    p.extensions
+                )
+                break;
+            case "ServerHello":
+                result = new ServerHelloMessage(
+                    p.version,
+                    p.rand_time,
+                    p.rand_data,
+                    p.session_id,
+                    p.ciphers,
+                    p.compressions,
+                    p.extensions
+                )
+                break;
+            case "Certificate":
+                // TODO: certificate message
+                break;
+            case "CertificateRequest":
+                result = new CertificateRequestMessage(p.sig_hash_algos)
+                break;
+            case "CertificateStatus":
+                // TODO: certificate status miss
+                break;
+            case "CertificateVerify":
+                result = new CertificateVerifyMessage(p.data)
+                break;
+            case "ClientKeyExchange":
+                result = new ClientKeyExchangeMessage(
+                    p.data,
+                    p.algo_type
+                )
+                break;
+            case "EndOfEarlyData":
+                result = new EndOfEarlyData();
+                break;
+            case "Finished":
+                result = new FinishedMessage(p.data);
+                break;
+            case "HelloRequest":
+                result = new HelloRequest();
+                break;
+            case "HelloRetryRequest":
+                result = new HelloRetryRequestMessage(
+                    p.cipher,
+                    p.extensions,
+                    p.version
+                )
+                break;
+            case "KeyUpdate":
+                result = new KeyUpdate(p.key)
+                break;
+            case "NewSessionTicket":
+                result = new NewSessionTicketMessage(
+                    p.ticket,
+                    p.ticket_lifetime_hint
+                )
+                break;
+            case "NextProtocol":
+                result = new NextProtocolMessage(
+                    p.selected_protocol,
+                    p.padding
+                )
+                break;
+            case "ServerDone":
+                result = new ServerDoneMessage(p.data)
+                break;
+            case "ServerHelloV13Draft18":
+                new ServerHelloV13Draft18Message(
+                    p.version,
+                    p.random,
+                    p.cipher,
+                    p.extensions
+                )
+                break;
+            case "ServerKeyExchange":
+                result = new ServerKeyExchangeMessage(
+                    p.prime_modulus,
+                    p.generator,
+                    p.public_value
+                )
+                break;
+            default:
+            // TODO: manage default
+        }
+
+        return result;
     }
 
     getInfo(): string {
         let res = "";
 
-        this.messages.forEach( (message) => {
-            res += message.getType()+", ";
+        this.messages.forEach((message) => {
+            res += message.getType() + ", ";
         })
 
-        return res.slice(0,-2);
+        return res.slice(0, -2);
     }
 
     getType(): string {
         return this.version;
     }
 
-    // todo: get all messagges
     toDisplay() {
-        return []
+        return this.messages;
     }
 
     toString(): string {

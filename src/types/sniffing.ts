@@ -101,7 +101,7 @@ export class GeneralPacket {
         this.packet = new Packet(link_layer, network_layer, transport_layer, application_layer);
     }
 
-    // todo: remove "?" adding malformed packet
+    // todo: try to remove "?" when adding malformed packet
 
 }
 

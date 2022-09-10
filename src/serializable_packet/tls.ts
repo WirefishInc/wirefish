@@ -8,7 +8,7 @@ export interface CustomTlsMessages {
     toString(): string;
 }
 
-// todo check all packet without payload !!!
+// todo fields too long (fix css) ex. client hello cyphers
 
 /* type */
 
@@ -26,8 +26,8 @@ export class CustomAlertMessage implements CustomTlsMessages {
     toDisplay(): any {
         let packet_info = [];
 
-        packet_info.push( {"Severity" : this.severity});
-        packet_info.push( {"Description" : this.description});
+        packet_info.push({"Severity": this.severity});
+        packet_info.push({"Description": this.description});
 
         return packet_info;
     }
@@ -57,9 +57,9 @@ export class CustomHeartbeatMessage implements CustomTlsMessages {
     toDisplay(): any {
         let packet_info = [];
 
-        packet_info.push( {"Heartbeat type" : this.heartbeat_type});
-        packet_info.push( {"Payload" : this.payload});
-        packet_info.push( {"Payload Len" : this.payload_len});
+        packet_info.push({"Heartbeat type": this.heartbeat_type});
+        packet_info.push({"Payload": this.payload});
+        packet_info.push({"Payload Len": this.payload_len});
 
         return packet_info;
     }
@@ -73,7 +73,7 @@ export class CustomHeartbeatMessage implements CustomTlsMessages {
     }
 }
 
-// todo
+
 export class CustomHandshakeMessage implements CustomTlsMessages {
     type: string;
 
@@ -82,10 +82,11 @@ export class CustomHandshakeMessage implements CustomTlsMessages {
     }
 
     toDisplay(): any {
+        return []
     }
 
     toString(): string {
-        return "";
+        return "TLS Record Layer: Handshake ";
     }
 
     getType(): string {
@@ -103,7 +104,7 @@ export class CustomApplicationDataMessage implements CustomTlsMessages {
     }
 
     toDisplay(): any {
-        return [ {"Data": this.data}]
+        return [{"Data": this.data}]
     }
 
     toString(): string {
@@ -125,7 +126,7 @@ export class CustomEncryptedMessage implements CustomTlsMessages {
     }
 
     toDisplay(): any {
-        return [{"Hardware Type" : this.data}];
+        return [{"Hardware Type": this.data}];
     }
 
     toString(): string {
@@ -168,6 +169,7 @@ export class ClientHelloMessage extends CustomHandshakeMessage {
     ciphers: string[];
     compressions: string[];
     extensions: string[];
+    type: string;
 
     constructor(
         version: string,
@@ -186,6 +188,31 @@ export class ClientHelloMessage extends CustomHandshakeMessage {
         this.ciphers = ciphers;
         this.compressions = compressions;
         this.extensions = extensions;
+        this.type = "Client Hello"
+    }
+
+    toDisplay(): any {
+        let packet_info = [];
+
+        packet_info.push({"Version": this.version});
+        packet_info.push({"Rand Time": this.rand_time});
+        packet_info.push({"Rand Data": this.rand_data});
+        packet_info.push({"Session Id": this.session_id});
+        packet_info.push({"Ciphers": this.ciphers});
+        packet_info.push({"Compression": this.compressions});
+        packet_info.push({"Extension": this.extensions});
+
+        return packet_info;
+    }
+
+    toString(): string {
+        let res = super.toString();
+
+        return res + "Protocol: Client Hello";
+    }
+
+    getType(): string {
+        return this.type
     }
 }
 
@@ -197,6 +224,7 @@ export class ServerHelloMessage extends CustomHandshakeMessage {
     ciphers: string;
     compressions: string;
     extensions: string[];
+    type: string;
 
     constructor(
         version: string,
@@ -215,9 +243,35 @@ export class ServerHelloMessage extends CustomHandshakeMessage {
         this.ciphers = ciphers;
         this.compressions = compressions;
         this.extensions = extensions;
+        this.type = "Server Hello"
+    }
+
+    toDisplay(): any {
+        let packet_info = [];
+
+        packet_info.push({"Version": this.version});
+        packet_info.push({"Rand Time": this.rand_time});
+        packet_info.push({"Rand Data": this.rand_data});
+        packet_info.push({"Session Id": this.session_id});
+        packet_info.push({"Ciphers": this.ciphers});
+        packet_info.push({"Compression": this.compressions});
+        packet_info.push({"Extension": this.extensions});
+
+        return packet_info;
+    }
+
+    toString(): string {
+        let res = super.toString();
+
+        return res + "Protocol: Server Hello";
+    }
+
+    getType(): string {
+        return this.type
     }
 }
 
+// TODO CHECK
 export class Certificate extends CustomHandshakeMessage {
     signature_algorithm: string;
     signature_value: number[];
@@ -227,6 +281,7 @@ export class Certificate extends CustomHandshakeMessage {
     subject_uid: string;
     validity: string;
     version: string;
+    type: string;
     //subject_pki: string;
 
     constructor(
@@ -248,24 +303,77 @@ export class Certificate extends CustomHandshakeMessage {
         this.subject_uid = subject_uid;
         this.validity = validity;
         this.version = version;
+        this.type = "Certificate"
+    }
+
+    // todo
+    toDisplay(): any {
+        return [];
+    }
+
+    toString(): string {
+        let res = super.toString();
+
+        return res + "Protocol: Certificate";
+    }
+
+    getType(): string {
+        return this.type
     }
 }
 
 export class CertificateMessage extends CustomHandshakeMessage {
     certificates: Certificate[];
+    type: string;
 
     constructor(certificates: Certificate[]) {
         super();
         this.certificates = certificates;
+        this.type = "Certificate Message"
+    }
+
+    // todo
+    toDisplay(): any {
+        return [];
+    }
+
+    toString(): string {
+        let res = super.toString();
+
+        return res + "Protocol: Certificate Message";
+    }
+
+    getType(): string {
+        return this.type
     }
 }
 
 export class CertificateRequestMessage extends CustomHandshakeMessage {
     sig_hash_algos: number[];
+    type: string;
 
     constructor(sig_hash_algos: number[]) {
         super();
         this.sig_hash_algos = sig_hash_algos;
+        this.type = "Certificate Request"
+    }
+
+    toDisplay(): any {
+        let packet_info = [];
+
+        packet_info.push({"Signature Hash Alogs": this.sig_hash_algos});
+
+        return packet_info;
+    }
+
+    toString(): string {
+        let res = super.toString();
+
+        return res + "Protocol: Certificate Request";
+    }
+
+    getType(): string {
+        return this.type
     }
 }
 
@@ -275,30 +383,91 @@ export class CertificateStatusMessage extends CustomHandshakeMessage {
 
 export class CertificateVerifyMessage extends CustomHandshakeMessage {
     data: number[];
+    type: string;
 
     constructor(data: number[]) {
         super();
         this.data = data;
+        this.type = "Certificate Verify"
+    }
+
+    toDisplay(): any {
+        let packet_info = [];
+
+        packet_info.push({"Data": this.data});
+
+        return packet_info;
+    }
+
+    toString(): string {
+        let res = super.toString();
+
+        return res + "Protocol: Certificate Verify";
+    }
+
+    getType(): string {
+        return this.type
     }
 }
 
 export class ClientKeyExchangeMessage extends CustomHandshakeMessage {
     data: number[];
     algo_type: string;
+    type: string;
 
     constructor(data: number[], algo_type: string) {
         super();
         this.data = data;
         this.algo_type = algo_type;
+        this.type = "Client Key Exchange"
+    }
+
+    toDisplay(): any {
+        let packet_info = [];
+
+        packet_info.push({"Data": this.data});
+        packet_info.push({"Algorithm Type": this.algo_type});
+
+        return packet_info;
+    }
+
+    toString(): string {
+        let res = super.toString();
+
+        return res + "Protocol: Client Key Exchange";
+    }
+
+    getType(): string {
+        return this.type
     }
 }
 
 export class FinishedMessage extends CustomHandshakeMessage {
     data: number[];
+    type: string;
 
     constructor(data: number[]) {
         super();
         this.data = data;
+        this.type = "Finished"
+    }
+
+    toDisplay(): any {
+        let packet_info = [];
+
+        packet_info.push({"Data": this.data});
+
+        return packet_info;
+    }
+
+    toString(): string {
+        let res = super.toString();
+
+        return res + "Protocol: Finished";
+    }
+
+    getType(): string {
+        return this.type
     }
 }
 
@@ -306,6 +475,7 @@ export class HelloRetryRequestMessage extends CustomHandshakeMessage {
     cipher: string;
     extensions: string[];
     version: string;
+    type: string;
 
     constructor(cipher: string,
                 extensions: string[],
@@ -314,37 +484,120 @@ export class HelloRetryRequestMessage extends CustomHandshakeMessage {
         this.cipher = cipher;
         this.extensions = extensions;
         this.version = version;
+        this.type = "Hello Retry Request"
+    }
+
+    toDisplay(): any {
+        let packet_info = [];
+
+        packet_info.push({"Cipher": this.cipher});
+        packet_info.push({"Extension": this.extensions});
+        packet_info.push({"Version": this.version});
+
+        return packet_info;
+    }
+
+    toString(): string {
+        let res = super.toString();
+
+        return res + "Protocol: Hello Retry Request";
+    }
+
+    getType(): string {
+        return this.type
     }
 }
 
 export class NewSessionTicketMessage extends CustomHandshakeMessage {
     ticket: number[];
     ticket_lifetime_hint: number;
+    type: string;
 
     constructor(ticket: number[], ticket_lifetime_hint: number) {
         super();
         this.ticket = ticket;
         this.ticket_lifetime_hint = ticket_lifetime_hint;
+        this.type = "New Session Ticket"
+    }
+
+    toDisplay(): any {
+        let packet_info = [];
+
+        packet_info.push({"Ticket": this.ticket});
+        packet_info.push({"Ticket Life Time Hint": this.ticket_lifetime_hint});
+
+        return packet_info;
+    }
+
+    toString(): string {
+        let res = super.toString();
+
+        return res + "Protocol: New Session Ticket";
+    }
+
+    getType(): string {
+        return this.type
     }
 }
 
 export class NextProtocolMessage extends CustomHandshakeMessage {
     selected_protocol: number[];
     padding: number[];
+    type: string;
 
     constructor(selected_protocol: number[], padding: number[]) {
         super();
         this.selected_protocol = selected_protocol;
         this.padding = padding;
+        this.type = "Next Protocol"
+    }
+
+    toDisplay(): any {
+        let packet_info = [];
+
+        packet_info.push({"Selected Protocol": this.selected_protocol});
+        packet_info.push({"Padding": this.padding});
+
+        return packet_info;
+    }
+
+    toString(): string {
+        let res = super.toString();
+
+        return res + "Protocol: Next Protocol";
+    }
+
+    getType(): string {
+        return this.type
     }
 }
 
 export class ServerDoneMessage extends CustomHandshakeMessage {
     data: number[];
+    type: string;
 
     constructor(data: number[]) {
         super();
         this.data = data;
+        this.type = "Server Done"
+    }
+
+    toDisplay(): any {
+        let packet_info = [];
+
+        packet_info.push({"Data": this.data});
+
+        return packet_info;
+    }
+
+    toString(): string {
+        let res = super.toString();
+
+        return res + "Protocol: Server Done";
+    }
+
+    getType(): string {
+        return this.type
     }
 }
 
@@ -353,6 +606,7 @@ export class ServerHelloV13Draft18Message extends CustomHandshakeMessage {
     random: number[];
     cipher: string;
     extensions: string[];
+    type: string;
 
     constructor(
         version: string,
@@ -365,6 +619,28 @@ export class ServerHelloV13Draft18Message extends CustomHandshakeMessage {
         this.random = random;
         this.cipher = cipher;
         this.extensions = extensions;
+        this.type = "Server Hello V13 Draft 18 Message"
+    }
+
+    toDisplay(): any {
+        let packet_info = [];
+
+        packet_info.push({"Version": this.version});
+        packet_info.push({"Random": this.random});
+        packet_info.push({"Cipher": this.cipher});
+        packet_info.push({"Extensions": this.extensions});
+
+        return packet_info;
+    }
+
+    toString(): string {
+        let res = super.toString();
+
+        return res + "Protocol: Server Hello V13 Draft 18 Message";
+    }
+
+    getType(): string {
+        return this.type
     }
 }
 
@@ -372,6 +648,7 @@ export class ServerKeyExchangeMessage extends CustomHandshakeMessage {
     prime_modulus: number[];
     generator: number[];
     public_value: number[];
+    type: string;
 
     constructor(
         prime_modulus: number[],
@@ -382,21 +659,102 @@ export class ServerKeyExchangeMessage extends CustomHandshakeMessage {
         this.prime_modulus = prime_modulus;
         this.generator = generator;
         this.public_value = public_value;
+        this.type = "Server Key Exchange"
+    }
+
+    toDisplay(): any {
+        let packet_info = [];
+
+        packet_info.push({"Prime Modulus": this.prime_modulus});
+        packet_info.push({"Generator": this.generator});
+        packet_info.push({"Public Value": this.public_value});
+
+        return packet_info;
+    }
+
+    toString(): string {
+        let res = super.toString();
+
+        return res + "Protocol: Server Key Exchange";
+    }
+
+    getType(): string {
+        return this.type
     }
 }
 
 export class KeyUpdate extends CustomHandshakeMessage {
     key: string;
+    type: string;
 
     constructor(key: string) {
         super();
         this.key = key;
+        this.type = "Key Update"
+    }
+
+    toDisplay(): any {
+        let packet_info = [];
+
+        packet_info.push({"Key": this.key});
+
+        return packet_info;
+    }
+
+    toString(): string {
+        let res = super.toString();
+
+        return res + "Protocol: Key Update";
+    }
+
+    getType(): string {
+        return this.type
     }
 }
 
 
 export class EndOfEarlyData extends CustomHandshakeMessage {
+    type: string;
+
+    constructor() {
+        super();
+        this.type = "End of Early Data"
+    }
+
+    toDisplay(): any {
+        return [];
+    }
+
+    toString(): string {
+        let res = super.toString();
+
+        return res + "Protocol: End of Early Data";
+    }
+
+    getType(): string {
+        return this.type
+    }
 }
 
 export class HelloRequest extends CustomHandshakeMessage {
+    type: string;
+
+    constructor() {
+        super();
+        this.type = "Hello Request"
+    }
+
+    toDisplay(): any {
+        return [];
+    }
+
+    toString(): string {
+        let res = super.toString();
+
+        return res + "Protocol: Hello Request";
+    }
+
+    getType(): string {
+        return this.type
+    }
 }

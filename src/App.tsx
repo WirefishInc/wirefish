@@ -16,7 +16,7 @@ import ReportFolderInput from "./components/ReportFolderInput";
 import ReportNameInput from "./components/ReportNameInput";
 import ToggleButton from "./components/ToggleButton";
 import {SniffingStatus, GeneralPacket} from "./types/sniffing";
-import Fields from "./components/Fields";
+import {Fields, TlsFields} from "./components/Fields";
 import HewViewer from "./components/HexViewer";
 
 const darkTheme = createTheme({
@@ -25,31 +25,30 @@ const darkTheme = createTheme({
     },
 });
 
-// todo fix col dimension
 const columns: GridColDef[] = [
     {field: 'id', headerName: '#', width: 70},
-    {field: 'type', headerName: 'Type', width: 140, valueGetter: p => p.row.type},
-    {field: 'sourceMAC', headerName: 'Source MAC', width: 140, valueGetter: p => p.row.sourceMAC},
+    {field: 'type', headerName: 'Type', width: 100, valueGetter: p => p.row.type},
+    {field: 'sourceMAC', headerName: 'Source MAC', width: 200, valueGetter: p => p.row.sourceMAC},
     {
         field: 'destinationMAC',
         headerName: 'Destination MAC',
-        width: 140,
+        width: 200,
         valueGetter: p => p.row.destinationMAC
     },
     {
         field: 'sourceIP',
         headerName: 'Source IP',
-        width: 120,
+        width: 200,
         valueGetter: p => p.row.sourceIP
     },
     {
         field: 'destinationIP',
         headerName: 'Destination IP',
-        width: 120,
+        width: 200,
         valueGetter: p => p.row.destinationIP
     },
-    {field: 'length', headerName: 'Lenght', width: 100, valueGetter: p => p.row.length},
-    {field: 'info', headerName: 'Info', width: 600, valueGetter: p => p.row.info},
+    {field: 'length', headerName: 'Lenght', width: 70, valueGetter: p => p.row.length},
+    {field: 'info', headerName: 'Info', width: 1000, valueGetter: p => p.row.info},
 ];
 
 function App() {
@@ -249,12 +248,19 @@ function App() {
                                         </AccordionSummary>
                                         <AccordionDetails>
                                             <List component="nav" aria-label="mailbox folders">
-                                                <Fields
-                                                    packetInfo={selectedPacket.packet.application_layer_packet.toDisplay()}/>
+                                                {
+                                                    selectedPacket.packet.application_layer_packet.toString() !== "Transport Layer Security" ?
+                                                        <Fields
+                                                            packetInfo={selectedPacket.packet.application_layer_packet.toDisplay()}/>
+                                                        :
+                                                        <TlsFields
+                                                            packetInfo={selectedPacket.packet.application_layer_packet.toDisplay()}/>
+                                                }
                                             </List>
                                         </AccordionDetails>
                                     </Accordion>
                                 }
+
                             </Grid>
                         </>
                 }
