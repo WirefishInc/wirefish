@@ -29,29 +29,57 @@ const darkTheme = createTheme({
 });
 
 const columns: GridColDef[] = [
-    {field: 'id', headerName: '#', width: 70},
-    {field: 'type', headerName: 'Type', width: 100, valueGetter: p => p.row.type},
-    {field: 'sourceMAC', headerName: 'Source MAC', width: 200, valueGetter: p => p.row.sourceMAC},
+    {field: 'id', headerName: '#', width: 70, disableColumnMenu: true, sortable: false},
+    {
+        field: 'type',
+        headerName: 'Type',
+        width: 100,
+        valueGetter: p => p.row.type,
+        disableColumnMenu: true,
+        sortable: false
+    },
+    {
+        field: 'sourceMAC',
+        headerName: 'Source MAC',
+        width: 200,
+        valueGetter: p => p.row.sourceMAC,
+        disableColumnMenu: true,
+        sortable: false
+    },
     {
         field: 'destinationMAC',
         headerName: 'Destination MAC',
         width: 200,
-        valueGetter: p => p.row.destinationMAC
+        valueGetter: p => p.row.destinationMAC, disableColumnMenu: true, sortable: false
     },
     {
         field: 'sourceIP',
         headerName: 'Source IP',
         width: 200,
-        valueGetter: p => p.row.sourceIP
+        valueGetter: p => p.row.sourceIP, disableColumnMenu: true, sortable: false
     },
     {
         field: 'destinationIP',
         headerName: 'Destination IP',
         width: 200,
-        valueGetter: p => p.row.destinationIP
+        valueGetter: p => p.row.destinationIP, disableColumnMenu: true, sortable: false
     },
-    {field: 'length', headerName: 'Lenght', width: 70, valueGetter: p => p.row.length},
-    {field: 'info', headerName: 'Info', width: 1000, valueGetter: p => p.row.info},
+    {
+        field: 'length',
+        headerName: 'Lenght',
+        width: 70,
+        valueGetter: p => p.row.length,
+        disableColumnMenu: true,
+        sortable: false
+    },
+    {
+        field: 'info',
+        headerName: 'Info',
+        width: 1000,
+        valueGetter: p => p.row.info,
+        disableColumnMenu: true,
+        sortable: false
+    },
 ];
 
 function App() {
@@ -130,7 +158,7 @@ function App() {
         else if (sniffingStatus === SniffingStatus.Active) await pauseSniffing();
     }
 
-    // TODO: more filters
+    // TODO: filters
     const packetFilter = (packet: GeneralPacket) => {
         switch (filter) {
             case 'ALL':
@@ -216,7 +244,7 @@ function App() {
 
                 {/* Filter */}
                 <Grid xs={12} item={true} className={"container-center"}>
-                    <FormControl >
+                    <FormControl>
                         <InputLabel id="select-label">Type</InputLabel>
                         <Select
                             labelId="select-label"

@@ -14,7 +14,7 @@ const Fields: FC<FieldProps> = ({packetInfo}) => {
     for (const el of packetInfo) {
         fields.push(
             <>
-                <ListItem key={fields.length}><> {Object.keys(el)[0]} : {Object.values(el)[0]} </>
+                <ListItem className={"break"} key={fields.length}><> {Object.keys(el)[0]} : {Object.values(el)[0]} </>
                 </ListItem>
                 <Divider/>
             </>
@@ -42,7 +42,7 @@ const TlsFields: FC<TlsFieldProps> = ({packetInfo}) => {
                             {el.toString()}
                         </AccordionSummary>
                         <AccordionDetails>
-                            <List component="nav" aria-label="mailbox folders">
+                            <List className={"break"} key={fields.length} component="nav" aria-label="mailbox folders">
                                 <Fields
                                     packetInfo={el.toDisplay()}/>
                             </List>

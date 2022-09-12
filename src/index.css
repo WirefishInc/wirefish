@@ -84,6 +84,7 @@ td.active {
 div.payload {
     margin-top: 20px;
     margin-left: 17px;
+    padding-left: 30px;
     background-color: rgb(80,80,80);
 }
 
@@ -95,4 +96,8 @@ td.index {
 div.inner-acc {
     width: 1300px;
     background-color: rgb(40,40,40);
+}
+
+li.break {
+    word-wrap: anywhere;
 }

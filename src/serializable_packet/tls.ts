@@ -8,9 +8,6 @@ export interface CustomTlsMessages {
     toString(): string;
 }
 
-// todo fields too long (fix css) ex. client hello cyphers
-// todo fix fields [] toDisplay
-
 /* type */
 
 export class CustomAlertMessage implements CustomTlsMessages {
