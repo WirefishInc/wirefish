@@ -231,7 +231,6 @@ async fn generate_report(state: tauri::State<'_, SniffingInfoState>, report_path
     let sniffing_state = state.0.lock().await;
     let exchanged_packets = sniffing_state.exchanged_packets.take();
     drop(sniffing_state);
-    let sniffing_state2 = state.0.lock().await;
     let result = write_report(&report_path, exchanged_packets, first_generation);
     return match result {
         Err(why) => Err(why.to_string()),

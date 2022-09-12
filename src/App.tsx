@@ -1,8 +1,8 @@
 import {createTheme, ThemeProvider} from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {
-    Accordion, AccordionDetails, AccordionSummary, Alert, Fab, FormControl, Grid, List, Snackbar
+    Accordion, AccordionDetails, AccordionSummary, Alert, Fab, FormControl, Grid, LinearProgress, List, Snackbar
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {Pause, PlayArrow, RestartAlt, Stop} from '@mui/icons-material';
@@ -53,22 +53,28 @@ const columns: GridColDef[] = [
 
 function App() {
 
+    const REPORT_GENERATION_SECONDS = 30;
     const resetFeedback = {text: "", isError: false, duration: 0};
+
     let [interfaces, setInterfaces] = useState<string[] | null>(null);
     let [currentInterface, setCurrentInterface] = useState<string>("");
     let [sniffingStatus, setSniffingStatus] = useState<SniffingStatus>(SniffingStatus.Inactive);
     let [capturedPackets, setCapturedPackets] = useState<GeneralPacket[]>([]);
-    let [reportUpdateTime, setReportUpdateTime] = useState<number>(30);
+    let [reportUpdateTime, setReportUpdateTime] = useState<number>(REPORT_GENERATION_SECONDS);
     let [reportFileName, setReportFileName] = useState<string>("report");
     let [reportFolder, setReportFolder] = useState<string>("./");
     let [selectedPacket, setSelectedPacket] = useState<GeneralPacket | null>(null);
     let [over, setOver] = useState<string | null>(null);
-    let [reportTimer, setReportTimer] = useState<null | ReturnType<typeof setInterval>>(null);
-    let [timerStartTime, setTimerStartTime] = useState<number>(0);
+    let [reportGenerationTimer, setReportGenerationTimer] = useState<null | ReturnType<typeof setInterval>>(null);
+    let [reportProgressTimer, setReportProgressTimer] = useState<null | ReturnType<typeof setInterval>>(null);
+    let [reportResumeTimeout, setReportResumeTimeout] = useState<null | ReturnType<typeof setTimeout>>(null);
     let [timerRemainingTime, setTimerRemainingTime] = useState<number>(0);
-    let [firstReportGeneration, setFirstReportGeneration] = useState<boolean>(true);
     let [feedbackMessage, setFeedbackMessage] = useState<FeedbackMessage>(resetFeedback);
     let [actionLoading, setActionLoading] = useState<string>("");
+    let [reportProgress, setReportProgress] = useState<number>(0);
+    let [secondsToReportGeneration, setSecondsToReportGeneration] = useState<number>(REPORT_GENERATION_SECONDS);
+    let firstReportGeneration = useRef<boolean>(true);
+    let timerStartTime = useRef<number>(0);
 
     useEffect(() => {
         const setup = async () => {
@@ -97,10 +103,10 @@ function App() {
 
     const generateReport = async () => {
         try {
-            setTimerStartTime(Date.now());
-            await API.generateReport(`${reportFolder}${reportFileName}.txt`, firstReportGeneration);
-            if (firstReportGeneration)
-                setFirstReportGeneration(false);
+            timerStartTime.current = Date.now();
+            await API.generateReport(`${reportFolder}${reportFileName}.txt`, firstReportGeneration.current);
+            if (firstReportGeneration.current)
+                firstReportGeneration.current = false;
             setFeedbackMessage({
                 isError: false,
                 duration: 5000,
@@ -115,9 +121,15 @@ function App() {
         }
     }
 
-    const resumeReportTimer = async () => {
-        setTimerStartTime(Date.now());
-        setReportTimer(setInterval(generateReport, reportUpdateTime * 1000));
+    const updateReportProgress = () => {
+        const elapsedTime = Math.floor((Date.now() - timerStartTime.current) / 1000);
+        setSecondsToReportGeneration(reportUpdateTime - elapsedTime);
+        setReportProgress(Math.ceil(elapsedTime / (reportUpdateTime - 1) * 100));
+    }
+
+    const resumeReportGenerationTimer = async () => {
+        timerStartTime.current = Date.now();
+        setReportGenerationTimer(setInterval(generateReport, reportUpdateTime * 1000));
         await generateReport();
     }
 
@@ -126,21 +138,30 @@ function App() {
         setCurrentInterface(interfaceName);
     }
 
+    const clearTimers = () => {
+        if (reportResumeTimeout)
+            clearTimeout(reportResumeTimeout);
+        if (reportGenerationTimer)
+            clearInterval(reportGenerationTimer);
+        if (reportProgressTimer)
+            clearInterval(reportProgressTimer);
+    }
+
     const stopSniffing = async () => {
         if (sniffingStatus !== SniffingStatus.Active) return;
         setActionLoading("stop");
-        if (reportTimer)
-            clearInterval(reportTimer);
+        clearTimers();
         await API.stopSniffing();
-        setFirstReportGeneration(true);
+        firstReportGeneration.current = true;
         setSniffingStatus(SniffingStatus.Inactive);
     }
 
     const startSniffing = async () => {
         if (currentInterface === null || sniffingStatus !== SniffingStatus.Inactive) return;
         setActionLoading("start");
-        setTimerStartTime(Date.now());
-        setReportTimer(setInterval(generateReport, reportUpdateTime * 1000));
+        timerStartTime.current = Date.now();
+        setReportGenerationTimer(setInterval(generateReport, reportUpdateTime * 1000));
+        setReportProgressTimer(setInterval(updateReportProgress, 500));
         await API.startSniffing();
         setSniffingStatus(SniffingStatus.Active);
     }
@@ -148,10 +169,11 @@ function App() {
     const pauseSniffing = async () => {
         if (sniffingStatus !== SniffingStatus.Active) return;
         setActionLoading("pause");
-        if (reportTimer) {
-            clearInterval(reportTimer);
-            setTimerRemainingTime(reportUpdateTime - (Date.now() - timerStartTime));
-        }
+
+        clearTimers();
+        const elapsedTime = Date.now() - timerStartTime.current;
+        setTimerRemainingTime(Math.max(0, reportUpdateTime * 1000 - elapsedTime));
+
         await API.stopSniffing();
         setSniffingStatus(SniffingStatus.Paused);
     }
@@ -159,7 +181,9 @@ function App() {
     const resumeSniffing = async () => {
         if (currentInterface === null || sniffingStatus !== SniffingStatus.Paused) return;
         setActionLoading("resume");
-        setTimeout(resumeReportTimer, timerRemainingTime);
+        timerStartTime.current = Date.now() - (reportUpdateTime * 1000 - timerRemainingTime);
+        setReportResumeTimeout(setTimeout(resumeReportGenerationTimer, timerRemainingTime));
+        setReportProgressTimer(setInterval(updateReportProgress, 500));
         await API.startSniffing();
         setSniffingStatus(SniffingStatus.Active);
     }
@@ -232,6 +256,14 @@ function App() {
                         }
                     </FormControl>
                 </Grid>
+
+                {/* Report generation Status */
+
+                sniffingStatus !== SniffingStatus.Inactive && <Grid xs={12} item={true}>
+                    Next report generated in: {secondsToReportGeneration}s
+                    <LinearProgress variant="determinate" value={reportProgress} />
+                </Grid>
+                }
 
                 {/* Sniffing Results */}
 

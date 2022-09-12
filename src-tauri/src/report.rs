@@ -8,8 +8,8 @@ use chrono::Local;
 
 /// Appends data to a report file, creates the file if it doesn't exist
 pub fn write_report(output_path: &str, mut data: HashMap<SourceDestination, PacketExchange>, first_generation: bool) -> Result<bool, io::Error> {
-    let path = Path::new(output_path);
-    let file_exists = path.is_file();
+    let path = Path::new(&output_path);
+    let mut file_exists = path.is_file();
     let file_extension = path.extension();
 
     // Check file extension is .txt
@@ -26,6 +26,7 @@ pub fn write_report(output_path: &str, mut data: HashMap<SourceDestination, Pack
     } else if first_generation {
         // Remove old report file
         fs::remove_file(&output_path)?;
+        file_exists = false;
     }
 
     // Open file in append mode, create it if it doesn't exist
