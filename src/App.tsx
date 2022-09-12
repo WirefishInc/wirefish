@@ -68,6 +68,7 @@ function App() {
     let [timerRemainingTime, setTimerRemainingTime] = useState<number>(0);
     let [firstReportGeneration, setFirstReportGeneration] = useState<boolean>(true);
     let [feedbackMessage, setFeedbackMessage] = useState<FeedbackMessage>(resetFeedback);
+    let [actionLoading, setActionLoading] = useState<string>("");
 
     useEffect(() => {
         const setup = async () => {
@@ -127,6 +128,7 @@ function App() {
 
     const stopSniffing = async () => {
         if (sniffingStatus !== SniffingStatus.Active) return;
+        setActionLoading("stop");
         if (reportTimer)
             clearInterval(reportTimer);
         await API.stopSniffing();
@@ -136,6 +138,7 @@ function App() {
 
     const startSniffing = async () => {
         if (currentInterface === null || sniffingStatus !== SniffingStatus.Inactive) return;
+        setActionLoading("start");
         setTimerStartTime(Date.now());
         setReportTimer(setInterval(generateReport, reportUpdateTime * 1000));
         await API.startSniffing();
@@ -144,6 +147,7 @@ function App() {
 
     const pauseSniffing = async () => {
         if (sniffingStatus !== SniffingStatus.Active) return;
+        setActionLoading("pause");
         if (reportTimer) {
             clearInterval(reportTimer);
             setTimerRemainingTime(reportUpdateTime - (Date.now() - timerStartTime));
@@ -154,6 +158,7 @@ function App() {
 
     const resumeSniffing = async () => {
         if (currentInterface === null || sniffingStatus !== SniffingStatus.Paused) return;
+        setActionLoading("resume");
         setTimeout(resumeReportTimer, timerRemainingTime);
         await API.startSniffing();
         setSniffingStatus(SniffingStatus.Active);
@@ -162,11 +167,13 @@ function App() {
     const startStopSniffing = async () => {
         if (sniffingStatus === SniffingStatus.Inactive) await startSniffing();
         else if (sniffingStatus === SniffingStatus.Active) await stopSniffing();
+        setActionLoading("");
     }
 
     const pauseResumeSniffing = async () => {
         if (sniffingStatus === SniffingStatus.Paused) await resumeSniffing();
         else if (sniffingStatus === SniffingStatus.Active) await pauseSniffing();
+        setActionLoading("");
     }
 
     return (
@@ -205,7 +212,9 @@ function App() {
                     <FormControl className={"container-center"}>
                         {
                             sniffingStatus !== SniffingStatus.Paused &&
-                            <ToggleButton toggleFunction={startStopSniffing} disabled={currentInterface === ""}
+                            <ToggleButton toggleFunction={startStopSniffing}
+                                          disabled={currentInterface === "" || actionLoading.length > 0}
+                                          loading={actionLoading === "start" || actionLoading === "stop"}
                                           condition={sniffingStatus === SniffingStatus.Active}
                                           textTrue={"Stop Sniffing"} textFalse={"Start Sniffing"}
                                           iconTrue={<Stop/>} iconFalse={<PlayArrow/>}
@@ -213,7 +222,9 @@ function App() {
                         }
                         {
                             sniffingStatus !== SniffingStatus.Inactive &&
-                            <ToggleButton toggleFunction={pauseResumeSniffing} disabled={currentInterface === ""}
+                            <ToggleButton toggleFunction={pauseResumeSniffing}
+                                          disabled={currentInterface === "" || actionLoading.length > 0}
+                                          loading={actionLoading === "pause" || actionLoading === "resume"}
                                           condition={sniffingStatus === SniffingStatus.Active}
                                           textTrue={"Pause Sniffing"} textFalse={"Resume Sniffing"}
                                           iconTrue={<Pause/>} iconFalse={<RestartAlt/>}
@@ -236,13 +247,15 @@ function App() {
                           autoHideDuration={feedbackMessage.duration}
                           message={feedbackMessage.text}
                           onClick={() => setFeedbackMessage(resetFeedback)}
-                          onClose={(event: React.SyntheticEvent | Event, reason?: string) => {if (reason === 'clickaway') return; setFeedbackMessage(resetFeedback);}}
-                    >
+                          onClose={(event: React.SyntheticEvent | Event, reason?: string) => {
+                              if (reason === 'clickaway') return;
+                              setFeedbackMessage(resetFeedback);
+                          }}
+                >
                     <Alert severity={feedbackMessage.isError ? 'error' : 'success'}>
                         {feedbackMessage.text}
                     </Alert>
-            </Snackbar>
-
+                </Snackbar>
 
 
                 {/* Info selected Packet */}
