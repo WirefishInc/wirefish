@@ -1,5 +1,5 @@
 import {FC} from "react";
-import {Grid} from "@mui/material";
+import {Grid, Table} from "@mui/material";
 
 function payloadToHex(payload: number[]) {
     return payload.reverse().map((el: number) => el.toString(16)).map((el) => el.toUpperCase());
@@ -38,13 +38,11 @@ const HewViewer: FC<HewViewerProps> = ({payload, over, setOver}) => {
         ascii_rows.push(ascii_payload.splice(0, 16))
     }
 
-    // TODO: make table responsive (or fix width)
-
     return (
-        <Grid className={"payload"} container xs={12} item={true}>
-            <Grid xs={6}>
+        <Grid className={"payload"} container spacing={2}>
+            <Grid item xs={6}>
 
-                <table>
+                <Table>
                     <tbody>
                     {hew_rows.map((r, i) =>
                         <tr>
@@ -64,9 +62,9 @@ const HewViewer: FC<HewViewerProps> = ({payload, over, setOver}) => {
                         </tr>
                     )}
                     </tbody>
-                </table>
+                </Table>
             </Grid>
-            <Grid xs={6}>
+            <Grid item xs={6}>
                 <table>
                     <tbody>
                     {ascii_rows.map((r, i) =>
