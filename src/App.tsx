@@ -16,8 +16,12 @@ import CloseIcon from '@mui/icons-material/Close';
 import ReportFolderInput from "./components/ReportFolderInput";
 import ReportNameInput from "./components/ReportNameInput";
 import ToggleButton from "./components/ToggleButton";
-import Fields from "./components/Fields";
+import {SniffingStatus, GeneralPacket} from "./types/sniffing";
+import {Fields, TlsFields} from "./components/Fields";
 import HewViewer from "./components/HexViewer";
+import InputLabel from '@mui/material/InputLabel';
+import MenuItem from '@mui/material/MenuItem';
+import Select from '@mui/material/Select';
 
 const darkTheme = createTheme({
     palette: {
@@ -26,29 +30,57 @@ const darkTheme = createTheme({
 });
 
 const columns: GridColDef[] = [
-    {field: 'id', headerName: '#', width: 70},
-    {field: 'type', headerName: 'Type', width: 140, valueGetter: p => p.row.type},
-    {field: 'sourceMAC', headerName: 'Source MAC', width: 140, valueGetter: p => p.row.sourceMAC},
+    {field: 'id', headerName: '#', width: 70, disableColumnMenu: true, sortable: false},
+    {
+        field: 'type',
+        headerName: 'Type',
+        width: 100,
+        valueGetter: p => p.row.type,
+        disableColumnMenu: true,
+        sortable: false
+    },
+    {
+        field: 'sourceMAC',
+        headerName: 'Source MAC',
+        width: 200,
+        valueGetter: p => p.row.sourceMAC,
+        disableColumnMenu: true,
+        sortable: false
+    },
     {
         field: 'destinationMAC',
         headerName: 'Destination MAC',
-        width: 140,
-        valueGetter: p => p.row.destinationMAC
+        width: 200,
+        valueGetter: p => p.row.destinationMAC, disableColumnMenu: true, sortable: false
     },
     {
         field: 'sourceIP',
         headerName: 'Source IP',
-        width: 120,
-        valueGetter: p => p.row.sourceIP
+        width: 200,
+        valueGetter: p => p.row.sourceIP, disableColumnMenu: true, sortable: false
     },
     {
         field: 'destinationIP',
         headerName: 'Destination IP',
-        width: 120,
-        valueGetter: p => p.row.destinationIP
+        width: 200,
+        valueGetter: p => p.row.destinationIP, disableColumnMenu: true, sortable: false
     },
-    {field: 'length', headerName: 'Lenght', width: 100, valueGetter: p => p.row.length},
-    {field: 'info', headerName: 'Info', width: 600, valueGetter: p => p.row.info},
+    {
+        field: 'length',
+        headerName: 'Lenght',
+        width: 70,
+        valueGetter: p => p.row.length,
+        disableColumnMenu: true,
+        sortable: false
+    },
+    {
+        field: 'info',
+        headerName: 'Info',
+        width: 1000,
+        valueGetter: p => p.row.info,
+        disableColumnMenu: true,
+        sortable: false
+    },
 ];
 
 function App() {
@@ -75,6 +107,7 @@ function App() {
     let [secondsToReportGeneration, setSecondsToReportGeneration] = useState<number>(REPORT_GENERATION_SECONDS);
     let firstReportGeneration = useRef<boolean>(true);
     let timerStartTime = useRef<number>(0);
+    let [filter, setFilter] = useState<string>("ALL");
 
     useEffect(() => {
         const setup = async () => {
@@ -200,6 +233,37 @@ function App() {
         setActionLoading("");
     }
 
+    // TODO: filters
+    const packetFilter = (packet: GeneralPacket) => {
+        switch (filter) {
+            case 'ALL':
+                return true
+
+            case 'TLS':
+                return packet.type === 'TLS'
+
+            case 'TCP':
+                return packet.type === 'TCP'
+
+            case 'UDP':
+                return packet.type === 'UDP'
+
+            case 'ICMPv6':
+                return packet.type === 'ICMPv6'
+
+            case 'ICMP':
+                return packet.type === 'ICMP'
+
+            case 'ARP':
+                return packet.type === 'ARP'
+
+            case 'HTTP':
+                return packet.type === 'HTTP'
+
+            default:
+                return true
+        }
+    }
     return (
         <ThemeProvider theme={darkTheme}>
             <CssBaseline/>
@@ -257,6 +321,7 @@ function App() {
                     </FormControl>
                 </Grid>
 
+
                 {/* Report generation Status */
 
                 sniffingStatus !== SniffingStatus.Inactive && <Grid xs={12} item={true}>
@@ -265,11 +330,35 @@ function App() {
                 </Grid>
                 }
 
+                {/* Filter */}
+                <Grid xs={12} item={true} className={"container-center"}>
+                    <FormControl>
+                        <InputLabel id="select-label">Type</InputLabel>
+                        <Select
+                            labelId="select-label"
+                            id="select"
+                            value={filter}
+                            label="Type"
+                            onChange={(ev) => setFilter(ev.target.value)}
+                        >
+                            <MenuItem value={"ALL"}>All packet</MenuItem>
+                            <MenuItem value={"TLS"}>TLS packet</MenuItem>
+                            <MenuItem value={"TCP"}>TCP packet</MenuItem>
+                            <MenuItem value={"UDP"}>UDP packet</MenuItem>
+                            <MenuItem value={"ICMPv6"}>ICMPv6 packet</MenuItem>
+                            <MenuItem value={"ICMP"}>ICMP packet</MenuItem>
+                            <MenuItem value={"ARP"}>ARP packet</MenuItem>
+                            <MenuItem value={"HTTP"}>HTTP packet</MenuItem>
+                        </Select>
+                    </FormControl>
+                </Grid>
+
+
                 {/* Sniffing Results */}
 
                 <Grid xs={12} item={true}>
                     <DataGrid style={{marginTop: "15px", minHeight: "250px"}}
-                              rows={capturedPackets} columns={columns}
+                              rows={capturedPackets.filter(packetFilter)} columns={columns}
                               onCellClick={(ev) => setSelectedPacket(ev.row)}/>
                 </Grid>
 
@@ -337,6 +426,26 @@ function App() {
                                         </AccordionDetails>
                                     </Accordion>
                                 }
+                                {!selectedPacket.packet.application_layer_packet ? null :
+                                    <Accordion>
+                                        <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
+                                            {selectedPacket.packet.application_layer_packet?.toString()}
+                                        </AccordionSummary>
+                                        <AccordionDetails>
+                                            <List component="nav" aria-label="mailbox folders">
+                                                {
+                                                    selectedPacket.packet.application_layer_packet.getType() !== "TLS" ?
+                                                        <Fields
+                                                            packetInfo={selectedPacket.packet.application_layer_packet.toDisplay()}/>
+                                                        :
+                                                        <TlsFields
+                                                            packetInfo={selectedPacket.packet.application_layer_packet.toDisplay()}/>
+                                                }
+                                            </List>
+                                        </AccordionDetails>
+                                    </Accordion>
+                                }
+
                             </Grid>
                         </>
                 }

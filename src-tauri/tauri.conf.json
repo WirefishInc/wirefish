@@ -60,10 +60,12 @@
     "windows": [
       {
         "fullscreen": false,
-        "height": 600,
+        "height": 700,
         "resizable": true,
         "title": "Tauri App",
-        "width": 800
+        "width": 1200,
+        "minWidth": 1200,
+        "minHeight": 700
       }
     ]
   }

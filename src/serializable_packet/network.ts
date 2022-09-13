@@ -64,6 +64,14 @@ export class ArpPacket implements SerializableNetworkLayerPacket {
     getSource(): string {
         return this.sender_proto_addr;
     }
+
+    getInfo(): string {
+        return "Who has "+this.target_proto_addr+"?";
+    }
+
+    getType(): string {
+        return "ARP";
+    }
 }
 
 export class Ipv6Packet implements SerializableNetworkLayerPacket{
@@ -126,6 +134,14 @@ export class Ipv6Packet implements SerializableNetworkLayerPacket{
 
     getSource(): string {
         return this.source;
+    }
+
+    getInfo(): string {
+        return "Internet Protocol Version 6";
+    }
+
+    getType(): string {
+        return "IPv6";
     }
 }
 
@@ -211,5 +227,13 @@ export class Ipv4Packet implements SerializableNetworkLayerPacket {
 
     getSource(): string {
         return this.source;
+    }
+
+    getInfo(): string {
+        return "Internet Protocol Version 4";
+    }
+
+    getType(): string {
+        return "IPv4";
     }
 }
