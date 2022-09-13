@@ -78,10 +78,12 @@ export class GeneralPacket {
     destinationMAC: string;
     sourceIP: string;
     destinationIP: string;
+    layers: string[]
     packet: Packet;
 
     constructor(id: number, packet: any) {
         this.id = id;
+        this.layers = [];
 
         let link_layer: SerializableLinkLayerPacket | MalformedPacket;
         let network_layer: SerializableNetworkLayerPacket | MalformedPacket;
@@ -112,8 +114,13 @@ export class GeneralPacket {
         this.destinationIP = network_layer.getDestination();
         this.length = link_layer.getPayload().length;
 
+        if (application_layer) this.layers.push(application_layer.getType());
+        if (transport_layer) this.layers.push(transport_layer.getType());
+        this.layers.push(network_layer.getType());
+
         this.packet = new Packet(link_layer, network_layer, transport_layer, application_layer);
     }
+
 }
 
 /* ParsedPacket */
@@ -315,8 +322,7 @@ const make_application_level = (application: any) => {
                 application.packet.method,
                 application.packet.path,
                 application.packet.version,
-                application.packet.headers,
-                application.packet.payload
+                application.packet.headers
             )
             break;
 

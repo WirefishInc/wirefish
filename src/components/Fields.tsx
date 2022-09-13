@@ -5,7 +5,7 @@ import {ArrowDropDown} from "@mui/icons-material";
 import '../index.css';
 
 interface FieldProps {
-    packetInfo: [];
+    packetInfo: any[];
 }
 
 const Fields: FC<FieldProps> = ({packetInfo}) => {
@@ -14,8 +14,25 @@ const Fields: FC<FieldProps> = ({packetInfo}) => {
     for (const el of packetInfo) {
         fields.push(
             <>
-                <ListItem className={"break"} key={fields.length}><> {Object.keys(el)[0]} : {Object.values(el)[0]} </>
-                </ListItem>
+                {Object.keys(el)[0] === "HTTPResp" ?
+                    <ListItem className={"break"}
+                              key={fields.length}>
+                        <Accordion className={"inner-acc"}>
+                            <AccordionSummary expandIcon={<ArrowDropDown/>}>
+                                {// @ts-ignore
+                                    Object.values(el)[0].type}
+                            </AccordionSummary>
+                            <AccordionDetails>
+                                {// @ts-ignore
+                                    Object.values(el)[0].content}
+                            </AccordionDetails>
+                        </Accordion>
+                    </ListItem>
+                    :
+                    <ListItem className={"break"}
+                              key={fields.length}><> {Object.keys(el)[0]} : {Object.values(el)[0]} </>
+                    </ListItem>
+                }
                 <Divider/>
             </>
         )
