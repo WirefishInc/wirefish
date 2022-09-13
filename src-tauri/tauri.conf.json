@@ -4,7 +4,8 @@
     "beforeBuildCommand": "npm run build",
     "beforeDevCommand": "npm run start",
     "devPath": "http://localhost:3000",
-    "distDir": "../build"
+    "distDir": "../build",
+    "withGlobalTauri": true
   },
   "package": {
     "productName": "tauri-app",
@@ -12,7 +13,10 @@
   },
   "tauri": {
     "allowlist": {
-      "all": true
+      "all": true,
+      "path": {
+        "all": true
+      }
     },
     "bundle": {
       "active": true,

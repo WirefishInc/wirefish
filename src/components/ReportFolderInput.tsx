@@ -4,7 +4,7 @@ import {open} from '@tauri-apps/api/dialog';
 import {appDir} from '@tauri-apps/api/path';
 import {useState} from "react";
 
-const selectDirectory = async (originalDirectory: string | string[] | null) => {
+const selectDirectory = async (originalDirectory: string | null) => {
     let directory = originalDirectory;
     try {
         let result = await open({
@@ -12,8 +12,12 @@ const selectDirectory = async (originalDirectory: string | string[] | null) => {
             multiple: false,
             defaultPath: await appDir(),
         });
+        if (Array.isArray(result)) {
+            result = result[0];
+        }
         directory = result || directory;
-    } catch (NoDirectorySelected) {}
+    } catch (NoDirectorySelected) {
+    }
     return directory;
 }
 
@@ -32,7 +36,11 @@ const ReportFolderInput = ({
     let [selectingFolder, setSelectingFolder] = useState(false);
     const setReportFolderWrapper = async () => {
         setSelectingFolder(true);
-        setReportFolder(await selectDirectory(reportFolder));
+        const folder = await selectDirectory(reportFolder);
+        // @ts-ignore
+        const separator = window.__TAURI__.path.sep;
+        const extraSeparator = folder && folder.endsWith(separator) ? "" : separator;
+        setReportFolder(folder + extraSeparator);
         setSelectingFolder(false);
     }
 

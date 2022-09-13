@@ -9,6 +9,12 @@ export enum SniffingStatus {
     Active
 }
 
+export type FeedbackMessage = {
+    text: string,
+    isError: boolean,
+    duration: number
+}
+
 export interface SerializableTransportLayerPacket {
     type: string;
 
