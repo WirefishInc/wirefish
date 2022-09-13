@@ -120,15 +120,15 @@ export class CustomEncryptedMessage implements CustomTlsMessages {
 
     constructor(data: number[]) {
         this.data = data;
-        this.type = "Encrypted"
+        this.type = "Application Data (Encrypted)"
     }
 
     toDisplay(): any {
-        return [{"Hardware Type": this.data}];
+        return [{"Data": this.data}];
     }
 
     toString(): string {
-        return "TLS Record Layer: Encrypted";
+        return "TLS Record Layer: Application Data (Encrypted)";
     }
 
     getType(): string {
