@@ -18,6 +18,7 @@ use tls_parser::{
 use x509_parser::{parse_x509_certificate, prelude::X509Certificate};
 
 #[derive(Serialize, Debug)]
+#[serde(tag = "type", content = "content")]
 pub enum HttpContentType {
     TextCorrectlyDecoded(String),
     TextMalformedDecoded(String),

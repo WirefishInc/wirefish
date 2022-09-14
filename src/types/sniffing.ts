@@ -78,10 +78,16 @@ export class GeneralPacket {
     destinationMAC: string;
     sourceIP: string;
     destinationIP: string;
+    sourcePort: number | null;
+    destinationPort: number | null;
+    layers: string[]
     packet: Packet;
 
     constructor(id: number, packet: any) {
         this.id = id;
+        this.layers = [];
+        this.sourcePort = null;
+        this.destinationPort = null;
 
         let link_layer: SerializableLinkLayerPacket | MalformedPacket;
         let network_layer: SerializableNetworkLayerPacket | MalformedPacket;
@@ -112,8 +118,18 @@ export class GeneralPacket {
         this.destinationIP = network_layer.getDestination();
         this.length = link_layer.getPayload().length;
 
+        if (application_layer) this.layers.push(application_layer.getType());
+        if (transport_layer) this.layers.push(transport_layer.getType());
+        if (transport_layer instanceof UdpPacket || transport_layer instanceof TcpPacket){
+            this.sourcePort = transport_layer.source;
+            this.destinationPort = transport_layer.destination;
+        }
+
+        this.layers.push(network_layer.getType());
+
         this.packet = new Packet(link_layer, network_layer, transport_layer, application_layer);
     }
+
 }
 
 /* ParsedPacket */
@@ -315,8 +331,7 @@ const make_application_level = (application: any) => {
                 application.packet.method,
                 application.packet.path,
                 application.packet.version,
-                application.packet.headers,
-                application.packet.payload
+                application.packet.headers
             )
             break;
 

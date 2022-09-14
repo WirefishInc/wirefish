@@ -63,8 +63,8 @@
         "height": 700,
         "resizable": true,
         "title": "Tauri App",
-        "width": 1200,
-        "minWidth": 1200,
+        "width": 1300,
+        "minWidth": 1300,
         "minHeight": 700
       }
     ]

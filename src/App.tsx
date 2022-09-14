@@ -16,12 +16,9 @@ import CloseIcon from '@mui/icons-material/Close';
 import ReportFolderInput from "./components/ReportFolderInput";
 import ReportNameInput from "./components/ReportNameInput";
 import ToggleButton from "./components/ToggleButton";
-import {SniffingStatus, GeneralPacket} from "./types/sniffing";
 import {Fields, TlsFields} from "./components/Fields";
 import HewViewer from "./components/HexViewer";
-import InputLabel from '@mui/material/InputLabel';
-import MenuItem from '@mui/material/MenuItem';
-import Select from '@mui/material/Select';
+import Filters from "./components/Filters";
 
 const darkTheme = createTheme({
     palette: {
@@ -33,7 +30,7 @@ const columns: GridColDef[] = [
     {field: 'id', headerName: '#', width: 70, disableColumnMenu: true, sortable: false},
     {
         field: 'type',
-        headerName: 'Type',
+        headerName: 'Last Type',
         width: 100,
         valueGetter: p => p.row.type,
         disableColumnMenu: true,
@@ -107,7 +104,49 @@ function App() {
     let [secondsToReportGeneration, setSecondsToReportGeneration] = useState<number>(REPORT_GENERATION_SECONDS);
     let firstReportGeneration = useRef<boolean>(true);
     let timerStartTime = useRef<number>(0);
-    let [filter, setFilter] = useState<string>("ALL");
+    let [srcIpForm, setSrcIpForm] = useState<string>("");
+    let [dstIpForm, setDstIpForm] = useState<string>("");
+    let [srcMacForm, setSrcMacForm] = useState<string>("");
+    let [dstMacForm, setDstMacForm] = useState<string>("");
+    let [srcPortForm, setSrcPortForm] = useState<string>("");
+    let [dstPortForm, setDstPortForm] = useState<string>("");
+    let [infoForm, setInfoForm] = useState<string>("");
+
+    let [filter, setFilter] = useState<{
+        tcp: boolean;
+        udp: boolean;
+        icmpv6: boolean;
+        icmp: boolean;
+        http: boolean,
+        tls: boolean,
+        ipv4: boolean,
+        ipv6: boolean,
+        arp: boolean,
+        src_ip: boolean,
+        dst_ip: boolean,
+        src_mac: boolean,
+        dst_mac: boolean,
+        src_port: boolean,
+        dst_port: boolean,
+        info: boolean
+    }>({
+        http: true,
+        icmp: true,
+        icmpv6: true,
+        ipv4: true,
+        ipv6: true,
+        tls: true,
+        tcp: true,
+        udp: true,
+        arp: true,
+        src_ip: false,
+        dst_ip: false,
+        src_mac: false,
+        dst_mac: false,
+        src_port: false,
+        dst_port: false,
+        info: false
+    });
 
     useEffect(() => {
         const setup = async () => {
@@ -233,37 +272,44 @@ function App() {
         setActionLoading("");
     }
 
-    // TODO: filters
+    // todo: why if port filter checked, icmp packets selected?
     const packetFilter = (packet: GeneralPacket) => {
-        switch (filter) {
-            case 'ALL':
-                return true
+        let condition = false;
 
-            case 'TLS':
-                return packet.type === 'TLS'
+        if (filter.tcp)
+            condition = condition || packet.layers.includes("TCP");
+        if (filter.udp)
+            condition = condition || packet.layers.includes("UDP");
+        if (filter.icmp)
+            condition = condition || packet.layers.includes("ICMP");
+        if (filter.icmpv6)
+            condition = condition || packet.layers.includes("ICMPv6");
+        if (filter.http)
+            condition = condition || packet.layers.includes("HTTP");
+        if (filter.tls)
+            condition = condition || packet.layers.includes("TLS");
+        if (filter.ipv4)
+            condition = condition || packet.layers.includes("IPv4");
+        if (filter.ipv6)
+            condition = condition || packet.layers.includes("IPv6");
+        if (filter.src_ip)
+            condition = condition && packet.sourceIP === srcIpForm
+        if (filter.dst_ip)
+            condition = condition && packet.destinationIP === dstIpForm
+        if (filter.src_mac)
+            condition = condition && packet.sourceMAC === srcMacForm
+        if (filter.dst_mac)
+            condition = condition && packet.destinationMAC === dstMacForm
+        if (filter.src_port && packet.sourcePort !== null)
+            condition = condition && packet.sourcePort.toLocaleString() === srcPortForm
+        if (filter.dst_port && packet.destinationPort !== null)
+            condition = condition && packet.destinationPort.toLocaleString() === dstPortForm
+        if (filter.info)
+            condition = condition && packet.info.toLowerCase().includes(infoForm.toLowerCase())
 
-            case 'TCP':
-                return packet.type === 'TCP'
-
-            case 'UDP':
-                return packet.type === 'UDP'
-
-            case 'ICMPv6':
-                return packet.type === 'ICMPv6'
-
-            case 'ICMP':
-                return packet.type === 'ICMP'
-
-            case 'ARP':
-                return packet.type === 'ARP'
-
-            case 'HTTP':
-                return packet.type === 'HTTP'
-
-            default:
-                return true
-        }
+        return condition;
     }
+
     return (
         <ThemeProvider theme={darkTheme}>
             <CssBaseline/>
@@ -324,34 +370,16 @@ function App() {
 
                 {/* Report generation Status */
 
-                sniffingStatus !== SniffingStatus.Inactive && <Grid xs={12} item={true}>
-                    Next report generated in: {secondsToReportGeneration}s
-                    <LinearProgress variant="determinate" value={reportProgress} />
-                </Grid>
+                    sniffingStatus !== SniffingStatus.Inactive && <Grid xs={12} item={true}>
+                        Next report generated in: {secondsToReportGeneration}s
+                        <LinearProgress variant="determinate" value={reportProgress}/>
+                    </Grid>
                 }
 
-                {/* Filter */}
-                <Grid xs={12} item={true} className={"container-center"}>
-                    <FormControl>
-                        <InputLabel id="select-label">Type</InputLabel>
-                        <Select
-                            labelId="select-label"
-                            id="select"
-                            value={filter}
-                            label="Type"
-                            onChange={(ev) => setFilter(ev.target.value)}
-                        >
-                            <MenuItem value={"ALL"}>All packet</MenuItem>
-                            <MenuItem value={"TLS"}>TLS packet</MenuItem>
-                            <MenuItem value={"TCP"}>TCP packet</MenuItem>
-                            <MenuItem value={"UDP"}>UDP packet</MenuItem>
-                            <MenuItem value={"ICMPv6"}>ICMPv6 packet</MenuItem>
-                            <MenuItem value={"ICMP"}>ICMP packet</MenuItem>
-                            <MenuItem value={"ARP"}>ARP packet</MenuItem>
-                            <MenuItem value={"HTTP"}>HTTP packet</MenuItem>
-                        </Select>
-                    </FormControl>
-                </Grid>
+                {/* Filters */}
+                <Filters filter={filter} setFilter={setFilter} setSrcIpForm={setSrcIpForm} setDstIpForm={setDstIpForm}
+                         setSrcMacForm={setSrcMacForm} setDstMacForm={setDstMacForm} setSrcPortForm={setSrcPortForm}
+                         setDstPortForm={setDstPortForm} setInfoForm={setInfoForm}/>
 
 
                 {/* Sniffing Results */}
@@ -461,7 +489,6 @@ function App() {
             </Grid>
         </ThemeProvider>
     );
-
 }
 
 export default App;

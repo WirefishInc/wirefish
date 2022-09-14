@@ -41,8 +41,7 @@ const HewViewer: FC<HewViewerProps> = ({payload, over, setOver}) => {
     return (
         <Grid className={"payload"} container spacing={2}>
             <Grid item xs={6}>
-
-                <Table>
+                <table>
                     <tbody>
                     {hew_rows.map((r, i) =>
                         <tr>
@@ -62,14 +61,13 @@ const HewViewer: FC<HewViewerProps> = ({payload, over, setOver}) => {
                         </tr>
                     )}
                     </tbody>
-                </Table>
+                </table>
             </Grid>
             <Grid item xs={6}>
-                <table>
+                <table className={"ascii"}>
                     <tbody>
                     {ascii_rows.map((r, i) =>
                         <tr>
-                            {<td className={"index"}>{"0x" + (i * 16).toString(16).toUpperCase()}</td>}
                             {
                                 r.map((el, j) =>
                                     <td id={(i * 16 + j).toString()}
