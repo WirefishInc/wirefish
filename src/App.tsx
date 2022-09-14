@@ -2,17 +2,7 @@ import {createTheme, ThemeProvider} from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import React, {useState, useEffect, useRef} from 'react';
 import {
-    Accordion,
-    AccordionDetails,
-    AccordionSummary,
-    Alert, Checkbox,
-    Fab,
-    FormControl, FormControlLabel,
-    FormGroup, FormLabel,
-    Grid,
-    LinearProgress,
-    List,
-    Snackbar, TextField
+    Accordion, AccordionDetails, AccordionSummary, Alert, Fab, FormControl, Grid, LinearProgress, List, Snackbar
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {Pause, PlayArrow, RestartAlt, Stop} from '@mui/icons-material';
@@ -28,7 +18,7 @@ import ReportNameInput from "./components/ReportNameInput";
 import ToggleButton from "./components/ToggleButton";
 import {Fields, TlsFields} from "./components/Fields";
 import HewViewer from "./components/HexViewer";
-import Box from "@mui/material/Box";
+import Filters from "./components/Filters";
 
 const darkTheme = createTheme({
     palette: {
@@ -40,7 +30,7 @@ const columns: GridColDef[] = [
     {field: 'id', headerName: '#', width: 70, disableColumnMenu: true, sortable: false},
     {
         field: 'type',
-        headerName: 'Type',
+        headerName: 'Last Type',
         width: 100,
         valueGetter: p => p.row.type,
         disableColumnMenu: true,
@@ -115,6 +105,13 @@ function App() {
     let firstReportGeneration = useRef<boolean>(true);
     let timerStartTime = useRef<number>(0);
     let [srcIpForm, setSrcIpForm] = useState<string>("");
+    let [dstIpForm, setDstIpForm] = useState<string>("");
+    let [srcMacForm, setSrcMacForm] = useState<string>("");
+    let [dstMacForm, setDstMacForm] = useState<string>("");
+    let [srcPortForm, setSrcPortForm] = useState<string>("");
+    let [dstPortForm, setDstPortForm] = useState<string>("");
+    let [infoForm, setInfoForm] = useState<string>("");
+
     let [filter, setFilter] = useState<{
         tcp: boolean;
         udp: boolean;
@@ -125,7 +122,13 @@ function App() {
         ipv4: boolean,
         ipv6: boolean,
         arp: boolean,
-        src_ip: boolean
+        src_ip: boolean,
+        dst_ip: boolean,
+        src_mac: boolean,
+        dst_mac: boolean,
+        src_port: boolean,
+        dst_port: boolean,
+        info: boolean
     }>({
         http: true,
         icmp: true,
@@ -136,7 +139,13 @@ function App() {
         tcp: true,
         udp: true,
         arp: true,
-        src_ip: false
+        src_ip: false,
+        dst_ip: false,
+        src_mac: false,
+        dst_mac: false,
+        src_port: false,
+        dst_port: false,
+        info: false
     });
 
     useEffect(() => {
@@ -263,7 +272,7 @@ function App() {
         setActionLoading("");
     }
 
-    // TODO: filters (refactor in a new file; check all level types)
+    // todo: why if port filter checked, icmp packets selected?
     const packetFilter = (packet: GeneralPacket) => {
         let condition = false;
 
@@ -284,7 +293,19 @@ function App() {
         if (filter.ipv6)
             condition = condition || packet.layers.includes("IPv6");
         if (filter.src_ip)
-            condition = condition || packet.sourceIP === srcIpForm
+            condition = condition && packet.sourceIP === srcIpForm
+        if (filter.dst_ip)
+            condition = condition && packet.destinationIP === dstIpForm
+        if (filter.src_mac)
+            condition = condition && packet.sourceMAC === srcMacForm
+        if (filter.dst_mac)
+            condition = condition && packet.destinationMAC === dstMacForm
+        if (filter.src_port && packet.sourcePort !== null)
+            condition = condition && packet.sourcePort.toLocaleString() === srcPortForm
+        if (filter.dst_port && packet.destinationPort !== null)
+            condition = condition && packet.destinationPort.toLocaleString() === dstPortForm
+        if (filter.info)
+            condition = condition && packet.info.toLowerCase().includes(infoForm.toLowerCase())
 
         return condition;
     }
@@ -355,151 +376,10 @@ function App() {
                     </Grid>
                 }
 
-                {/* Filter */}
-                <Grid xs={12} item={true} className={"container-center"}>
-                    <Accordion>
-                        <AccordionSummary expandIcon={<ExpandMoreIcon/>}>Filters</AccordionSummary>
-                        <AccordionDetails>
-                            <Box sx={{display: 'flex'}}>
-                                <FormControl sx={{m: 3}} component="fieldset" variant="standard">
-                                    <FormLabel component="legend">Network Layer</FormLabel>
-                                    <FormGroup>
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox checked={filter.ipv6} onChange={(ev) => {
-                                                    if (ev.target.checked)
-                                                        setFilter((f) => Object.assign({}, f, {ipv6: true}));
-                                                    else
-                                                        setFilter((f) => Object.assign({}, f, {ipv6: false}));
-                                                }} name="ipv6"/>
-                                            }
-                                            label="IPv6"
-                                        />
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox checked={filter.ipv4} onChange={(ev) => {
-                                                    if (ev.target.checked)
-                                                        setFilter((f) => Object.assign({}, f, {ipv4: true}));
-                                                    else
-                                                        setFilter((f) => Object.assign({}, f, {ipv4: false}));
-                                                }} name="ipv4"/>
-                                            }
-                                            label="IPv4"
-                                        />
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox checked={filter.arp} onChange={(ev) => {
-                                                    if (ev.target.checked)
-                                                        setFilter((f) => Object.assign({}, f, {arp: true}));
-                                                    else
-                                                        setFilter((f) => Object.assign({}, f, {arp: false}));
-                                                }} name="arp"/>
-                                            }
-                                            label="ARP"
-                                        />
-                                    </FormGroup>
-                                </FormControl>
-                                <FormControl sx={{m: 3}} component="fieldset" variant="standard">
-                                    <FormLabel component="legend">Transport Layer</FormLabel>
-                                    <FormGroup>
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox checked={filter.tcp} onChange={(ev) => {
-                                                    if (ev.target.checked)
-                                                        setFilter((f) => Object.assign({}, f, {tcp: true}));
-                                                    else
-                                                        setFilter((f) => Object.assign({}, f, {tcp: false}));
-                                                }} name="tcp"/>
-                                            }
-                                            label="TCP"
-                                        />
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox checked={filter.udp} onChange={(ev) => {
-                                                    if (ev.target.checked)
-                                                        setFilter((f) => Object.assign({}, f, {udp: true}));
-                                                    else
-                                                        setFilter((f) => Object.assign({}, f, {udp: false}));
-                                                }} name="udp"/>
-                                            }
-                                            label="UDP"
-                                        />
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox checked={filter.icmpv6} onChange={(ev) => {
-                                                    if (ev.target.checked)
-                                                        setFilter((f) => Object.assign({}, f, {icmpv6: true}));
-                                                    else
-                                                        setFilter((f) => Object.assign({}, f, {icmpv6: false}));
-                                                }} name="icmpv6"/>
-                                            }
-                                            label="ICMPv6"
-                                        />
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox checked={filter.icmp} onChange={(ev) => {
-                                                    if (ev.target.checked)
-                                                        setFilter((f) => Object.assign({}, f, {icmp: true}));
-                                                    else
-                                                        setFilter((f) => Object.assign({}, f, {icmp: false}));
-                                                }} name="icmp"/>
-                                            }
-                                            label="ICMP"
-                                        />
-                                    </FormGroup>
-                                </FormControl>
-                                <FormControl sx={{m: 3}} component="fieldset" variant="standard">
-                                    <FormLabel component="legend">Application Layer</FormLabel>
-                                    <FormGroup>
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox checked={filter.http} onChange={(ev) => {
-                                                    if (ev.target.checked)
-                                                        setFilter((f) => Object.assign({}, f, {http: true}));
-                                                    else
-                                                        setFilter((f) => Object.assign({}, f, {http: false}));
-                                                }} name="http"/>
-                                            }
-                                            label="HTTP"
-                                        />
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox checked={filter.tls} onChange={(ev) => {
-                                                    if (ev.target.checked)
-                                                        setFilter((f) => Object.assign({}, f, {tls: true}));
-                                                    else
-                                                        setFilter((f) => Object.assign({}, f, {tls: false}));
-                                                }} name="tls"/>
-                                            }
-                                            label="TLS"
-                                        />
-                                    </FormGroup>
-                                </FormControl>
-                                <FormControl sx={{m: 3}} component="fieldset" variant="standard">
-                                    <FormLabel component="legend">Others</FormLabel>
-                                    <FormControlLabel
-                                        control={
-                                            <>
-                                                <Checkbox checked={filter.src_ip} onChange={(ev) => {
-                                                    if (ev.target.checked)
-                                                        setFilter((f) => Object.assign({}, f, {src_ip: true}));
-                                                    else
-                                                        setFilter((f) => Object.assign({}, f, {src_ip: false}));
-                                                }} name="src_ip"/>
-                                                <TextField
-                                                    onChange={(s) => setSrcIpForm(s.target.value)}
-                                                    disabled={!filter.src_ip} id="src_ip" label="SOURCE IP" variant="standard"/>
-                                            </>
-                                        }
-                                        label=""
-                                    />
-                                    <FormGroup>
-                                    </FormGroup>
-                                </FormControl>
-                            </Box>
-                        </AccordionDetails>
-                    </Accordion>
-                </Grid>
+                {/* Filters */}
+                <Filters filter={filter} setFilter={setFilter} setSrcIpForm={setSrcIpForm} setDstIpForm={setDstIpForm}
+                         setSrcMacForm={setSrcMacForm} setDstMacForm={setDstMacForm} setSrcPortForm={setSrcPortForm}
+                         setDstPortForm={setDstPortForm} setInfoForm={setInfoForm}/>
 
 
                 {/* Sniffing Results */}
@@ -608,9 +488,7 @@ function App() {
 
             </Grid>
         </ThemeProvider>
-    )
-        ;
-
+    );
 }
 
 export default App;

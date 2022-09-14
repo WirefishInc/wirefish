@@ -101,3 +101,11 @@ div.inner-acc {
 li.break {
     word-wrap: anywhere;
 }
+
+label.text-field {
+    margin-top: 10px;
+}
+
+table.ascii {
+   margin-left: 100px;
+}

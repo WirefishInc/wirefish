@@ -190,8 +190,6 @@ export class TlsPacket implements SerializableApplicationLayerPacket {
     }
 }
 
-// TODO HttpContentType
-
 export class HttpResponsePacket implements SerializableApplicationLayerPacket {
     version: number;
     code: number;
@@ -285,6 +283,9 @@ export class HttpResponsePacket implements SerializableApplicationLayerPacket {
     }
 
 }
+
+
+// TODO Does HttpContentType make sense for Request Packet (no payload)?
 
 export class HttpRequestPacket implements SerializableApplicationLayerPacket {
     method: string;
