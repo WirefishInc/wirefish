@@ -98,6 +98,11 @@ div.inner-acc {
     background-color: rgb(40,40,40);
 }
 
+div.d-inner-acc {
+    width: 1100px;
+    background-color: rgb(87,87,87)
+}
+
 li.break {
     word-wrap: anywhere;
 }

@@ -1,7 +1,7 @@
 import {EchoReply, EchoRequest, IcmpPacket, Icmpv6Packet, TcpPacket, UdpPacket} from "../serializable_packet/transport";
 import {EthernetPacket} from "../serializable_packet/link";
 import {ArpPacket, Ipv4Packet, Ipv6Packet} from "../serializable_packet/network";
-import {HttpRequestPacket, HttpResponsePacket, TlsPacket} from "../serializable_packet/application";
+import {DnsPacket, HttpRequestPacket, HttpResponsePacket, TlsPacket} from "../serializable_packet/application";
 
 export enum SniffingStatus {
     Inactive,
@@ -342,6 +342,16 @@ const make_application_level = (application: any) => {
                 application.packet.reason,
                 application.packet.headers,
                 application.packet.payload
+            )
+            break;
+
+        case "DnsPacket":
+            application_layer = new DnsPacket(
+                application.packet.header,
+                application.packet.questions,
+                application.packet.answers,
+                application.packet.nameservers,
+                application.packet.additional
             )
             break;
 

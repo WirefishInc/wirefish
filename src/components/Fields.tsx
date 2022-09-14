@@ -76,4 +76,175 @@ const TlsFields: FC<TlsFieldProps> = ({packetInfo}) => {
     );
 };
 
-export {Fields, TlsFields};
+interface DnsFieldProps {
+    packetInfo: any;
+}
+
+const DnsFields: FC<DnsFieldProps> = ({packetInfo}) => {
+    let fields = [];
+
+    for (const el of packetInfo.header) {
+        fields.push(
+            <>
+                <ListItem className={"break"}
+                          key={fields.length}><> {Object.keys(el)[0]} : {Object.values(el)[0]} </>
+                </ListItem>
+                <Divider/>
+            </>
+        )
+    }
+
+    if (packetInfo.questions.length > 0) {
+        fields.push(
+            <>
+                <ListItem>
+                    <Accordion className={"inner-acc"}>
+                        <AccordionSummary expandIcon={<ArrowDropDown/>}>
+                            Questions
+                        </AccordionSummary>
+                        <AccordionDetails>
+                            <List className={"break"} key={fields.length} component="nav" aria-label="mailbox folders">
+                                {packetInfo.questions.map((el: any[], i: number) =>
+                                    <>
+                                        <ListItem>
+                                            <Accordion className={"d-inner-acc"}>
+                                                <AccordionSummary expandIcon={<ArrowDropDown/>}>
+                                                    //TODO
+                                                </AccordionSummary>
+                                                <AccordionDetails>
+                                                    <List className={"break"} key={fields.length} component="nav"
+                                                          aria-label="mailbox folders">
+                                                        <Fields
+                                                            packetInfo={el}/>
+                                                    </List>
+                                                </AccordionDetails>
+                                            </Accordion>
+                                        </ListItem>
+                                        <Divider/>
+                                    </>)}
+                            </List>
+                        </AccordionDetails>
+                    </Accordion>
+                </ListItem>
+                <Divider/>
+            </>
+        )
+    }
+
+    if (packetInfo.answers.length > 0) {
+        fields.push(
+            <>
+                <ListItem>
+                    <Accordion className={"inner-acc"}>
+                        <AccordionSummary expandIcon={<ArrowDropDown/>}>
+                            Answers
+                        </AccordionSummary>
+                        <AccordionDetails>
+                            <List className={"break"} key={fields.length} component="nav" aria-label="mailbox folders">
+                                {packetInfo.answers.map((el: any[], i: number) =>
+                                    <>
+                                        <ListItem>
+                                            <Accordion className={"d-inner-acc"}>
+                                                <AccordionSummary expandIcon={<ArrowDropDown/>}>
+                                                    //TODO
+                                                </AccordionSummary>
+                                                <AccordionDetails>
+                                                    <List className={"break"} key={fields.length} component="nav"
+                                                          aria-label="mailbox folders">
+                                                        <Fields
+                                                            packetInfo={el}/>
+                                                    </List>
+                                                </AccordionDetails>
+                                            </Accordion>
+                                        </ListItem>
+                                        <Divider/>
+                                    </>)}
+                            </List>
+                        </AccordionDetails>
+                    </Accordion>
+                </ListItem>
+                <Divider/>
+            </>
+        )
+    }
+
+    if (packetInfo.nameservers.length > 0) {
+        fields.push(
+            <>
+                <ListItem>
+                    <Accordion className={"inner-acc"}>
+                        <AccordionSummary expandIcon={<ArrowDropDown/>}>
+                            Name servers
+                        </AccordionSummary>
+                        <AccordionDetails>
+                            <List className={"break"} key={fields.length} component="nav" aria-label="mailbox folders">
+                                {packetInfo.nameservers.map((el: any[], i: number) =>
+                                    <>
+                                        <ListItem>
+                                            <Accordion className={"d-inner-acc"}>
+                                                <AccordionSummary expandIcon={<ArrowDropDown/>}>
+                                                    //TODO
+                                                </AccordionSummary>
+                                                <AccordionDetails>
+                                                    <List className={"break"} key={fields.length} component="nav"
+                                                          aria-label="mailbox folders">
+                                                        <Fields
+                                                            packetInfo={el}/>
+                                                    </List>
+                                                </AccordionDetails>
+                                            </Accordion>
+                                        </ListItem>
+                                        <Divider/>
+                                    </>)}
+                            </List>
+                        </AccordionDetails>
+                    </Accordion>
+                </ListItem>
+                <Divider/>
+            </>
+        )
+    }
+
+    if (packetInfo.additional.length > 0) {
+        fields.push(
+            <>
+                <ListItem>
+                    <Accordion className={"inner-acc"}>
+                        <AccordionSummary expandIcon={<ArrowDropDown/>}>
+                            Additional
+                        </AccordionSummary>
+                        <AccordionDetails>
+                            <List className={"break"} key={fields.length} component="nav" aria-label="mailbox folders">
+                                {packetInfo.additional.map((el: any[], i: number) =>
+                                    <>
+                                        <ListItem>
+                                            <Accordion className={"d-inner-acc"}>
+                                                <AccordionSummary expandIcon={<ArrowDropDown/>}>
+                                                    //TODO
+                                                </AccordionSummary>
+                                                <AccordionDetails>
+                                                    <List className={"break"} key={fields.length} component="nav"
+                                                          aria-label="mailbox folders">
+                                                        <Fields
+                                                            packetInfo={el}/>
+                                                    </List>
+                                                </AccordionDetails>
+                                            </Accordion>
+                                        </ListItem>
+                                        <Divider/>
+                                    </>)}
+                            </List>
+                        </AccordionDetails>
+                    </Accordion>
+                </ListItem>
+                <Divider/>
+            </>
+        )
+    }
+
+    return (
+        <>{fields}</>
+    );
+};
+
+export {Fields, TlsFields, DnsFields};

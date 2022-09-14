@@ -154,6 +154,17 @@ const Filters: FC<FiltersProps> = ({
                                     }
                                     label="TLS"
                                 />
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox checked={filter.dns} onChange={(ev) => {
+                                            if (ev.target.checked)
+                                                setFilter((f: any) => Object.assign({}, f, {dns: true}));
+                                            else
+                                                setFilter((f: any) => Object.assign({}, f, {dns: false}));
+                                        }} name="dns"/>
+                                    }
+                                    label="DNS"
+                                />
                             </FormGroup>
                         </FormControl>
                         <FormControl sx={{m: 3}} component="fieldset" variant="standard">

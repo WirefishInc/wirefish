@@ -16,7 +16,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import ReportFolderInput from "./components/ReportFolderInput";
 import ReportNameInput from "./components/ReportNameInput";
 import ToggleButton from "./components/ToggleButton";
-import {Fields, TlsFields} from "./components/Fields";
+import {DnsFields, Fields, TlsFields} from "./components/Fields";
 import HewViewer from "./components/HexViewer";
 import Filters from "./components/Filters";
 
@@ -122,6 +122,7 @@ function App() {
         ipv4: boolean,
         ipv6: boolean,
         arp: boolean,
+        dns: boolean,
         src_ip: boolean,
         dst_ip: boolean,
         src_mac: boolean,
@@ -139,6 +140,7 @@ function App() {
         tcp: true,
         udp: true,
         arp: true,
+        dns: true,
         src_ip: false,
         dst_ip: false,
         src_mac: false,
@@ -292,6 +294,8 @@ function App() {
             condition = condition || packet.layers.includes("IPv4");
         if (filter.ipv6)
             condition = condition || packet.layers.includes("IPv6");
+        if (filter.dns)
+            condition = condition || packet.layers.includes("DNS");
         if (filter.src_ip)
             condition = condition && packet.sourceIP === srcIpForm
         if (filter.dst_ip)
@@ -462,12 +466,16 @@ function App() {
                                         <AccordionDetails>
                                             <List component="nav" aria-label="mailbox folders">
                                                 {
-                                                    selectedPacket.packet.application_layer_packet.getType() !== "TLS" ?
-                                                        <Fields
-                                                            packetInfo={selectedPacket.packet.application_layer_packet.toDisplay()}/>
-                                                        :
+                                                    selectedPacket.packet.application_layer_packet.getType() === "TLS" ?
                                                         <TlsFields
                                                             packetInfo={selectedPacket.packet.application_layer_packet.toDisplay()}/>
+                                                        :
+                                                        selectedPacket.packet.application_layer_packet.getType() === "DNS" ?
+                                                            <DnsFields
+                                                                packetInfo={selectedPacket.packet.application_layer_packet.toDisplay()}/>
+                                                            :
+                                                            <Fields
+                                                                packetInfo={selectedPacket.packet.application_layer_packet.toDisplay()}/>
                                                 }
                                             </List>
                                         </AccordionDetails>

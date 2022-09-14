@@ -19,6 +19,7 @@ import {
     KeyUpdate, NewSessionTicketMessage, NextProtocolMessage, ServerDoneMessage,
     ServerHelloMessage, ServerHelloV13Draft18Message, ServerKeyExchangeMessage
 } from "./tls";
+import {DnsHeader, DnsQuestion, DnsResourceRecord} from "./dns";
 
 export class TlsPacket implements SerializableApplicationLayerPacket {
     version: string;
@@ -340,4 +341,126 @@ export class HttpRequestPacket implements SerializableApplicationLayerPacket {
         return this.type;
     }
 
+}
+
+// TODO BUG
+// number of additional in field 8 -> displayed 0
+// number of answer in field 8 -> displayed 16
+
+export class DnsPacket implements SerializableApplicationLayerPacket {
+    header: DnsHeader;
+    questions: DnsQuestion[];
+    answers: DnsResourceRecord[];
+    nameservers: DnsResourceRecord[];
+    additional: DnsResourceRecord[];
+    type: string;
+
+    constructor(header: any, questions: any[], answers: any[], nameservers: any[], additional: any[]) {
+        this.header = new DnsHeader(
+            header.id,
+            header.query,
+            header.opcode,
+            header.authoritative,
+            header.truncated,
+            header.recursion_desired,
+            header.recursion_available,
+            header.authenticated_data,
+            header.checking_disabled,
+            header.response_code,
+            header.num_questions,
+            header.num_answers,
+            header.num_nameservers,
+            header.num_additional
+        );
+
+        let quest: DnsQuestion[] = [];
+        questions.forEach((q) => {
+            quest.push(new DnsQuestion(
+                q.query_name,
+                q.prefer_unicast,
+                q.query_type,
+                q.query_class
+            ))
+        });
+        this.questions = quest;
+
+        let ans: DnsResourceRecord[] = [];
+        answers.forEach((a) => {
+            ans.push(new DnsResourceRecord(
+                a.name,
+                a.multicast_unique,
+                a.class,
+                a.ttl,
+                a.data
+            ))
+        });
+        this.answers = ans;
+
+        let ns: DnsResourceRecord[] = [];
+        nameservers.forEach((n) => {
+            ns.push(new DnsResourceRecord(
+                n.name,
+                n.multicast_unique,
+                n.class,
+                n.ttl,
+                n.data
+            ))
+        });
+        this.nameservers = ns;
+
+        let add: DnsResourceRecord[] = [];
+        additional.forEach((a) => {
+            ans.push(new DnsResourceRecord(
+                a.name,
+                a.multicast_unique,
+                a.class,
+                a.ttl,
+                a.data
+            ))
+        });
+        this.additional = add;
+
+        this.type = "Domain Name System";
+    }
+
+    // TODO: improve getInfo
+    getInfo(): string {
+        if (this.header.query)
+            return "Standard query 0x" + this.header.id.toString(16)
+        else
+            return "Standard query response 0x" + this.header.id.toString(16)
+    }
+
+    getType(): string {
+        return "DNS";
+    }
+
+    toDisplay(): any {
+        let questions: any[] = [];
+        this.questions.forEach((q) => questions.push(q.toDisplay()));
+
+        let answers: any[] = [];
+        this.answers.forEach((a) => answers.push(a.toDisplay()));
+
+        let nameservers: any[] = [];
+        this.nameservers.forEach((n) => nameservers.push(n.toDisplay()));
+
+        let additional: any[] = [];
+        this.additional.forEach((a) => additional.push(a.toDisplay()));
+
+        return {
+            header: this.header.toDisplay(),
+            questions: questions,
+            answers: answers,
+            nameservers: nameservers,
+            additional: additional
+        };
+    }
+
+    toString(): string {
+        if (this.header.query)
+            return "Domain Name System (query)"
+        else
+            return "Domain Name System (response)"
+    }
 }
