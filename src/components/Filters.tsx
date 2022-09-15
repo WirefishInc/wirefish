@@ -43,6 +43,45 @@ const Filters: FC<FiltersProps> = ({
                 <AccordionDetails>
                     <Box sx={{display: 'flex'}}>
                         <FormControl sx={{m: 3}} component="fieldset" variant="standard">
+                            <FormLabel component="legend">Link Layer</FormLabel>
+                            <FormGroup>
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox checked={filter.ethernet} onChange={(ev) => {
+                                            if (ev.target.checked)
+                                                setFilter((f: any) => Object.assign({}, f, {ethernet: true}));
+                                            else
+                                                setFilter((f: any) => Object.assign({}, f, {ethernet: false}));
+                                        }} name="ethernet"/>
+                                    }
+                                    label="Ethernet"
+                                />
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox checked={filter.unknown} onChange={(ev) => {
+                                            if (ev.target.checked)
+                                                setFilter((f: any) => Object.assign({}, f, {unknown: true}));
+                                            else
+                                                setFilter((f: any) => Object.assign({}, f, {unknown: false}));
+                                        }} name="unknown"/>
+                                    }
+                                    label="Unknown"
+                                />
+                                <FormLabel component="legend">Other Packets</FormLabel>
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox checked={filter.malformed} onChange={(ev) => {
+                                            if (ev.target.checked)
+                                                setFilter((f: any) => Object.assign({}, f, {malformed: true}));
+                                            else
+                                                setFilter((f: any) => Object.assign({}, f, {malformed: false}));
+                                        }} name="malformed"/>
+                                    }
+                                    label="Malformed"
+                                />
+                            </FormGroup>
+                        </FormControl>
+                        <FormControl sx={{m: 3}} component="fieldset" variant="standard">
                             <FormLabel component="legend">Network Layer</FormLabel>
                             <FormGroup>
                                 <FormControlLabel
@@ -281,7 +320,7 @@ const Filters: FC<FiltersProps> = ({
                                                           }} name="info"/>
                                                           <TextField
                                                               onChange={(s) => setInfoForm(s.target.value)}
-                                                              id="info" label="Info" variant="standard"/>
+                                                              id="info" label="Packet Info" variant="standard"/>
                                                       </>
                                                   }
                                                   label=""

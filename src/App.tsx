@@ -113,6 +113,9 @@ function App() {
     let [infoForm, setInfoForm] = useState<string>("");
 
     let [filter, setFilter] = useState<{
+        ethernet: boolean,
+        malformed: boolean,
+        unknown: boolean,
         tcp: boolean;
         udp: boolean;
         icmpv6: boolean;
@@ -131,6 +134,9 @@ function App() {
         dst_port: boolean,
         info: boolean
     }>({
+        ethernet: true,
+        malformed: true,
+        unknown: true,
         http: true,
         icmp: true,
         icmpv6: true,
@@ -274,17 +280,26 @@ function App() {
         setActionLoading("");
     }
 
+    // TODO: Improve filter management (&&, ||)
     const packetFilter = (packet: GeneralPacket) => {
         let condition = false;
 
+        if (filter.unknown)
+            condition = condition || packet.layers.includes("Unknown");
+        if (filter.malformed)
+            condition = condition || packet.layers.includes("Malformed");
+        if (filter.ethernet)
+            condition = condition || packet.layers.includes("Ethernet");
         if (filter.tcp)
             condition = condition || packet.layers.includes("TCP");
         if (filter.udp)
             condition = condition || packet.layers.includes("UDP");
         if (filter.icmp)
-            condition = condition || packet.layers.includes("ICMP");
+            condition = condition || packet.layers.includes("ICMP")
+                || packet.layers.includes("Echo Reply") || packet.layers.includes("Echo Request");
         if (filter.icmpv6)
-            condition = condition || packet.layers.includes("ICMPv6");
+            condition = condition || packet.layers.includes("ICMPv6")
+                || packet.layers.includes("Echo Reply") || packet.layers.includes("Echo Request");
         if (filter.http)
             condition = condition || packet.layers.includes("HTTP");
         if (filter.tls)
@@ -295,6 +310,8 @@ function App() {
             condition = condition || packet.layers.includes("IPv6");
         if (filter.dns)
             condition = condition || packet.layers.includes("DNS");
+        if (filter.arp)
+            condition = condition || packet.layers.includes("ARP");
         if (filter.src_ip)
             condition = condition && packet.sourceIP === srcIpForm
         if (filter.dst_ip)
