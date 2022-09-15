@@ -25,11 +25,14 @@ use tauri_awesome_rpc::{AwesomeEmit, AwesomeRpc};
 
 use sniffer_parser::{parse_ethernet_frame, cleanup_sniffing_state, serializable_packet::{SerializablePacket, ParsedPacket}};
 
-struct SniffingInfoState(Arc<Mutex<SniffingInfo>>); // TODO: I think it would be better to have a mutex for the interface and one for the hashmap
+struct SniffingInfoState {
+    sniffing_info: Mutex<SniffingInfo>,
+    exchanged_packets: Mutex<RefCell<HashMap<SourceDestination, PacketExchange>>>,
+}
+
 struct SniffingInfo {
     interface_channel: Option<Box<dyn DataLinkReceiver>>,
     interface_name: Option<String>,
-    exchanged_packets: RefCell<HashMap<SourceDestination, PacketExchange>>,
     is_sniffing: bool,
 }
 
@@ -38,7 +41,6 @@ impl SniffingInfo {
         SniffingInfo {
             interface_channel: None,
             interface_name: None,
-            exchanged_packets: RefCell::new(HashMap::<SourceDestination, PacketExchange>::new()),
             is_sniffing: false,
         }
     }
@@ -48,7 +50,7 @@ impl SniffingInfo {
 async fn get_interfaces_list() -> Vec<String> {
     let interfaces = datalink::interfaces()
         .into_iter()
-        .map(|i| if cfg!(target_os = "windows") { i.description } else { i.name } )
+        .map(|i| if cfg!(target_os = "windows") { i.description } else { i.name })
         .collect::<Vec<String>>();
     info!("Interfaces retrieved: {:#?}", interfaces);
 
@@ -57,11 +59,11 @@ async fn get_interfaces_list() -> Vec<String> {
 
 #[tauri::command]
 async fn select_interface(
-    state: tauri::State<'_, SniffingInfoState>,
+    state: tauri::State<'_, Arc<SniffingInfoState>>,
     interface_name: String,
 ) -> Result<(), ()> {
     let interface_names_match = |iface: &NetworkInterface|
-        if cfg!(target_os = "windows") { iface.description == interface_name } else { iface.name == interface_name};
+        if cfg!(target_os = "windows") { iface.description == interface_name } else { iface.name == interface_name };
 
     // Find the network interface with the provided name
     let interfaces = datalink::interfaces();
@@ -94,7 +96,7 @@ async fn select_interface(
         ),
     };
 
-    let mut sniffing_state = state.0.lock().await;
+    let mut sniffing_state = state.sniffing_info.lock().await;
     sniffing_state.interface_channel = Some(rx);
     sniffing_state.interface_name = Some(interface_name);
 
@@ -108,10 +110,10 @@ async fn select_interface(
 
 #[tauri::command]
 async fn start_sniffing(
-    state: tauri::State<'_, SniffingInfoState>,
+    state: tauri::State<'_, Arc<SniffingInfoState>>,
     window: Window<Wry>,
 ) -> Result<(), String> {
-    let mut sniffing_state = state.0.lock().await;
+    let mut sniffing_state = state.sniffing_info.lock().await;
 
     if sniffing_state.interface_name.is_none() {
         error!("Start sniffing without prior selection of the inteface");
@@ -124,10 +126,10 @@ async fn start_sniffing(
         sniffing_state.interface_name.as_ref().unwrap()
     );
 
-    let ss = Arc::clone(&state.0);
+    let ss = Arc::clone(&state);
     tauri::async_runtime::spawn(async move {
         loop {
-            let mut sniffing_state = ss.lock().await;
+            let mut sniffing_state = ss.sniffing_info.lock().await;
 
             if !sniffing_state.is_sniffing {
                 break;
@@ -147,10 +149,13 @@ async fn start_sniffing(
                         transmitted_bytes = link_packet.payload.len();
                         protocol = link_packet.ethertype.clone();
                     }
-                    sniffing_state.exchanged_packets.borrow_mut()
+
+                    let exchanged_packets = ss.exchanged_packets.lock().await;
+                    exchanged_packets.borrow_mut()
                         .entry(sender_receiver)
                         .and_modify(|exchange| exchange.add_packet(protocol.clone(), transmitted_bytes, now))
                         .or_insert(PacketExchange::new(protocol, transmitted_bytes, now));
+                    drop(exchanged_packets);
 
                     window
                         .state::<AwesomeEmit>()
@@ -158,6 +163,7 @@ async fn start_sniffing(
                 }
                 Err(e) => {
                     // If an error occurs, we can handle it here
+                    // TODO: The application should properly indicate any failure of the sniffing process, providing meaningful and actionable feedback
                     error!("An error occurred while reading");
                     panic!("An error occurred while reading: {}", e);
                 }
@@ -181,15 +187,15 @@ fn get_sender_receiver(packet: &ParsedPacket) -> SourceDestination {
             SerializablePacket::ArpPacket(network_packet) => {
                 network_source = network_packet.sender_proto_addr.to_string();
                 network_destination = network_packet.target_proto_addr.to_string();
-            },
+            }
             SerializablePacket::Ipv4Packet(network_packet) => {
                 network_source = network_packet.source.to_string();
                 network_destination = network_packet.destination.to_string();
-            },
+            }
             SerializablePacket::Ipv6Packet(network_packet) => {
                 network_source = network_packet.source.to_string();
                 network_destination = network_packet.destination.to_string();
-            },
+            }
             _ => {}
         }
     }
@@ -199,27 +205,26 @@ fn get_sender_receiver(packet: &ParsedPacket) -> SourceDestination {
             SerializablePacket::TcpPacket(transport_packet) => {
                 transport_source = transport_packet.source.to_string();
                 transport_destination = transport_packet.destination.to_string();
-            },
+            }
             SerializablePacket::UdpPacket(transport_packet) => {
                 transport_source = transport_packet.source.to_string();
                 transport_destination = transport_packet.destination.to_string();
-            },
+            }
             _ => {}
         }
     }
-    // Todo: Handle arp packets source and destination
     SourceDestination::new(network_source, network_destination, transport_source, transport_destination)
 }
 
 #[tauri::command]
-async fn stop_sniffing(state: tauri::State<'_, SniffingInfoState>) -> Result<(), ()> {
-    let mut sniffing_state = state.0.lock().await;
+async fn stop_sniffing(state: tauri::State<'_, Arc<SniffingInfoState>>) -> Result<(), ()> {
+    let mut sniffing_state = state.sniffing_info.lock().await;
     sniffing_state.is_sniffing = false;
 
     // TODO: Empty sniffing_state.exchanged_packets on stop (not on pause)
-    
+
     cleanup_sniffing_state();
-    
+
     info!(
         "[{}] Sniffing stopped",
         sniffing_state.interface_name.as_ref().unwrap()
@@ -229,15 +234,15 @@ async fn stop_sniffing(state: tauri::State<'_, SniffingInfoState>) -> Result<(),
 }
 
 #[tauri::command]
-async fn generate_report(state: tauri::State<'_, SniffingInfoState>, report_path: String, first_generation: bool) -> Result<bool, String> {
-    let sniffing_state = state.0.lock().await;
-    let exchanged_packets = sniffing_state.exchanged_packets.take();
-    drop(sniffing_state);
+async fn generate_report(state: tauri::State<'_, Arc<SniffingInfoState>>, report_path: String, first_generation: bool) -> Result<bool, String> {
+    let packets = state.exchanged_packets.lock().await;
+    let exchanged_packets = packets.take();
+    drop(packets);
     let result = write_report(&report_path, exchanged_packets, first_generation);
     return match result {
         Err(why) => Err(why.to_string()),
         Ok(_) => Ok(true)
-    }
+    };
 }
 
 fn main() {
@@ -263,7 +268,14 @@ fn main() {
             awesome_rpc.start(app.handle());
             Ok(())
         })
-        .manage(SniffingInfoState(Arc::new(Mutex::new(SniffingInfo::new()))))
+        .manage(
+            Arc::new(
+                SniffingInfoState {
+                    sniffing_info: Mutex::new(SniffingInfo::new()),
+                    exchanged_packets: Mutex::new(RefCell::new(HashMap::<SourceDestination, PacketExchange>::new()))
+                },
+            )
+        )
         .invoke_handler(tauri::generate_handler![
             start_sniffing,
             stop_sniffing,
