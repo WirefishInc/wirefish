@@ -278,6 +278,7 @@ class Certificate {
     subject_uid: string;
     validity: string;
     version: string;
+
     //subject_pki: string;
 
     constructor(
@@ -303,7 +304,7 @@ class Certificate {
     toDisplay(): any {
         let packet_info = [];
 
-        packet_info.push({"Signature Algorithm": this.version});
+        packet_info.push({"Signature Algorithm": this.signature_algorithm});
         packet_info.push({"Signature Value": this.signature_value});
         packet_info.push({"Serial": this.serial});
         packet_info.push({"Issuer Id": this.issuer_uid});
@@ -316,15 +317,17 @@ class Certificate {
     }
 }
 
+// TODO BUG: FIX TO DISPLAY CERTIFICATE MESSAGES
+// Error: Objects are not valid as a React child (found: object with keys {Signature Algorithm}).
 export class CertificateMessage extends CustomHandshakeMessage {
     certificates: Certificate[];
     type: string;
 
     constructor(certificates: Certificate[]) {
         super();
-        let res : Certificate[] = [];
-        certificates.forEach( (c) => {
-            res.push( new Certificate(
+        let res: Certificate[] = [];
+        certificates.forEach((c) => {
+            res.push(new Certificate(
                 c.signature_algorithm,
                 c.signature_value,
                 c.serial,
@@ -342,7 +345,7 @@ export class CertificateMessage extends CustomHandshakeMessage {
     toDisplay(): any {
         let packet_info: any[] = [];
 
-        this.certificates.forEach( (c) => packet_info.push(c.toDisplay()))
+        this.certificates.forEach((c) => packet_info.push(c.toDisplay()))
 
         return packet_info;
     }
@@ -388,7 +391,35 @@ export class CertificateRequestMessage extends CustomHandshakeMessage {
 }
 
 export class CertificateStatusMessage extends CustomHandshakeMessage {
-    // TODO CertificateStatusMessage
+    status_type: string;
+    data: number[];
+    type: string;
+
+    constructor(status_type: string, data: number[]) {
+        super();
+        this.status_type = status_type;
+        this.data = data;
+        this.type = "Certificate Status"
+    }
+
+    toDisplay(): any {
+        let packet_info = [];
+
+        packet_info.push({"Status Type": this.status_type});
+        packet_info.push({"Data": this.data});
+
+        return packet_info;
+    }
+
+    toString(): string {
+        let res = super.toString();
+
+        return res + "Protocol: Certificate Status";
+    }
+
+    getType(): string {
+        return this.type
+    }
 }
 
 export class CertificateVerifyMessage extends CustomHandshakeMessage {
@@ -413,38 +444,6 @@ export class CertificateVerifyMessage extends CustomHandshakeMessage {
         let res = super.toString();
 
         return res + "Protocol: Certificate Verify";
-    }
-
-    getType(): string {
-        return this.type
-    }
-}
-
-export class ClientKeyExchangeMessage extends CustomHandshakeMessage {
-    data: number[];
-    algo_type: string;
-    type: string;
-
-    constructor(data: number[], algo_type: string) {
-        super();
-        this.data = data;
-        this.algo_type = algo_type;
-        this.type = "Client Key Exchange"
-    }
-
-    toDisplay(): any {
-        let packet_info = [];
-
-        packet_info.push({"Data": this.data});
-        packet_info.push({"Algorithm Type": this.algo_type});
-
-        return packet_info;
-    }
-
-    toString(): string {
-        let res = super.toString();
-
-        return res + "Protocol: Client Key Exchange";
     }
 
     getType(): string {
@@ -654,45 +653,6 @@ export class ServerHelloV13Draft18Message extends CustomHandshakeMessage {
     }
 }
 
-export class ServerKeyExchangeMessage extends CustomHandshakeMessage {
-    prime_modulus: number[];
-    generator: number[];
-    public_value: number[];
-    type: string;
-
-    constructor(
-        prime_modulus: number[],
-        generator: number[],
-        public_value: number[]
-    ) {
-        super();
-        this.prime_modulus = prime_modulus;
-        this.generator = generator;
-        this.public_value = public_value;
-        this.type = "Server Key Exchange"
-    }
-
-    toDisplay(): any {
-        let packet_info = [];
-
-        packet_info.push({"Prime Modulus": this.prime_modulus});
-        packet_info.push({"Generator": this.generator});
-        packet_info.push({"Public Value": this.public_value});
-
-        return packet_info;
-    }
-
-    toString(): string {
-        let res = super.toString();
-
-        return res + "Protocol: Server Key Exchange";
-    }
-
-    getType(): string {
-        return this.type
-    }
-}
-
 export class KeyUpdate extends CustomHandshakeMessage {
     key: string;
     type: string;
@@ -766,5 +726,179 @@ export class HelloRequest extends CustomHandshakeMessage {
 
     getType(): string {
         return this.type
+    }
+}
+
+// TODO ClientKeyExchangeMessage Methods
+export class ClientKeyExchangeMessage extends CustomHandshakeMessage {
+    parameters: ClientParameters | number[];
+    param_type: string;
+    type: string;
+
+    constructor(param: any) {
+        super();
+        this.type = "Client Key Exchange";
+        this.param_type = param.type;
+        switch (param.type) {
+            case "Dh":
+                this.parameters = new ServerDhParameters(
+                    param.parameters.prime_modulus,
+                    param.parameters.generator,
+                    param.parameters.public_value
+                )
+                break;
+            case "Ec":
+                this.parameters = new ServerEcParameters(
+                    param.parameters.ec_type,
+                    param.parameters.ec_content
+                )
+                break;
+            case "Ecdh":
+                this.parameters = new ClientEcdhParameters(param.parameters.point)
+                break;
+            default:
+                this.parameters = param.parameters
+        }
+    }
+}
+
+// TODO ServerKeyExchangeMessage Methods
+export class ServerKeyExchangeMessage extends CustomHandshakeMessage {
+    parameters: ServerParameters | number[];
+    param_type: string;
+    type: string;
+
+    constructor(param: any) {
+        super();
+        this.type = "Server Key Exchange";
+        this.param_type = param.type;
+        switch (param.type) {
+            case "Dh":
+                this.parameters = new ServerDhParameters(
+                    param.parameters.prime_modulus,
+                    param.parameters.generator,
+                    param.parameters.public_value
+                )
+                break;
+            case "Ec":
+                this.parameters = new ServerEcParameters(
+                    param.parameters.ec_type,
+                    param.parameters.ec_content
+                )
+                break;
+            case "Ecdh":
+                this.parameters = new ServerEcdhParameters(
+                    param.parameters.public_point,
+                    param.parameters.curve
+                )
+                break;
+            default:
+                this.parameters = param.parameters
+        }
+    }
+}
+
+/* --- */
+
+interface ClientParameters {
+}
+
+interface ServerParameters {
+}
+
+class ServerDhParameters implements ClientParameters, ServerParameters {
+    prime_modulus: number[];
+    generator: number[];
+    public_value: number[];
+
+    constructor(
+        prime_modulus: number[],
+        generator: number[],
+        public_value: number[]) {
+        this.prime_modulus = prime_modulus;
+        this.generator = generator;
+        this.public_value = public_value;
+    }
+}
+
+class ServerEcParameters implements ClientParameters, ServerParameters {
+    ec_type: string;
+    ec_content: CustomEcContent | null;
+
+    constructor(ec_type: string, ec_content: any) {
+        this.ec_type = ec_type;
+        switch (ec_content.type) {
+            case "ExplicitPrime":
+                this.ec_content = new CustomExplicitPrime(
+                    ec_content.content.prime_p,
+                    ec_content.content.curve,
+                    ec_content.content.base_point,
+                    ec_content.content.order,
+                    ec_content.content.cofactor
+                )
+                break;
+            case "NamedGroup":
+                this.ec_content = new CustomNamedGroup(
+                    ec_content.content.group
+                )
+                break;
+            default:
+                this.ec_content = null;
+        }
+    }
+}
+
+class ClientEcdhParameters implements ClientParameters {
+    point: string;
+
+    constructor(point: string) {
+        this.point = point;
+    }
+}
+
+class ServerEcdhParameters implements ServerParameters {
+    public_point: number[];
+    curve: ServerEcParameters;
+
+    constructor(public_point: number[], curve: any) {
+        this.public_point = public_point;
+        this.curve = new ServerEcParameters(
+            curve.ec_type,
+            curve.ec_content
+        );
+    }
+}
+
+/* --- */
+
+interface CustomEcContent {
+}
+
+class CustomExplicitPrime implements CustomEcContent {
+    prime_p: number[];
+    curve: number[][];
+    base_point: number[];
+    order: number[];
+    cofactor: number[];
+
+    constructor(
+        prime_p: number[],
+        curve: number[][],
+        base_point: number[],
+        order: number[],
+        cofactor: number[]) {
+        this.prime_p = prime_p;
+        this.curve = curve;
+        this.base_point = base_point;
+        this.order = order;
+        this.cofactor = cofactor;
+    }
+}
+
+class CustomNamedGroup implements CustomEcContent {
+    group: string;
+
+    constructor(group: string) {
+        this.group = group;
     }
 }

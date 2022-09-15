@@ -101,16 +101,13 @@ export class TlsPacket implements SerializableApplicationLayerPacket {
                 result = new CertificateRequestMessage(p.sig_hash_algos)
                 break;
             case "CertificateStatus":
-                result = new CertificateStatusMessage()
+                result = new CertificateStatusMessage(
+                    p.status_type,
+                    p.data
+                )
                 break;
             case "CertificateVerify":
                 result = new CertificateVerifyMessage(p.data)
-                break;
-            case "ClientKeyExchange":
-                result = new ClientKeyExchangeMessage(
-                    p.data,
-                    p.algo_type
-                )
                 break;
             case "EndOfEarlyData":
                 result = new EndOfEarlyData();
@@ -154,12 +151,11 @@ export class TlsPacket implements SerializableApplicationLayerPacket {
                     p.extensions
                 )
                 break;
+            case "ClientKeyExchange":
+                result = new ClientKeyExchangeMessage(p.parameters)
+                break;
             case "ServerKeyExchange":
-                result = new ServerKeyExchangeMessage(
-                    p.prime_modulus,
-                    p.generator,
-                    p.public_value
-                )
+                result = new ServerKeyExchangeMessage(p.parameters)
                 break;
             default:
                 result = new MalformedPacket();
@@ -285,7 +281,7 @@ export class HttpResponsePacket implements SerializableApplicationLayerPacket {
 
 }
 
-// TODO Does HttpContentType make sense for Request Packet (no payload)?
+// TODO HttpContentType for Request Packet
 
 export class HttpRequestPacket implements SerializableApplicationLayerPacket {
     method: string;
@@ -293,7 +289,8 @@ export class HttpRequestPacket implements SerializableApplicationLayerPacket {
     version: number;
     headers: [[string, string]];
     type: string;
-    // payload
+
+    // payload !!!
 
     constructor(
         method: string,
