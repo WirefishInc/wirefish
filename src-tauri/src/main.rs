@@ -217,11 +217,16 @@ fn get_sender_receiver(packet: &ParsedPacket) -> SourceDestination {
 }
 
 #[tauri::command]
-async fn stop_sniffing(state: tauri::State<'_, Arc<SniffingInfoState>>) -> Result<(), ()> {
+/// stop: true => terminate sniffing process, false: pause sniffing process
+async fn stop_sniffing(state: tauri::State<'_, Arc<SniffingInfoState>>, stop: bool) -> Result<(), ()> {
     let mut sniffing_state = state.sniffing_info.lock().await;
     sniffing_state.is_sniffing = false;
 
-    // TODO: Empty sniffing_state.exchanged_packets on stop (not on pause)
+    if stop {
+        let exchanged_packets = state.exchanged_packets.lock().await;
+        drop(exchanged_packets.take());
+        drop(exchanged_packets);
+    }
 
     cleanup_sniffing_state();
 

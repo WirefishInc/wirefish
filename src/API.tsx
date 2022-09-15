@@ -4,8 +4,8 @@ async function startSniffing() {
     return invoke('start_sniffing')
 }
 
-async function stopSniffing() {
-    return invoke('stop_sniffing')
+async function stopSniffing(stop: boolean) {
+    return invoke('stop_sniffing', {stop})
 }
 
 async function selectInterface(interfaceName: string) {
