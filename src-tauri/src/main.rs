@@ -277,7 +277,7 @@ fn main() {
             Arc::new(
                 SniffingInfoState {
                     sniffing_info: Mutex::new(SniffingInfo::new()),
-                    exchanged_packets: Mutex::new(RefCell::new(HashMap::<SourceDestination, PacketExchange>::new()))
+                    exchanged_packets: Mutex::new(RefCell::new(HashMap::<SourceDestination, PacketExchange>::new())),
                 },
             )
         )
