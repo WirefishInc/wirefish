@@ -82,7 +82,11 @@ const columns: GridColDef[] = [
 
 function App() {
 
+    // @ts-ignore
+    const separator = window.__TAURI__.path.sep;
     const REPORT_GENERATION_SECONDS = 30;
+    const INITIAL_REPORT_NAME = "report";
+    const INITIAL_REPORT_FOLDER = `.${separator}report${separator}`;
     const resetFeedback = {text: "", isError: false, duration: 0};
 
     let [interfaces, setInterfaces] = useState<string[] | null>(null);
@@ -90,8 +94,8 @@ function App() {
     let [sniffingStatus, setSniffingStatus] = useState<SniffingStatus>(SniffingStatus.Inactive);
     let [capturedPackets, setCapturedPackets] = useState<GeneralPacket[]>([]);
     let [reportUpdateTime, setReportUpdateTime] = useState<number>(REPORT_GENERATION_SECONDS);
-    let [reportFileName, setReportFileName] = useState<string>("report");
-    let [reportFolder, setReportFolder] = useState<string>("./");
+    let [reportFileName, setReportFileName] = useState<string>(INITIAL_REPORT_NAME);
+    let [reportFolder, setReportFolder] = useState<string>(INITIAL_REPORT_FOLDER);
     let [selectedPacket, setSelectedPacket] = useState<GeneralPacket | null>(null);
     let [over, setOver] = useState<string | null>(null);
     let [reportGenerationTimer, setReportGenerationTimer] = useState<null | ReturnType<typeof setInterval>>(null);
