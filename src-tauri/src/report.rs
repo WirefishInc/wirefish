@@ -5,6 +5,12 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::ffi::OsStr;
 use chrono::Local;
+use human_bytes::human_bytes;
+
+const MAX_IP_LEN: usize = 40;
+const MAX_PORT_LEN: usize = 20;
+const MAX_TIME_LEN: usize = 24;
+const MAX_BYTES_LEN: usize = 16;
 
 /// Appends data to a report file, creates the file if it doesn't exist
 pub fn write_report(output_path: &str, mut data: HashMap<SourceDestination, PacketExchange>, first_generation: bool) -> Result<bool, io::Error> {
@@ -43,23 +49,51 @@ pub fn write_report(output_path: &str, mut data: HashMap<SourceDestination, Pack
     };
     writer.write_all(("-".repeat(50) + "\n\n").as_bytes())?;
     writer.write_all((">> Updated at: ".to_owned() + &Local::now().format("%Y-%m-%d %H:%M:%S").to_string() + "\n").as_bytes())?;
-    writer.write_all((">> Collected entries: ".to_owned() + &data.len().to_string() + "\n").as_bytes())?;
-    writer.write_all((">> Total Bytes transmitted: ".to_owned() + &transmitted_bytes.to_string() + "\n\n").as_bytes())?;
-    writer.write_all("Source Ip \t\t\t\t\t\t\t\t    Destination Ip  \t\t\t\t\t\t    Source Port Destination Port		Data Exchanged	First Data Exchange\t\tLast Data Exchange\n".as_bytes())?;
+    writer.write_all((">> Number of Source-Destination pairs: ".to_owned() + &data.len().to_string() + "\n").as_bytes())?;
+    writer.write_all((">> Total Bytes transmitted: ".to_owned() + &human_bytes(transmitted_bytes as f64) + "\n\n").as_bytes())?;
 
-    // Write packets exchange data
-    for (source_destination, exchange) in data.drain() {
-        writer.write_all((source_destination.to_string() + "\t\t" + &exchange.to_string() + "\n").as_bytes())?
+    let mut data_pairs = data.drain().peekable();
+
+    if data_pairs.peek().is_some() {
+
+        // Write headers
+        let headers = [
+            ("Source Ip", MAX_IP_LEN),
+            ("Destination Ip", MAX_IP_LEN),
+            ("Source Port", MAX_PORT_LEN),
+            ("Destination Port", MAX_PORT_LEN),
+            ("First Data Exchange", MAX_TIME_LEN),
+            ("Last Data Exchange", MAX_TIME_LEN),
+            ("Data Exchanged", MAX_BYTES_LEN),
+            ("Protocols", 9),
+        ];
+        // writer.write_all("Source Ip \t\t\t\t\t\t\t\t    Destination Ip  \t\t\t\t\t\t    Source Port Destination Port		Data Exchanged	First Data Exchange\t\tLast Data Exchange\n".as_bytes())?;
+        for header in headers {
+            let len = header.0.len();
+            writer.write_all((header.0.to_owned() + "\t" + &tab_word(len, header.1)).as_bytes())?;
+        }
+        writer.write_all("\n".as_bytes())?;
+
+        // Write packets exchange data
+        for (source_destination, exchange) in data_pairs {
+            writer.write_all((source_destination.to_string() + "\t" + &exchange.to_string() + "\n").as_bytes())?
+        }
+        writer.write_all(b"\n")?;
     }
-    writer.write_all(b"\n")?;
 
     Ok(true)
+}
+
+pub fn tab_word(word_length: usize, fill_length: usize) -> String {
+    "\t".repeat(((fill_length - word_length) as f64 / 4 as f64).ceil() as usize)
 }
 
 pub mod data {
     use std::collections::HashSet;
     use chrono::{DateTime, Local};
     use std::cmp;
+    use crate::report::{MAX_IP_LEN, MAX_PORT_LEN, MAX_BYTES_LEN, MAX_TIME_LEN, tab_word};
+    use human_bytes::human_bytes;
 
     #[derive(PartialEq, Eq, Hash, Debug)]
     pub struct SourceDestination {
@@ -90,14 +124,12 @@ pub mod data {
 
     impl ToString for SourceDestination {
         fn to_string(&self) -> String {
-            const MAX_IP_LEN: usize = 39;
-            let extra_tabs = |text_len: usize| { "\t".repeat((MAX_IP_LEN - text_len) / 4) };
             [
-                self.ip_source.clone() + &extra_tabs(self.ip_source.len()),
-                self.ip_destination.clone() + &extra_tabs(self.ip_destination.len()),
-                self.port_source.clone(),
-                self.port_destination.clone()
-            ].join("\t\t")
+                self.ip_source.clone() + &tab_word(self.ip_source.len(), MAX_IP_LEN),
+                self.ip_destination.clone() + &tab_word(self.ip_destination.len(), MAX_IP_LEN),
+                self.port_source.clone() + &tab_word(self.port_source.len(), MAX_PORT_LEN),
+                self.port_destination.clone() + &tab_word(self.port_destination.len(), MAX_PORT_LEN)
+            ].join("\t")
         }
     }
 
@@ -105,9 +137,9 @@ pub mod data {
         pub fn new(protocol: String, transmitted_bytes: usize, exchange_time: DateTime<Local>) -> Self {
             PacketExchange {
                 protocols: HashSet::from([protocol]),
-                transmitted_bytes: transmitted_bytes,
                 first_exchange: exchange_time,
                 last_exchange: exchange_time,
+                transmitted_bytes,
             }
         }
 
@@ -121,12 +153,18 @@ pub mod data {
 
     impl ToString for PacketExchange {
         fn to_string(&self) -> String {
+            let first_exchange = self.first_exchange.format("%Y-%m-%d %H:%M:%S").to_string();
+            let last_exchange = self.last_exchange.format("%Y-%m-%d %H:%M:%S").to_string();
+            let first_exchange_len = first_exchange.len();
+            let last_exchange_len = last_exchange.len();
+            let bytes = human_bytes(self.transmitted_bytes as f64);
+            let protocols = "[".to_owned() + &self.protocols.clone().into_iter().collect::<Vec<String>>().join(", ") + "]";
             [
-                "[".to_owned() + &self.protocols.clone().into_iter().collect::<Vec<String>>().join(", ") + "]",
-                self.transmitted_bytes.to_string() + " Bytes",
-                self.first_exchange.format("%Y-%m-%d %H:%M:%S").to_string(),
-                self.last_exchange.format("%Y-%m-%d %H:%M:%S").to_string()
-            ].join("\t\t")
+                first_exchange + &tab_word(first_exchange_len, MAX_TIME_LEN),
+                last_exchange + &tab_word(last_exchange_len, MAX_TIME_LEN),
+                bytes.to_string() + &tab_word(bytes.to_string().len(), MAX_BYTES_LEN),
+                protocols
+            ].join("\t")
         }
     }
 
