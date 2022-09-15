@@ -233,7 +233,6 @@ const make_transport_level_packet = (transport: any) => {
 }
 
 const make_link_level_packet = (link: any) => {
-    //if (!link) return null;
     let link_layer: SerializableLinkLayerPacket | MalformedPacket;
 
     switch (link.type) {
@@ -254,7 +253,6 @@ const make_link_level_packet = (link: any) => {
 }
 
 const make_network_level_packet = (network: any) => {
-    //if (!network) return null;
     let network_layer: SerializableNetworkLayerPacket | MalformedPacket;
 
     switch (network.type) {
@@ -366,7 +364,7 @@ export class MalformedPacket {
     type: string;
 
     constructor() {
-        this.type = "Malformed Packet"
+        this.type = "Malformed"
     }
 
     toDisplay() {

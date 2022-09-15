@@ -285,7 +285,6 @@ export class HttpResponsePacket implements SerializableApplicationLayerPacket {
 
 }
 
-
 // TODO Does HttpContentType make sense for Request Packet (no payload)?
 
 export class HttpRequestPacket implements SerializableApplicationLayerPacket {
@@ -294,6 +293,7 @@ export class HttpRequestPacket implements SerializableApplicationLayerPacket {
     version: number;
     headers: [[string, string]];
     type: string;
+    // payload
 
     constructor(
         method: string,
@@ -342,10 +342,6 @@ export class HttpRequestPacket implements SerializableApplicationLayerPacket {
     }
 
 }
-
-// TODO BUG
-// number of additional in field 8 -> displayed 0
-// number of answer in field 8 -> displayed 16
 
 export class DnsPacket implements SerializableApplicationLayerPacket {
     header: DnsHeader;
@@ -410,7 +406,7 @@ export class DnsPacket implements SerializableApplicationLayerPacket {
 
         let add: DnsResourceRecord[] = [];
         additional.forEach((a) => {
-            ans.push(new DnsResourceRecord(
+            add.push(new DnsResourceRecord(
                 a.name,
                 a.multicast_unique,
                 a.class,
@@ -423,7 +419,6 @@ export class DnsPacket implements SerializableApplicationLayerPacket {
         this.type = "Domain Name System";
     }
 
-    // TODO: improve getInfo
     getInfo(): string {
         if (this.header.query)
             return "Standard query 0x" + this.header.id.toString(16)

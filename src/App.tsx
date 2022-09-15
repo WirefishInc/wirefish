@@ -274,7 +274,6 @@ function App() {
         setActionLoading("");
     }
 
-    // todo: why if port filter checked, icmp packets selected?
     const packetFilter = (packet: GeneralPacket) => {
         let condition = false;
 
@@ -304,10 +303,10 @@ function App() {
             condition = condition && packet.sourceMAC === srcMacForm
         if (filter.dst_mac)
             condition = condition && packet.destinationMAC === dstMacForm
-        if (filter.src_port && packet.sourcePort !== null)
-            condition = condition && packet.sourcePort.toLocaleString() === srcPortForm
-        if (filter.dst_port && packet.destinationPort !== null)
-            condition = condition && packet.destinationPort.toLocaleString() === dstPortForm
+        if (filter.src_port)
+            condition = condition && packet.sourcePort !== null && packet.sourcePort.toString() === srcPortForm
+        if (filter.dst_port)
+            condition = condition && packet.destinationPort !== null && packet.destinationPort.toString() === dstPortForm
         if (filter.info)
             condition = condition && packet.info.toLowerCase().includes(infoForm.toLowerCase())
 

@@ -222,7 +222,7 @@ const Filters: FC<FiltersProps> = ({
                                                       <>
                                                           <Checkbox checked={filter.dst_mac} onChange={(ev) => {
                                                               if (ev.target.checked)
-                                                                  setFilter((f: any) => Object.assign({}, f, {dts_mac: true}));
+                                                                  setFilter((f: any) => Object.assign({}, f, {dst_mac: true}));
                                                               else
                                                                   setFilter((f: any) => Object.assign({}, f, {dst_mac: false}));
                                                           }} name="dst_mac"/>

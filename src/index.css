@@ -114,3 +114,7 @@ label.text-field {
 table.ascii {
    margin-left: 100px;
 }
+
+div.paper {
+    background-color: rgb(40,40,40) ;
+}

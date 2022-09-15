@@ -1,5 +1,5 @@
 import {FC} from "react";
-import {Accordion, AccordionDetails, AccordionSummary, Divider, List, ListItem} from "@mui/material";
+import {Accordion, AccordionDetails, AccordionSummary, Divider, List, ListItem, Paper} from "@mui/material";
 import {CustomTlsMessages} from "../serializable_packet/tls";
 import {ArrowDropDown} from "@mui/icons-material";
 import '../index.css';
@@ -104,18 +104,18 @@ const DnsFields: FC<DnsFieldProps> = ({packetInfo}) => {
                         </AccordionSummary>
                         <AccordionDetails>
                             <List className={"break"} key={fields.length} component="nav" aria-label="mailbox folders">
-                                {packetInfo.questions.map((el: any[], i: number) =>
+                                {packetInfo.questions.map((el: any, i: number) =>
                                     <>
                                         <ListItem>
                                             <Accordion className={"d-inner-acc"}>
                                                 <AccordionSummary expandIcon={<ArrowDropDown/>}>
-                                                    //TODO
+                                                    {el.name}
                                                 </AccordionSummary>
                                                 <AccordionDetails>
                                                     <List className={"break"} key={fields.length} component="nav"
                                                           aria-label="mailbox folders">
                                                         <Fields
-                                                            packetInfo={el}/>
+                                                            packetInfo={el.fields}/>
                                                     </List>
                                                 </AccordionDetails>
                                             </Accordion>
@@ -141,19 +141,22 @@ const DnsFields: FC<DnsFieldProps> = ({packetInfo}) => {
                         </AccordionSummary>
                         <AccordionDetails>
                             <List className={"break"} key={fields.length} component="nav" aria-label="mailbox folders">
-                                {packetInfo.answers.map((el: any[], i: number) =>
+                                {packetInfo.answers.map((el: any, i: number) =>
                                     <>
                                         <ListItem>
                                             <Accordion className={"d-inner-acc"}>
                                                 <AccordionSummary expandIcon={<ArrowDropDown/>}>
-                                                    //TODO
+                                                    {el.name}
                                                 </AccordionSummary>
                                                 <AccordionDetails>
                                                     <List className={"break"} key={fields.length} component="nav"
                                                           aria-label="mailbox folders">
                                                         <Fields
-                                                            packetInfo={el}/>
+                                                            packetInfo={el.fields}/>
                                                     </List>
+                                                    <Paper className={"paper"} elevation={24}>
+                                                        <Fields packetInfo={el.data}/>
+                                                    </Paper>
                                                 </AccordionDetails>
                                             </Accordion>
                                         </ListItem>
@@ -178,19 +181,22 @@ const DnsFields: FC<DnsFieldProps> = ({packetInfo}) => {
                         </AccordionSummary>
                         <AccordionDetails>
                             <List className={"break"} key={fields.length} component="nav" aria-label="mailbox folders">
-                                {packetInfo.nameservers.map((el: any[], i: number) =>
+                                {packetInfo.nameservers.map((el: any, i: number) =>
                                     <>
                                         <ListItem>
                                             <Accordion className={"d-inner-acc"}>
                                                 <AccordionSummary expandIcon={<ArrowDropDown/>}>
-                                                    //TODO
+                                                    {el.name}
                                                 </AccordionSummary>
                                                 <AccordionDetails>
                                                     <List className={"break"} key={fields.length} component="nav"
                                                           aria-label="mailbox folders">
                                                         <Fields
-                                                            packetInfo={el}/>
+                                                            packetInfo={el.fields}/>
                                                     </List>
+                                                    <Paper className={"paper"} elevation={24}>
+                                                        <Fields packetInfo={el.data}/>
+                                                    </Paper>
                                                 </AccordionDetails>
                                             </Accordion>
                                         </ListItem>
@@ -215,19 +221,22 @@ const DnsFields: FC<DnsFieldProps> = ({packetInfo}) => {
                         </AccordionSummary>
                         <AccordionDetails>
                             <List className={"break"} key={fields.length} component="nav" aria-label="mailbox folders">
-                                {packetInfo.additional.map((el: any[], i: number) =>
+                                {packetInfo.additional.map((el: any, i: number) =>
                                     <>
                                         <ListItem>
                                             <Accordion className={"d-inner-acc"}>
                                                 <AccordionSummary expandIcon={<ArrowDropDown/>}>
-                                                    //TODO
+                                                    {el.name}
                                                 </AccordionSummary>
                                                 <AccordionDetails>
                                                     <List className={"break"} key={fields.length} component="nav"
                                                           aria-label="mailbox folders">
                                                         <Fields
-                                                            packetInfo={el}/>
+                                                            packetInfo={el.fields}/>
                                                     </List>
+                                                    <Paper className={"paper"} elevation={24}>
+                                                        <Fields packetInfo={el.data}/>
+                                                    </Paper>
                                                 </AccordionDetails>
                                             </Accordion>
                                         </ListItem>

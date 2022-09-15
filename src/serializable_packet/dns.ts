@@ -83,15 +83,14 @@ export class DnsQuestion {
         this.query_class = query_class;
     }
 
-    toDisplay(): any[] {
+    toDisplay(): any {
         let result = [];
 
-        result.push({"Query Name": this.query_name})
         result.push({"Prefer Unicast": String(this.prefer_unicast)})
         result.push({"Query Type": this.query_type})
         result.push({"Query Class": this.query_class})
 
-        return result;
+        return {name: this.query_name, fields: result};
     }
 }
 
@@ -150,21 +149,21 @@ export class DnsResourceRecord {
         }
     }
 
-    toDisplay() : any[]{
+    toDisplay() : any {
         let result = [];
 
-        result.push({"Name": this.name})
         result.push({"Multicas Unique": String(this.multicast_unique)})
         result.push({"Class": this.class_})
         result.push({"TTL": this.ttl})
-        // todo ResourceData
 
-        return result;
+        return {name: this.name, fields: result, data: this.data.toDisplay()};
     }
 }
 
 interface ResourceData {
     type: string;
+
+    toDisplay(): any[]
 }
 
 class A implements ResourceData {
@@ -174,6 +173,15 @@ class A implements ResourceData {
     constructor(address: string) {
         this.address = address;
         this.type = "A"
+    }
+
+    toDisplay() : any[] {
+        let result = [];
+
+        result.push({"Type": this.type})
+        result.push({"Address": this.address})
+
+        return result
     }
 }
 
@@ -185,6 +193,15 @@ class Aaaa implements ResourceData {
         this.address = address;
         this.type = "AAAA"
     }
+
+    toDisplay() : any[] {
+        let result = [];
+
+        result.push({"Type": this.type})
+        result.push({"Address": this.address})
+
+        return result
+    }
 }
 
 class Cname implements ResourceData {
@@ -194,6 +211,15 @@ class Cname implements ResourceData {
     constructor(name: string) {
         this.name = name;
         this.type = "CNAME"
+    }
+
+    toDisplay() : any[] {
+        let result = [];
+
+        result.push({"Type": this.type})
+        result.push({"Name": this.name})
+
+        return result
     }
 }
 
@@ -207,6 +233,16 @@ class Mx implements ResourceData {
         this.exchange = exchange;
         this.type = "MX"
     }
+
+    toDisplay() : any[] {
+        let result = [];
+
+        result.push({"Type": this.type})
+        result.push({"Preference": this.preference})
+        result.push({"Exchange": this.exchange})
+
+        return result
+    }
 }
 
 class Ns implements ResourceData {
@@ -217,6 +253,15 @@ class Ns implements ResourceData {
         this.name = name;
         this.type = "NS"
     }
+
+    toDisplay() : any[] {
+        let result = [];
+
+        result.push({"Type": this.type})
+        result.push({"Name": this.name})
+
+        return result
+    }
 }
 
 class Ptr implements ResourceData {
@@ -226,6 +271,15 @@ class Ptr implements ResourceData {
     constructor(name: string) {
         this.name = name;
         this.type = "PTR"
+    }
+
+    toDisplay() : any[] {
+        let result = [];
+
+        result.push({"Type": this.type})
+        result.push({"Name": this.name})
+
+        return result
     }
 }
 
@@ -256,6 +310,21 @@ class Soa implements ResourceData {
         this.minimum_ttl = minimum_ttl;
         this.type = "SOA"
     }
+
+    toDisplay() : any[] {
+        let result = [];
+
+        result.push({"Type": this.type})
+        result.push({"Primary NS": this.primary_ns})
+        result.push({"Mailbox": this.mailbox})
+        result.push({"Serial": this.serial})
+        result.push({"Refresh": this.refresh})
+        result.push({"Retry": this.retry})
+        result.push({"Expire": this.expire})
+        result.push({"Minimum TTL": this.minimum_ttl})
+
+        return result
+    }
 }
 
 class Srv implements ResourceData {
@@ -277,6 +346,18 @@ class Srv implements ResourceData {
         this.target = target;
         this.type = "SRV";
     }
+
+    toDisplay() : any[] {
+        let result = [];
+
+        result.push({"Type": this.type})
+        result.push({"Priority": this.priority})
+        result.push({"Weight": this.weight})
+        result.push({"Port": this.port})
+        result.push({"Target": this.target})
+
+        return result
+    }
 }
 
 class Txt implements ResourceData {
@@ -287,6 +368,15 @@ class Txt implements ResourceData {
         this.data = data;
         this.type = "TXT"
     }
+
+    toDisplay() : any[] {
+        let result = [];
+
+        result.push({"Type": this.type})
+        result.push({"Data": this.data})
+
+        return result
+    }
 }
 
 class Unknown implements ResourceData {
@@ -296,5 +386,14 @@ class Unknown implements ResourceData {
     constructor(data: number[]) {
         this.data = data;
         this.type = "Unknown"
+    }
+
+    toDisplay() : any[] {
+        let result = [];
+
+        result.push({"Type": this.type})
+        result.push({"Data": this.data})
+
+        return result
     }
 }
