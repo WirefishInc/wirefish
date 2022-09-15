@@ -67,7 +67,6 @@ pub fn write_report(output_path: &str, mut data: HashMap<SourceDestination, Pack
             ("Data Exchanged", MAX_BYTES_LEN),
             ("Protocols", 9),
         ];
-        // writer.write_all("Source Ip \t\t\t\t\t\t\t\t    Destination Ip  \t\t\t\t\t\t    Source Port Destination Port		Data Exchanged	First Data Exchange\t\tLast Data Exchange\n".as_bytes())?;
         for header in headers {
             let len = header.0.len();
             writer.write_all((header.0.to_owned() + "\t" + &tab_word(len, header.1)).as_bytes())?;
@@ -134,17 +133,19 @@ pub mod data {
     }
 
     impl PacketExchange {
-        pub fn new(protocol: String, transmitted_bytes: usize, exchange_time: DateTime<Local>) -> Self {
+        pub fn new(protocols: Vec<String>, transmitted_bytes: usize, exchange_time: DateTime<Local>) -> Self {
             PacketExchange {
-                protocols: HashSet::from([protocol]),
+                protocols: HashSet::from_iter(protocols.into_iter()),
                 first_exchange: exchange_time,
                 last_exchange: exchange_time,
                 transmitted_bytes,
             }
         }
 
-        pub fn add_packet(&mut self, protocol: String, transmitted_bytes: usize, exchange_time: DateTime<Local>) {
-            self.protocols.insert(protocol);
+        pub fn add_packet(&mut self, protocols: Vec<String>, transmitted_bytes: usize, exchange_time: DateTime<Local>) {
+            for protocol in protocols {
+                self.protocols.insert(protocol);
+            }
             self.transmitted_bytes += transmitted_bytes;
             self.first_exchange = cmp::min(self.first_exchange, exchange_time);
             self.last_exchange = cmp::max(self.last_exchange, exchange_time);
@@ -158,7 +159,14 @@ pub mod data {
             let first_exchange_len = first_exchange.len();
             let last_exchange_len = last_exchange.len();
             let bytes = human_bytes(self.transmitted_bytes as f64);
-            let protocols = "[".to_owned() + &self.protocols.clone().into_iter().collect::<Vec<String>>().join(", ") + "]";
+            let mut protocols_set = self.protocols.clone().into_iter().collect::<Vec<String>>();
+            let protocols = if protocols_set.len() == 0 {
+                "-".to_owned()
+            } else {
+                protocols_set.sort();
+                "[".to_owned() + &protocols_set.join(", ") + "]"
+            };
+
             [
                 first_exchange + &tab_word(first_exchange_len, MAX_TIME_LEN),
                 last_exchange + &tab_word(last_exchange_len, MAX_TIME_LEN),

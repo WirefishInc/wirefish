@@ -144,17 +144,17 @@ async fn start_sniffing(
                     let now = Local::now();
                     let sender_receiver = get_sender_receiver(&new_packet);
                     let mut transmitted_bytes = 0;
-                    let mut protocol = String::from("-");
+                    let mut protocols: Vec<String> = sender_receiver.1;
                     if let SerializablePacket::EthernetPacket(link_packet) = new_packet.get_link_layer_packet().unwrap() {
-                        transmitted_bytes = link_packet.payload.len();
-                        protocol = link_packet.ethertype.clone();
+                        transmitted_bytes = link_packet.payload.len(); // TODO: Add ethernet header size
+                        protocols.push(link_packet.ethertype.clone());
                     }
 
                     let exchanged_packets = ss.exchanged_packets.lock().await;
                     exchanged_packets.borrow_mut()
-                        .entry(sender_receiver)
-                        .and_modify(|exchange| exchange.add_packet(protocol.clone(), transmitted_bytes, now))
-                        .or_insert(PacketExchange::new(protocol, transmitted_bytes, now));
+                        .entry(sender_receiver.0)
+                        .and_modify(|exchange| exchange.add_packet(protocols.clone(), transmitted_bytes, now))
+                        .or_insert(PacketExchange::new(protocols, transmitted_bytes, now));
                     drop(exchanged_packets);
 
                     window
@@ -176,11 +176,12 @@ async fn start_sniffing(
     Ok(())
 }
 
-fn get_sender_receiver(packet: &ParsedPacket) -> SourceDestination {
+fn get_sender_receiver(packet: &ParsedPacket) -> (SourceDestination, Vec<String>) {
     let mut network_source = String::from("-");
     let mut network_destination = String::from("-");
     let mut transport_source = String::from("-");
     let mut transport_destination = String::from("-");
+    let mut protocols = Vec::new();
     let network_packet_wrapper = packet.get_network_layer_packet();
     if network_packet_wrapper.is_some() {
         match network_packet_wrapper.unwrap() {
@@ -205,15 +206,17 @@ fn get_sender_receiver(packet: &ParsedPacket) -> SourceDestination {
             SerializablePacket::TcpPacket(transport_packet) => {
                 transport_source = transport_packet.source.to_string();
                 transport_destination = transport_packet.destination.to_string();
+                protocols.push("TCP".to_owned());
             }
             SerializablePacket::UdpPacket(transport_packet) => {
                 transport_source = transport_packet.source.to_string();
                 transport_destination = transport_packet.destination.to_string();
+                protocols.push("UDP".to_owned());
             }
             _ => {}
         }
     }
-    SourceDestination::new(network_source, network_destination, transport_source, transport_destination)
+    (SourceDestination::new(network_source, network_destination, transport_source, transport_destination), protocols)
 }
 
 #[tauri::command]
