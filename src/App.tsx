@@ -223,7 +223,7 @@ function App() {
         if (sniffingStatus !== SniffingStatus.Active) return;
         setActionLoading("stop");
         clearTimers();
-        await API.stopSniffing();
+        await API.stopSniffing(true);
         firstReportGeneration.current = true;
         setSniffingStatus(SniffingStatus.Inactive);
     }
@@ -246,7 +246,7 @@ function App() {
         const elapsedTime = Date.now() - timerStartTime.current;
         setTimerRemainingTime(Math.max(0, reportUpdateTime * 1000 - elapsedTime));
 
-        await API.stopSniffing();
+        await API.stopSniffing(false);
         setSniffingStatus(SniffingStatus.Paused);
     }
 
