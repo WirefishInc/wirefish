@@ -67,7 +67,7 @@ export class UnknownPacket implements SerializableLinkLayerPacket {
         this.source = source;
         this.ethertype = ethertype;
         this.length = length;
-        this.type = "Unknown";
+        this.type = "Unknown Packet";
     }
 
     getDestination(): string {
@@ -99,5 +99,9 @@ export class UnknownPacket implements SerializableLinkLayerPacket {
 
     getType(): string {
         return "Unknown";
+    }
+
+    toString(): string {
+        return this.type
     }
 }

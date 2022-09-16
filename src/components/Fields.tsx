@@ -1,6 +1,5 @@
 import {FC} from "react";
 import {Accordion, AccordionDetails, AccordionSummary, Divider, List, ListItem, Paper} from "@mui/material";
-import {CustomTlsMessages} from "../serializable_packet/tls";
 import {ArrowDropDown} from "@mui/icons-material";
 import '../index.css';
 
@@ -53,7 +52,7 @@ const TlsFields: FC<TlsFieldProps> = ({packetInfo}) => {
     for (const el of packetInfo) {
         fields.push(
             <>
-                <ListItem>
+                <ListItem key={fields.length}>
                     <Accordion className={"inner-acc"}>
                         <AccordionSummary expandIcon={<ArrowDropDown/>}>
                             {el.name}
@@ -108,7 +107,7 @@ const DnsFields: FC<DnsFieldProps> = ({packetInfo}) => {
     if (packetInfo.questions.length > 0) {
         fields.push(
             <>
-                <ListItem>
+                <ListItem key={fields.length}>
                     <Accordion className={"inner-acc"}>
                         <AccordionSummary expandIcon={<ArrowDropDown/>}>
                             Questions
@@ -117,7 +116,7 @@ const DnsFields: FC<DnsFieldProps> = ({packetInfo}) => {
                             <List className={"break"} key={fields.length} component="nav" aria-label="mailbox folders">
                                 {packetInfo.questions.map((el: any, i: number) =>
                                     <>
-                                        <ListItem>
+                                        <ListItem key={i}>
                                             <Accordion className={"d-inner-acc"}>
                                                 <AccordionSummary expandIcon={<ArrowDropDown/>}>
                                                     {el.name}
@@ -145,7 +144,7 @@ const DnsFields: FC<DnsFieldProps> = ({packetInfo}) => {
     if (packetInfo.answers.length > 0) {
         fields.push(
             <>
-                <ListItem>
+                <ListItem key={fields.length}>
                     <Accordion className={"inner-acc"}>
                         <AccordionSummary expandIcon={<ArrowDropDown/>}>
                             Answers
@@ -154,7 +153,7 @@ const DnsFields: FC<DnsFieldProps> = ({packetInfo}) => {
                             <List className={"break"} key={fields.length} component="nav" aria-label="mailbox folders">
                                 {packetInfo.answers.map((el: any, i: number) =>
                                     <>
-                                        <ListItem>
+                                        <ListItem key={i}>
                                             <Accordion className={"d-inner-acc"}>
                                                 <AccordionSummary expandIcon={<ArrowDropDown/>}>
                                                     {el.name}
@@ -185,7 +184,7 @@ const DnsFields: FC<DnsFieldProps> = ({packetInfo}) => {
     if (packetInfo.nameservers.length > 0) {
         fields.push(
             <>
-                <ListItem>
+                <ListItem key={fields.length}>
                     <Accordion className={"inner-acc"}>
                         <AccordionSummary expandIcon={<ArrowDropDown/>}>
                             Name servers
@@ -194,7 +193,7 @@ const DnsFields: FC<DnsFieldProps> = ({packetInfo}) => {
                             <List className={"break"} key={fields.length} component="nav" aria-label="mailbox folders">
                                 {packetInfo.nameservers.map((el: any, i: number) =>
                                     <>
-                                        <ListItem>
+                                        <ListItem key={i}>
                                             <Accordion className={"d-inner-acc"}>
                                                 <AccordionSummary expandIcon={<ArrowDropDown/>}>
                                                     {el.name}
@@ -225,7 +224,7 @@ const DnsFields: FC<DnsFieldProps> = ({packetInfo}) => {
     if (packetInfo.additional.length > 0) {
         fields.push(
             <>
-                <ListItem>
+                <ListItem key={fields.length}>
                     <Accordion className={"inner-acc"}>
                         <AccordionSummary expandIcon={<ArrowDropDown/>}>
                             Additional
@@ -234,7 +233,7 @@ const DnsFields: FC<DnsFieldProps> = ({packetInfo}) => {
                             <List className={"break"} key={fields.length} component="nav" aria-label="mailbox folders">
                                 {packetInfo.additional.map((el: any, i: number) =>
                                     <>
-                                        <ListItem>
+                                        <ListItem key={i}>
                                             <Accordion className={"d-inner-acc"}>
                                                 <AccordionSummary expandIcon={<ArrowDropDown/>}>
                                                     {el.name}

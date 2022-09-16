@@ -1,5 +1,5 @@
 import {FC} from "react";
-import {Grid, Table} from "@mui/material";
+import {Grid} from "@mui/material";
 
 function payloadToHex(payload: number[]) {
     return payload.reverse().map((el: number) => el.toString(16)).map((el) => el.toUpperCase());
@@ -24,6 +24,9 @@ interface HewViewerProps {
 }
 
 const HewViewer: FC<HewViewerProps> = ({payload, over, setOver}) => {
+    if (payload.length === 0)
+        return null;
+
     let hex_payload = payloadToHex(payload);
     let ascii_payload = payload.map((el) => hexToAscii(el));
 
@@ -45,10 +48,10 @@ const HewViewer: FC<HewViewerProps> = ({payload, over, setOver}) => {
                     <tbody>
                     {hew_rows.map((r, i) =>
                         <tr>
-                            {<td className={"index"}>{"0x" + (i * 16).toString(16).toUpperCase()}</td>}
+                            {<td  className={"index"}>{"0x" + (i * 16).toString(16).toUpperCase()}</td>}
                             {
                                 r.map((el, j) =>
-                                    <td id={(i * 16 + j).toString()}
+                                    <td key={i * 16 + j} id={(i * 16 + j).toString()}
                                         onMouseOver={(ev) => {
                                             // @ts-ignore
                                             setOver(ev.target.id.toString())
@@ -70,7 +73,7 @@ const HewViewer: FC<HewViewerProps> = ({payload, over, setOver}) => {
                         <tr>
                             {
                                 r.map((el, j) =>
-                                    <td id={(i * 16 + j).toString()}
+                                    <td key={i * 16 + j} id={(i * 16 + j).toString()}
                                         onMouseOver={(ev) => {
                                             // @ts-ignore
                                             setOver(ev.target.id.toString())

@@ -256,10 +256,10 @@ const make_link_level_packet = (link: any) => {
 
         case "UnknownPacket":
             link_layer = new UnknownPacket(
-                link.destination,
-                link.source,
-                link.ethertype,
-                link.length
+                link.packet.destination,
+                link.packet.source,
+                link.packet.ethertype,
+                link.packet.length
             )
             break;
 
