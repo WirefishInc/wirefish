@@ -432,6 +432,7 @@ function App() {
                 {
                     !selectedPacket ? null :
                         <>
+                            {/* TODO: remove close button? */}
                             <Fab className={"close-btn"} size={"small"}
                                  onClick={() => setSelectedPacket(null)}><CloseIcon/></Fab>
                             <Grid xs={12} item={true}>

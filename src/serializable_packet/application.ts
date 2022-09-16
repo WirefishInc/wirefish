@@ -178,8 +178,12 @@ export class TlsPacket implements SerializableApplicationLayerPacket {
         return this.type;
     }
 
-    toDisplay() {
-        return this.messages;
+    toDisplay(): any[] {
+        let result : any[] = [];
+
+        this.messages.forEach( (m) => result.push({"name": m.toString(), "fields": m.toDisplay()}))
+
+        return result;
     }
 
     toString(): string {

@@ -317,8 +317,6 @@ class Certificate {
     }
 }
 
-// TODO BUG: FIX TO DISPLAY CERTIFICATE MESSAGES
-// Error: Objects are not valid as a React child (found: object with keys {Signature Algorithm}).
 export class CertificateMessage extends CustomHandshakeMessage {
     certificates: Certificate[];
     type: string;
@@ -343,9 +341,11 @@ export class CertificateMessage extends CustomHandshakeMessage {
     }
 
     toDisplay(): any {
-        let packet_info: any[] = [];
+        let packet_info: any;
+        let res: any[] = [];
+        this.certificates.forEach((c) => res.push(c.toDisplay()))
 
-        this.certificates.forEach((c) => packet_info.push(c.toDisplay()))
+        packet_info = {"certificateList": res}
 
         return packet_info;
     }

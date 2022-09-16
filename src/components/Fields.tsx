@@ -44,7 +44,7 @@ const Fields: FC<FieldProps> = ({packetInfo}) => {
 };
 
 interface TlsFieldProps {
-    packetInfo: CustomTlsMessages[];
+    packetInfo: any[];
 }
 
 const TlsFields: FC<TlsFieldProps> = ({packetInfo}) => {
@@ -56,13 +56,24 @@ const TlsFields: FC<TlsFieldProps> = ({packetInfo}) => {
                 <ListItem>
                     <Accordion className={"inner-acc"}>
                         <AccordionSummary expandIcon={<ArrowDropDown/>}>
-                            {el.toString()}
+                            {el.name}
                         </AccordionSummary>
                         <AccordionDetails>
-                            <List className={"break"} key={fields.length} component="nav" aria-label="mailbox folders">
-                                <Fields
-                                    packetInfo={el.toDisplay()}/>
-                            </List>
+                            {!Array.isArray(el.fields) ?
+                                el.fields.certificateList.map((c: []) =>
+                                    <>
+                                        <Paper className={"paper"} elevation={24}>
+                                            <Fields packetInfo={c}/>
+                                        </Paper>
+                                    </>
+                                )
+                                :
+                                <List className={"break"} key={fields.length} component="nav"
+                                      aria-label="mailbox folders">
+                                    <Fields
+                                        packetInfo={el.fields}/>
+                                </List>
+                            }
                         </AccordionDetails>
                     </Accordion>
                 </ListItem>
