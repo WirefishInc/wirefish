@@ -569,6 +569,7 @@ impl ServerDhParameters {
 }
 
 #[derive(Serialize, Debug)]
+#[serde(tag = "type", content = "content")]
 pub enum CustomEcContent {
     ExplicitPrime(CustomExplicitPrime),
     NamedGroup(CustomNamedGroup),

@@ -19,6 +19,7 @@ import {
     KeyUpdate, NewSessionTicketMessage, NextProtocolMessage, ServerDoneMessage,
     ServerHelloMessage, ServerHelloV13Draft18Message, ServerKeyExchangeMessage
 } from "./tls";
+import {DnsHeader, DnsQuestion, DnsResourceRecord} from "./dns";
 
 export class TlsPacket implements SerializableApplicationLayerPacket {
     version: string;
@@ -100,16 +101,13 @@ export class TlsPacket implements SerializableApplicationLayerPacket {
                 result = new CertificateRequestMessage(p.sig_hash_algos)
                 break;
             case "CertificateStatus":
-                result = new CertificateStatusMessage()
+                result = new CertificateStatusMessage(
+                    p.status_type,
+                    p.data
+                )
                 break;
             case "CertificateVerify":
                 result = new CertificateVerifyMessage(p.data)
-                break;
-            case "ClientKeyExchange":
-                result = new ClientKeyExchangeMessage(
-                    p.data,
-                    p.algo_type
-                )
                 break;
             case "EndOfEarlyData":
                 result = new EndOfEarlyData();
@@ -153,12 +151,11 @@ export class TlsPacket implements SerializableApplicationLayerPacket {
                     p.extensions
                 )
                 break;
+            case "ClientKeyExchange":
+                result = new ClientKeyExchangeMessage(p.parameters)
+                break;
             case "ServerKeyExchange":
-                result = new ServerKeyExchangeMessage(
-                    p.prime_modulus,
-                    p.generator,
-                    p.public_value
-                )
+                result = new ServerKeyExchangeMessage(p.parameters)
                 break;
             default:
                 result = new MalformedPacket();
@@ -181,12 +178,58 @@ export class TlsPacket implements SerializableApplicationLayerPacket {
         return this.type;
     }
 
-    toDisplay() {
-        return this.messages;
+    toDisplay(): any[] {
+        let result: any[] = [];
+
+        this.messages.forEach((m) => result.push({"name": m.toString(), "fields": m.toDisplay()}))
+
+        return result;
     }
 
     toString(): string {
         return this.version + " Transport Layer Security"
+    }
+}
+
+class HttpContentType {
+    static getPayloadType(payload: any): any {
+        let result: any = {};
+
+        switch (payload.type) {
+            case "TextCorrectlyDecoded":
+                result.payload = payload.content;
+                result.payload_type = "Text Correctly Decoded"
+                break;
+            case "TextMalformedDecoded":
+                result.payload = payload.content;
+                result.payload_type = "Text Malformed Decoded"
+                break;
+            case "TextDefaultDecoded":
+                result.payload = payload.content;
+                result.payload_type = "Text Default Decoded"
+                break;
+            case "Image":
+                result.payload = payload.content;
+                result.payload_type = "Image"
+                break;
+            case "Unknown":
+                result.payload = payload.content;
+                result.payload_type = "Unknown"
+                break;
+            case "Encoded":
+                result.payload = payload.content;
+                result.payload_type = "Encoded"
+                break;
+            case "Multipart":
+                result.payload = payload.content;
+                result.payload_type = "Multipart"
+                break;
+            default:
+                result.payload = [];
+                result.payload_type = ""
+        }
+
+        return result;
     }
 }
 
@@ -211,39 +254,9 @@ export class HttpResponsePacket implements SerializableApplicationLayerPacket {
         this.reason = reason;
         this.headers = headers;
 
-        switch (payload.type) {
-            case "TextCorrectlyDecoded":
-                this.payload = payload.content;
-                this.payload_type = "Text Correctly Decoded"
-                break;
-            case "TextMalformedDecoded":
-                this.payload = payload.content;
-                this.payload_type = "Text Malformed Decoded"
-                break;
-            case "TextDefaultDecoded":
-                this.payload = payload.content;
-                this.payload_type = "Text Default Decoded"
-                break;
-            case "Image":
-                this.payload = payload.content;
-                this.payload_type = "Image"
-                break;
-            case "Unknown":
-                this.payload = payload.content;
-                this.payload_type = "Unknown"
-                break;
-            case "Encoded":
-                this.payload = payload.content;
-                this.payload_type = "Encoded"
-                break;
-            case "Multipart":
-                this.payload = payload.content;
-                this.payload_type = "Multipart"
-                break;
-            default:
-                this.payload = [];
-                this.payload_type = ""
-        }
+        let res = HttpContentType.getPayloadType(payload);
+        this.payload_type = res.payload_type;
+        this.payload = res.payload;
 
         this.type = "Hypertext Transfer Protocol"
     }
@@ -273,7 +286,8 @@ export class HttpResponsePacket implements SerializableApplicationLayerPacket {
             packet_info.push(obj);
         })
 
-        packet_info.push({"HTTPResp": {"type": this.payload_type, "content": this.payload}})
+        if (this.payload.length > 0)
+            packet_info.push({"HTTPResp": {"type": this.payload_type, "content": this.payload}})
 
         return packet_info;
     }
@@ -284,26 +298,30 @@ export class HttpResponsePacket implements SerializableApplicationLayerPacket {
 
 }
 
-
-// TODO Does HttpContentType make sense for Request Packet (no payload)?
-
 export class HttpRequestPacket implements SerializableApplicationLayerPacket {
     method: string;
     path: string;
     version: number;
     headers: [[string, string]];
+    payload: number[] | string;
+    payload_type: string;
     type: string;
 
     constructor(
         method: string,
         path: string,
         version: number,
-        headers: [[string, string]]
+        headers: [[string, string]],
+        payload: any
     ) {
         this.method = method;
         this.path = path;
         this.version = version;
         this.headers = headers;
+
+        let res = HttpContentType.getPayloadType(payload);
+        this.payload_type = res.payload_type;
+        this.payload = res.payload;
 
         this.type = "Hypertext Transfer Protocol"
     }
@@ -333,6 +351,9 @@ export class HttpRequestPacket implements SerializableApplicationLayerPacket {
             packet_info.push(obj);
         })
 
+        if (this.payload.length > 0)
+            packet_info.push({"HTTPReq": {"type": this.payload_type, "content": this.payload}})
+
         return packet_info;
     }
 
@@ -340,4 +361,121 @@ export class HttpRequestPacket implements SerializableApplicationLayerPacket {
         return this.type;
     }
 
+}
+
+export class DnsPacket implements SerializableApplicationLayerPacket {
+    header: DnsHeader;
+    questions: DnsQuestion[];
+    answers: DnsResourceRecord[];
+    nameservers: DnsResourceRecord[];
+    additional: DnsResourceRecord[];
+    type: string;
+
+    constructor(header: any, questions: any[], answers: any[], nameservers: any[], additional: any[]) {
+        this.header = new DnsHeader(
+            header.id,
+            header.query,
+            header.opcode,
+            header.authoritative,
+            header.truncated,
+            header.recursion_desired,
+            header.recursion_available,
+            header.authenticated_data,
+            header.checking_disabled,
+            header.response_code,
+            header.num_questions,
+            header.num_answers,
+            header.num_nameservers,
+            header.num_additional
+        );
+
+        let quest: DnsQuestion[] = [];
+        questions.forEach((q) => {
+            quest.push(new DnsQuestion(
+                q.query_name,
+                q.prefer_unicast,
+                q.query_type,
+                q.query_class
+            ))
+        });
+        this.questions = quest;
+
+        let ans: DnsResourceRecord[] = [];
+        answers.forEach((a) => {
+            ans.push(new DnsResourceRecord(
+                a.name,
+                a.multicast_unique,
+                a.class,
+                a.ttl,
+                a.data
+            ))
+        });
+        this.answers = ans;
+
+        let ns: DnsResourceRecord[] = [];
+        nameservers.forEach((n) => {
+            ns.push(new DnsResourceRecord(
+                n.name,
+                n.multicast_unique,
+                n.class,
+                n.ttl,
+                n.data
+            ))
+        });
+        this.nameservers = ns;
+
+        let add: DnsResourceRecord[] = [];
+        additional.forEach((a) => {
+            add.push(new DnsResourceRecord(
+                a.name,
+                a.multicast_unique,
+                a.class,
+                a.ttl,
+                a.data
+            ))
+        });
+        this.additional = add;
+
+        this.type = "Domain Name System";
+    }
+
+    getInfo(): string {
+        if (this.header.query)
+            return "Standard query 0x" + this.header.id.toString(16)
+        else
+            return "Standard query response 0x" + this.header.id.toString(16)
+    }
+
+    getType(): string {
+        return "DNS";
+    }
+
+    toDisplay(): any {
+        let questions: any[] = [];
+        this.questions.forEach((q) => questions.push(q.toDisplay()));
+
+        let answers: any[] = [];
+        this.answers.forEach((a) => answers.push(a.toDisplay()));
+
+        let nameservers: any[] = [];
+        this.nameservers.forEach((n) => nameservers.push(n.toDisplay()));
+
+        let additional: any[] = [];
+        this.additional.forEach((a) => additional.push(a.toDisplay()));
+
+        return {
+            header: this.header.toDisplay(),
+            questions: questions,
+            answers: answers,
+            nameservers: nameservers,
+            additional: additional
+        };
+    }
+
+    toString(): string {
+        if (this.header.query)
+            return "Domain Name System (query)"
+        else
+            return "Domain Name System (response)"
+    }
 }

@@ -321,11 +321,11 @@ export class EchoRequest implements SerializableTransportLayerPacket {
     }
 
     getInfo(): string {
-        return "Echo Request";
+        return this.icmp_type
     }
 
     getType(): string {
-        return this.icmp_type
+        return "Echo Request"
     }
 }
 

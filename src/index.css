@@ -31,7 +31,7 @@ button.button-command:disabled {
 
 button.button-command:disabled,
 button.button-command {
-    margin: 20px 5px 5px 5px;
+    margin: 5px 5px 5px 5px;
     display: inline-block;
     max-width: 220px;
 }
@@ -94,8 +94,13 @@ td.index {
 }
 
 div.inner-acc {
-    width: 1300px;
+    width: 1280px;
     background-color: rgb(40,40,40);
+}
+
+div.d-inner-acc {
+    width: 1200px;
+    background-color: rgb(87,87,87)
 }
 
 li.break {
@@ -108,4 +113,15 @@ label.text-field {
 
 table.ascii {
    margin-left: 100px;
+}
+
+div.paper {
+    background-color: rgb(40,40,40) ;
+    margin: 20px;
+}
+
+div.center div.MuiAccordionSummary-content {
+    justify-content: center !important;
+    font-weight: inherit;
+    font-family: sans-serif;
 }

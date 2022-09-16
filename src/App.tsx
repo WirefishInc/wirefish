@@ -16,7 +16,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import ReportFolderInput from "./components/ReportFolderInput";
 import ReportNameInput from "./components/ReportNameInput";
 import ToggleButton from "./components/ToggleButton";
-import {Fields, TlsFields} from "./components/Fields";
+import {DnsFields, Fields, TlsFields} from "./components/Fields";
 import HewViewer from "./components/HexViewer";
 import Filters from "./components/Filters";
 
@@ -108,6 +108,7 @@ function App() {
     let [secondsToReportGeneration, setSecondsToReportGeneration] = useState<number>(REPORT_GENERATION_SECONDS);
     let firstReportGeneration = useRef<boolean>(true);
     let timerStartTime = useRef<number>(0);
+    let [filterEnabled, setFilterEnabled] = useState<boolean>(false);
     let [srcIpForm, setSrcIpForm] = useState<string>("");
     let [dstIpForm, setDstIpForm] = useState<string>("");
     let [srcMacForm, setSrcMacForm] = useState<string>("");
@@ -117,6 +118,9 @@ function App() {
     let [infoForm, setInfoForm] = useState<string>("");
 
     let [filter, setFilter] = useState<{
+        ethernet: boolean,
+        malformed: boolean,
+        unknown: boolean,
         tcp: boolean;
         udp: boolean;
         icmpv6: boolean;
@@ -126,6 +130,7 @@ function App() {
         ipv4: boolean,
         ipv6: boolean,
         arp: boolean,
+        dns: boolean,
         src_ip: boolean,
         dst_ip: boolean,
         src_mac: boolean,
@@ -134,15 +139,19 @@ function App() {
         dst_port: boolean,
         info: boolean
     }>({
-        http: true,
-        icmp: true,
-        icmpv6: true,
-        ipv4: true,
-        ipv6: true,
-        tls: true,
-        tcp: true,
-        udp: true,
-        arp: true,
+        ethernet: false,
+        malformed: false,
+        unknown: false,
+        http: false,
+        icmp: false,
+        icmpv6: false,
+        ipv4: false,
+        ipv6: false,
+        tls: false,
+        tcp: false,
+        udp: false,
+        arp: false,
+        dns: false,
         src_ip: false,
         dst_ip: false,
         src_mac: false,
@@ -276,40 +285,53 @@ function App() {
         setActionLoading("");
     }
 
-    // todo: why if port filter checked, icmp packets selected?
     const packetFilter = (packet: GeneralPacket) => {
-        let condition = false;
+        let condition = !filterEnabled;
 
-        if (filter.tcp)
-            condition = condition || packet.layers.includes("TCP");
-        if (filter.udp)
-            condition = condition || packet.layers.includes("UDP");
-        if (filter.icmp)
-            condition = condition || packet.layers.includes("ICMP");
-        if (filter.icmpv6)
-            condition = condition || packet.layers.includes("ICMPv6");
-        if (filter.http)
-            condition = condition || packet.layers.includes("HTTP");
-        if (filter.tls)
-            condition = condition || packet.layers.includes("TLS");
-        if (filter.ipv4)
-            condition = condition || packet.layers.includes("IPv4");
-        if (filter.ipv6)
-            condition = condition || packet.layers.includes("IPv6");
-        if (filter.src_ip)
-            condition = condition && packet.sourceIP === srcIpForm
-        if (filter.dst_ip)
-            condition = condition && packet.destinationIP === dstIpForm
-        if (filter.src_mac)
-            condition = condition && packet.sourceMAC === srcMacForm
-        if (filter.dst_mac)
-            condition = condition && packet.destinationMAC === dstMacForm
-        if (filter.src_port && packet.sourcePort !== null)
-            condition = condition && packet.sourcePort.toLocaleString() === srcPortForm
-        if (filter.dst_port && packet.destinationPort !== null)
-            condition = condition && packet.destinationPort.toLocaleString() === dstPortForm
-        if (filter.info)
-            condition = condition && packet.info.toLowerCase().includes(infoForm.toLowerCase())
+        if (filterEnabled) {
+            if (filter.unknown)
+                condition = condition || packet.layers.includes("Unknown");
+            if (filter.malformed)
+                condition = condition || packet.layers.includes("Malformed");
+            if (filter.ethernet)
+                condition = condition || packet.layers.includes("Ethernet");
+            if (filter.tcp)
+                condition = condition || packet.layers.includes("TCP");
+            if (filter.udp)
+                condition = condition || packet.layers.includes("UDP");
+            if (filter.icmp)
+                condition = condition || packet.layers.includes("ICMP")
+                    || packet.layers.includes("Echo Reply") || packet.layers.includes("Echo Request");
+            if (filter.icmpv6)
+                condition = condition || packet.layers.includes("ICMPv6")
+                    || packet.layers.includes("Echo Reply") || packet.layers.includes("Echo Request");
+            if (filter.http)
+                condition = condition || packet.layers.includes("HTTP");
+            if (filter.tls)
+                condition = condition || packet.layers.includes("TLS");
+            if (filter.ipv4)
+                condition = condition || packet.layers.includes("IPv4");
+            if (filter.ipv6)
+                condition = condition || packet.layers.includes("IPv6");
+            if (filter.dns)
+                condition = condition || packet.layers.includes("DNS");
+            if (filter.arp)
+                condition = condition || packet.layers.includes("ARP");
+            if (filter.src_ip)
+                condition = condition && packet.sourceIP === srcIpForm
+            if (filter.dst_ip)
+                condition = condition && packet.destinationIP === dstIpForm
+            if (filter.src_mac)
+                condition = condition && packet.sourceMAC === srcMacForm
+            if (filter.dst_mac)
+                condition = condition && packet.destinationMAC === dstMacForm
+            if (filter.src_port)
+                condition = condition && packet.sourcePort !== null && packet.sourcePort.toString() === srcPortForm
+            if (filter.dst_port)
+                condition = condition && packet.destinationPort !== null && packet.destinationPort.toString() === dstPortForm
+            if (filter.info)
+                condition = condition && packet.info.toLowerCase().includes(infoForm.toLowerCase())
+        }
 
         return condition;
     }
@@ -381,17 +403,19 @@ function App() {
                 }
 
                 {/* Filters */}
-                <Filters filter={filter} setFilter={setFilter} setSrcIpForm={setSrcIpForm} setDstIpForm={setDstIpForm}
-                         setSrcMacForm={setSrcMacForm} setDstMacForm={setDstMacForm} setSrcPortForm={setSrcPortForm}
-                         setDstPortForm={setDstPortForm} setInfoForm={setInfoForm}/>
-
+                <Filters filter={filter} setFilter={setFilter}
+                         setSrcIpForm={setSrcIpForm} setDstIpForm={setDstIpForm}
+                         setSrcMacForm={setSrcMacForm} setDstMacForm={setDstMacForm}
+                         setSrcPortForm={setSrcPortForm} setDstPortForm={setDstPortForm}
+                         setInfoForm={setInfoForm} enabled={filterEnabled} setEnabled={setFilterEnabled}/>
 
                 {/* Sniffing Results */}
 
                 <Grid xs={12} item={true}>
-                    <DataGrid style={{marginTop: "15px", minHeight: "250px"}}
+                    <DataGrid style={{marginTop: "5px", marginBottom: "5px", height: "370px"}}
                               rows={capturedPackets.filter(packetFilter)} columns={columns}
-                              onCellClick={(ev) => setSelectedPacket(ev.row)}/>
+                              onCellClick={(ev) => setSelectedPacket(ev.row)}
+                              rowHeight={40}/>
                 </Grid>
 
                 <Snackbar anchorOrigin={{vertical: "bottom", horizontal: "right"}}
@@ -416,8 +440,12 @@ function App() {
                 {
                     !selectedPacket ? null :
                         <>
+
+                            {/* TODO: remove close button? */}
                             <Fab className={"close-btn"} size={"small"}
                                  onClick={() => setSelectedPacket(null)}><CloseIcon/></Fab>
+                            {/* -------------------------- */}
+
                             <Grid xs={12} item={true}>
                                 {!selectedPacket.packet.link_layer_packet ? null :
                                     <Accordion>
@@ -466,12 +494,16 @@ function App() {
                                         <AccordionDetails>
                                             <List component="nav" aria-label="mailbox folders">
                                                 {
-                                                    selectedPacket.packet.application_layer_packet.getType() !== "TLS" ?
-                                                        <Fields
-                                                            packetInfo={selectedPacket.packet.application_layer_packet.toDisplay()}/>
-                                                        :
+                                                    selectedPacket.packet.application_layer_packet.getType() === "TLS" ?
                                                         <TlsFields
                                                             packetInfo={selectedPacket.packet.application_layer_packet.toDisplay()}/>
+                                                        :
+                                                        selectedPacket.packet.application_layer_packet.getType() === "DNS" ?
+                                                            <DnsFields
+                                                                packetInfo={selectedPacket.packet.application_layer_packet.toDisplay()}/>
+                                                            :
+                                                            <Fields
+                                                                packetInfo={selectedPacket.packet.application_layer_packet.toDisplay()}/>
                                                 }
                                             </List>
                                         </AccordionDetails>
@@ -488,7 +520,7 @@ function App() {
                     <HewViewer
                         over={over}
                         setOver={setOver}
-                        payload={!selectedPacket.packet.link_layer_packet ? [] : selectedPacket.packet.link_layer_packet.getPayload()}/>}
+                        payload={selectedPacket.packet.link_layer_packet.getPayload()}/>}
 
             </Grid>
         </ThemeProvider>

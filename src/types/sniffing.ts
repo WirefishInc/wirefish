@@ -1,7 +1,7 @@
 import {EchoReply, EchoRequest, IcmpPacket, Icmpv6Packet, TcpPacket, UdpPacket} from "../serializable_packet/transport";
-import {EthernetPacket} from "../serializable_packet/link";
+import {EthernetPacket, UnknownPacket} from "../serializable_packet/link";
 import {ArpPacket, Ipv4Packet, Ipv6Packet} from "../serializable_packet/network";
-import {HttpRequestPacket, HttpResponsePacket, TlsPacket} from "../serializable_packet/application";
+import {DnsPacket, HttpRequestPacket, HttpResponsePacket, TlsPacket} from "../serializable_packet/application";
 
 export enum SniffingStatus {
     Inactive,
@@ -55,6 +55,10 @@ export interface SerializableLinkLayerPacket {
     getSource(): string;
 
     getDestination(): string;
+
+    getType(): string;
+
+    getInfo(): string;
 }
 
 export interface SerializableApplicationLayerPacket {
@@ -89,8 +93,8 @@ export class GeneralPacket {
         this.sourcePort = null;
         this.destinationPort = null;
 
-        let link_layer: SerializableLinkLayerPacket | MalformedPacket;
-        let network_layer: SerializableNetworkLayerPacket | MalformedPacket;
+        let link_layer: SerializableLinkLayerPacket | MalformedPacket | UnknownPacket;
+        let network_layer: SerializableNetworkLayerPacket | MalformedPacket | null;
         let transport_layer: SerializableTransportLayerPacket | MalformedPacket | null;
         let application_layer: SerializableApplicationLayerPacket | MalformedPacket | null;
 
@@ -107,25 +111,30 @@ export class GeneralPacket {
             this.type = transport_layer.getType();
             this.info = transport_layer.getInfo();
 
-        } else {
+        } else if (network_layer) {
             this.type = network_layer.getType();
             this.info = network_layer.getInfo();
+
+        } else {
+            this.type = link_layer.getType();
+            this.info = link_layer.getInfo();
         }
 
         this.sourceMAC = link_layer.getSource();
         this.destinationMAC = link_layer.getDestination();
-        this.sourceIP = network_layer.getSource();
-        this.destinationIP = network_layer.getDestination();
+        this.sourceIP = network_layer ? network_layer.getSource() : "";
+        this.destinationIP = network_layer ? network_layer.getDestination() : "";
         this.length = link_layer.getPayload().length;
 
         if (application_layer) this.layers.push(application_layer.getType());
         if (transport_layer) this.layers.push(transport_layer.getType());
-        if (transport_layer instanceof UdpPacket || transport_layer instanceof TcpPacket){
+        if (transport_layer instanceof UdpPacket || transport_layer instanceof TcpPacket) {
             this.sourcePort = transport_layer.source;
             this.destinationPort = transport_layer.destination;
         }
-
-        this.layers.push(network_layer.getType());
+        if (network_layer)
+            this.layers.push(network_layer.getType());
+        this.layers.push(link_layer.getType());
 
         this.packet = new Packet(link_layer, network_layer, transport_layer, application_layer);
     }
@@ -135,16 +144,16 @@ export class GeneralPacket {
 /* ParsedPacket */
 
 export class Packet {
-    link_layer_packet: SerializableLinkLayerPacket | null;
-    network_layer_packet: SerializableNetworkLayerPacket | null;
-    transport_layer_packet: SerializableTransportLayerPacket | null;
-    application_layer_packet: SerializableTransportLayerPacket | null;
+    link_layer_packet: SerializableLinkLayerPacket | UnknownPacket | MalformedPacket;
+    network_layer_packet: SerializableNetworkLayerPacket | MalformedPacket | null;
+    transport_layer_packet: SerializableTransportLayerPacket | MalformedPacket | null;
+    application_layer_packet: SerializableTransportLayerPacket | MalformedPacket | null;
 
     constructor(
-        link_layer_packet: SerializableLinkLayerPacket | null,
-        network_layer_packet: SerializableNetworkLayerPacket | null,
-        transport_layer_packet: SerializableTransportLayerPacket | null,
-        application_layer_packet: SerializableTransportLayerPacket | null
+        link_layer_packet: SerializableLinkLayerPacket | UnknownPacket | MalformedPacket,
+        network_layer_packet: SerializableNetworkLayerPacket | MalformedPacket | null,
+        transport_layer_packet: SerializableTransportLayerPacket | MalformedPacket | null,
+        application_layer_packet: SerializableTransportLayerPacket | MalformedPacket | null
     ) {
         this.link_layer_packet = link_layer_packet;
         this.network_layer_packet = network_layer_packet;
@@ -233,8 +242,7 @@ const make_transport_level_packet = (transport: any) => {
 }
 
 const make_link_level_packet = (link: any) => {
-    //if (!link) return null;
-    let link_layer: SerializableLinkLayerPacket | MalformedPacket;
+    let link_layer: SerializableLinkLayerPacket | MalformedPacket | UnknownPacket;
 
     switch (link.type) {
         case "EthernetPacket":
@@ -246,6 +254,15 @@ const make_link_level_packet = (link: any) => {
             )
             break;
 
+        case "UnknownPacket":
+            link_layer = new UnknownPacket(
+                link.packet.destination,
+                link.packet.source,
+                link.packet.ethertype,
+                link.packet.length
+            )
+            break;
+
         default:
             link_layer = new MalformedPacket();
     }
@@ -254,7 +271,7 @@ const make_link_level_packet = (link: any) => {
 }
 
 const make_network_level_packet = (network: any) => {
-    //if (!network) return null;
+    if (!network) return null;
     let network_layer: SerializableNetworkLayerPacket | MalformedPacket;
 
     switch (network.type) {
@@ -331,7 +348,8 @@ const make_application_level = (application: any) => {
                 application.packet.method,
                 application.packet.path,
                 application.packet.version,
-                application.packet.headers
+                application.packet.headers,
+                application.packet.payload
             )
             break;
 
@@ -342,6 +360,16 @@ const make_application_level = (application: any) => {
                 application.packet.reason,
                 application.packet.headers,
                 application.packet.payload
+            )
+            break;
+
+        case "DnsPacket":
+            application_layer = new DnsPacket(
+                application.packet.header,
+                application.packet.questions,
+                application.packet.answers,
+                application.packet.nameservers,
+                application.packet.additional
             )
             break;
 
@@ -356,7 +384,7 @@ export class MalformedPacket {
     type: string;
 
     constructor() {
-        this.type = "Malformed Packet"
+        this.type = "Malformed"
     }
 
     toDisplay() {
@@ -372,7 +400,7 @@ export class MalformedPacket {
     }
 
     getInfo(): string {
-        return this.type
+        return "Malformed Packet"
     }
 
     getSource(): string {
