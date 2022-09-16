@@ -729,7 +729,19 @@ export class HelloRequest extends CustomHandshakeMessage {
     }
 }
 
-// TODO ClientKeyExchangeMessage Methods
+function separateObject(obj: any) {
+    const res: any[] = [];
+    const keys = Object.keys(obj);
+    keys.forEach(key => {
+        let object = {};
+        // @ts-ignore
+        object[key] = obj[key];
+        res.push(object);
+    });
+    return res;
+}
+
+
 export class ClientKeyExchangeMessage extends CustomHandshakeMessage {
     parameters: ClientParameters | number[];
     param_type: string;
@@ -760,9 +772,32 @@ export class ClientKeyExchangeMessage extends CustomHandshakeMessage {
                 this.parameters = param.parameters
         }
     }
+
+    toDisplay(): any[] {
+        let result: any[] = [];
+
+        if (Array.isArray(this.parameters))
+            result.push({"Parameters": this.parameters})
+        else
+            result = separateObject(this.parameters.toDisplay())
+
+        result.unshift({"Parameters Type": this.param_type})
+
+        return result
+    }
+
+    toString(): string {
+        let res = super.toString();
+
+        return res + "Protocol: Client Key Exchange";
+    }
+
+    getType(): string {
+        return this.type
+    }
 }
 
-// TODO ServerKeyExchangeMessage Methods
+
 export class ServerKeyExchangeMessage extends CustomHandshakeMessage {
     parameters: ServerParameters | number[];
     param_type: string;
@@ -796,14 +831,39 @@ export class ServerKeyExchangeMessage extends CustomHandshakeMessage {
                 this.parameters = param.parameters
         }
     }
+
+    toDisplay(): any[] {
+        let result: any[] = [];
+
+        if (Array.isArray(this.parameters))
+            result.push({"Parameters": this.parameters})
+        else
+            result = separateObject(this.parameters.toDisplay())
+
+        result.unshift({"Parameters Type": this.param_type})
+
+        return result
+    }
+
+    toString(): string {
+        let res = super.toString();
+
+        return res + "Protocol: Server Key Exchange";
+    }
+
+    getType(): string {
+        return this.type
+    }
 }
 
 /* --- */
 
 interface ClientParameters {
+    toDisplay(): any
 }
 
 interface ServerParameters {
+    toDisplay(): any
 }
 
 class ServerDhParameters implements ClientParameters, ServerParameters {
@@ -818,6 +878,18 @@ class ServerDhParameters implements ClientParameters, ServerParameters {
         this.prime_modulus = prime_modulus;
         this.generator = generator;
         this.public_value = public_value;
+    }
+
+    toDisplay(): any {
+        let result: any;
+
+        result = {
+            "Prime Modulus": this.prime_modulus,
+            "Generator": this.generator,
+            "Public Value": this.public_value
+        }
+
+        return result;
     }
 }
 
@@ -846,6 +918,17 @@ class ServerEcParameters implements ClientParameters, ServerParameters {
                 this.ec_content = null;
         }
     }
+
+    toDisplay(): any {
+        let result: any;
+
+        if (this.ec_content)
+            result = {"Ec Type": this.ec_type, ...this.ec_content.toDisplay()}
+        else
+            result = {"Ec Type": this.ec_type}
+
+        return result;
+    }
 }
 
 class ClientEcdhParameters implements ClientParameters {
@@ -853,6 +936,14 @@ class ClientEcdhParameters implements ClientParameters {
 
     constructor(point: string) {
         this.point = point;
+    }
+
+    toDisplay(): any {
+        let result: any = {};
+
+        result = {"Point": this.point}
+
+        return result;
     }
 }
 
@@ -867,11 +958,20 @@ class ServerEcdhParameters implements ServerParameters {
             curve.ec_content
         );
     }
+
+    toDisplay(): any {
+        let result: any;
+
+        result = {"Public Point": this.public_point, ...this.curve.toDisplay()}
+
+        return result;
+    }
 }
 
 /* --- */
 
 interface CustomEcContent {
+    toDisplay(): any
 }
 
 class CustomExplicitPrime implements CustomEcContent {
@@ -893,6 +993,20 @@ class CustomExplicitPrime implements CustomEcContent {
         this.order = order;
         this.cofactor = cofactor;
     }
+
+    toDisplay(): any {
+        let result: any;
+
+        result = {
+            "Prime": this.prime_p,
+            "Curve": this.curve,
+            "Base Point": this.base_point,
+            "Order": this.order,
+            "Cofactor": this.cofactor
+        }
+
+        return result;
+    }
 }
 
 class CustomNamedGroup implements CustomEcContent {
@@ -900,5 +1014,13 @@ class CustomNamedGroup implements CustomEcContent {
 
     constructor(group: string) {
         this.group = group;
+    }
+
+    toDisplay(): any {
+        let result: any;
+
+        result = {"Group": this.group}
+
+        return result;
     }
 }

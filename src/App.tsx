@@ -435,6 +435,8 @@ function App() {
                             {/* TODO: remove close button? */}
                             <Fab className={"close-btn"} size={"small"}
                                  onClick={() => setSelectedPacket(null)}><CloseIcon/></Fab>
+                            {/* -------------------------- */}
+
                             <Grid xs={12} item={true}>
                                 {!selectedPacket.packet.link_layer_packet ? null :
                                     <Accordion>

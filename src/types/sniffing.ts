@@ -348,7 +348,8 @@ const make_application_level = (application: any) => {
                 application.packet.method,
                 application.packet.path,
                 application.packet.version,
-                application.packet.headers
+                application.packet.headers,
+                application.packet.payload
             )
             break;
 

@@ -14,7 +14,7 @@ const Fields: FC<FieldProps> = ({packetInfo}) => {
     for (const el of packetInfo) {
         fields.push(
             <>
-                {Object.keys(el)[0] === "HTTPResp" ?
+                {Object.keys(el)[0] === "HTTPResp" || Object.keys(el)[0] === "HTTPReq" ?
                     <ListItem className={"break"}
                               key={fields.length}>
                         <Accordion className={"inner-acc"}>

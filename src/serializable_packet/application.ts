@@ -179,15 +179,57 @@ export class TlsPacket implements SerializableApplicationLayerPacket {
     }
 
     toDisplay(): any[] {
-        let result : any[] = [];
+        let result: any[] = [];
 
-        this.messages.forEach( (m) => result.push({"name": m.toString(), "fields": m.toDisplay()}))
+        this.messages.forEach((m) => result.push({"name": m.toString(), "fields": m.toDisplay()}))
 
         return result;
     }
 
     toString(): string {
         return this.version + " Transport Layer Security"
+    }
+}
+
+class HttpContentType {
+    static getPayloadType(payload: any): any {
+        let result: any = {};
+
+        switch (payload.type) {
+            case "TextCorrectlyDecoded":
+                result.payload = payload.content;
+                result.payload_type = "Text Correctly Decoded"
+                break;
+            case "TextMalformedDecoded":
+                result.payload = payload.content;
+                result.payload_type = "Text Malformed Decoded"
+                break;
+            case "TextDefaultDecoded":
+                result.payload = payload.content;
+                result.payload_type = "Text Default Decoded"
+                break;
+            case "Image":
+                result.payload = payload.content;
+                result.payload_type = "Image"
+                break;
+            case "Unknown":
+                result.payload = payload.content;
+                result.payload_type = "Unknown"
+                break;
+            case "Encoded":
+                result.payload = payload.content;
+                result.payload_type = "Encoded"
+                break;
+            case "Multipart":
+                result.payload = payload.content;
+                result.payload_type = "Multipart"
+                break;
+            default:
+                result.payload = [];
+                result.payload_type = ""
+        }
+
+        return result;
     }
 }
 
@@ -212,39 +254,9 @@ export class HttpResponsePacket implements SerializableApplicationLayerPacket {
         this.reason = reason;
         this.headers = headers;
 
-        switch (payload.type) {
-            case "TextCorrectlyDecoded":
-                this.payload = payload.content;
-                this.payload_type = "Text Correctly Decoded"
-                break;
-            case "TextMalformedDecoded":
-                this.payload = payload.content;
-                this.payload_type = "Text Malformed Decoded"
-                break;
-            case "TextDefaultDecoded":
-                this.payload = payload.content;
-                this.payload_type = "Text Default Decoded"
-                break;
-            case "Image":
-                this.payload = payload.content;
-                this.payload_type = "Image"
-                break;
-            case "Unknown":
-                this.payload = payload.content;
-                this.payload_type = "Unknown"
-                break;
-            case "Encoded":
-                this.payload = payload.content;
-                this.payload_type = "Encoded"
-                break;
-            case "Multipart":
-                this.payload = payload.content;
-                this.payload_type = "Multipart"
-                break;
-            default:
-                this.payload = [];
-                this.payload_type = ""
-        }
+        let res = HttpContentType.getPayloadType(payload);
+        this.payload_type = res.payload_type;
+        this.payload = res.payload;
 
         this.type = "Hypertext Transfer Protocol"
     }
@@ -274,7 +286,8 @@ export class HttpResponsePacket implements SerializableApplicationLayerPacket {
             packet_info.push(obj);
         })
 
-        packet_info.push({"HTTPResp": {"type": this.payload_type, "content": this.payload}})
+        if (this.payload.length > 0)
+            packet_info.push({"HTTPResp": {"type": this.payload_type, "content": this.payload}})
 
         return packet_info;
     }
@@ -285,27 +298,30 @@ export class HttpResponsePacket implements SerializableApplicationLayerPacket {
 
 }
 
-// TODO HttpContentType for Request Packet
-
 export class HttpRequestPacket implements SerializableApplicationLayerPacket {
     method: string;
     path: string;
     version: number;
     headers: [[string, string]];
+    payload: number[] | string;
+    payload_type: string;
     type: string;
-
-    // payload !!!
 
     constructor(
         method: string,
         path: string,
         version: number,
-        headers: [[string, string]]
+        headers: [[string, string]],
+        payload: any
     ) {
         this.method = method;
         this.path = path;
         this.version = version;
         this.headers = headers;
+
+        let res = HttpContentType.getPayloadType(payload);
+        this.payload_type = res.payload_type;
+        this.payload = res.payload;
 
         this.type = "Hypertext Transfer Protocol"
     }
@@ -334,6 +350,9 @@ export class HttpRequestPacket implements SerializableApplicationLayerPacket {
 
             packet_info.push(obj);
         })
+
+        if (this.payload.length > 0)
+            packet_info.push({"HTTPReq": {"type": this.payload_type, "content": this.payload}})
 
         return packet_info;
     }
