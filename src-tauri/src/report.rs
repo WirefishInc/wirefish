@@ -187,7 +187,7 @@ pub mod data {
             let now = Local::now();
             let protocol = String::from("TCP");
             let protocols = HashSet::from([protocol.clone()]);
-            let exchange = PacketExchange::new(protocol, 0, now);
+            let exchange = PacketExchange::new(vec!(protocol), 0, now);
             assert_eq!(exchange.protocols, protocols);
             assert_eq!(exchange.transmitted_bytes, 0);
             assert_eq!(exchange.first_exchange, now);
@@ -200,7 +200,7 @@ pub mod data {
             let protocol = String::from("UDP");
             let protocols = HashSet::from([protocol.clone()]);
             let bytes = 100;
-            let exchange = PacketExchange::new(protocol, bytes, now);
+            let exchange = PacketExchange::new(vec!(protocol), bytes, now);
             assert_eq!(exchange.protocols, protocols);
             assert_eq!(exchange.transmitted_bytes, bytes);
             assert_eq!(exchange.first_exchange, now);
@@ -213,9 +213,9 @@ pub mod data {
             let protocol = String::from("UDP");
             let bytes_1 = 100;
             let bytes_2 = 300;
-            let mut exchange = PacketExchange::new(protocol.clone(), bytes_1, now);
+            let mut exchange = PacketExchange::new(vec!(protocol.clone()), bytes_1, now);
             let protocols = HashSet::from([protocol.clone()]);
-            exchange.add_packet(protocol, bytes_2, now);
+            exchange.add_packet(vec!(protocol), bytes_2, now);
             assert_eq!(exchange.protocols, protocols);
             assert_eq!(exchange.transmitted_bytes, bytes_1 + bytes_2);
             assert_eq!(exchange.first_exchange, now);
@@ -228,9 +228,9 @@ pub mod data {
             let protocol = String::from("UDP");
             let bytes_1 = 100;
             let bytes_2 = 2100;
-            let mut exchange = PacketExchange::new(protocol.clone(), bytes_1, now);
+            let mut exchange = PacketExchange::new(vec!(protocol.clone()), bytes_1, now);
             let protocols = HashSet::from([protocol.clone()]);
-            exchange.add_packet(protocol, bytes_2, now);
+            exchange.add_packet(vec!(protocol), bytes_2, now);
             assert_eq!(exchange.protocols, protocols);
             assert_eq!(exchange.transmitted_bytes, bytes_1 + bytes_2);
             assert_eq!(exchange.first_exchange, now);
@@ -245,8 +245,8 @@ pub mod data {
             let bytes_1 = 100;
             let bytes_2 = 300;
             let protocols = HashSet::from([protocol_1.clone(), protocol_2.clone()]);
-            let mut exchange = PacketExchange::new(protocol_1, bytes_1, now);
-            exchange.add_packet(protocol_2, bytes_2, now);
+            let mut exchange = PacketExchange::new(vec!(protocol_1), bytes_1, now);
+            exchange.add_packet(vec!(protocol_2), bytes_2, now);
             assert_eq!(exchange.protocols, protocols);
             assert_eq!(exchange.transmitted_bytes, bytes_1 + bytes_2);
             assert_eq!(exchange.first_exchange, now);
@@ -261,8 +261,8 @@ pub mod data {
             let bytes_1 = 100;
             let bytes_2 = 300;
             let protocols = HashSet::from([protocol_1.clone(), protocol_2.clone()]);
-            let mut exchange = PacketExchange::new(protocol_1, bytes_1, now);
-            exchange.add_packet(protocol_2, bytes_2, now);
+            let mut exchange = PacketExchange::new(vec!(protocol_1), bytes_1, now);
+            exchange.add_packet(vec!(protocol_2), bytes_2, now);
             assert_eq!(exchange.protocols, protocols);
             assert_eq!(exchange.transmitted_bytes, bytes_1 + bytes_2);
             assert_eq!(exchange.first_exchange, now);
@@ -278,8 +278,8 @@ pub mod data {
             let bytes_1 = 100;
             let bytes_2 = 300;
             let protocols = HashSet::from([protocol_1.clone(), protocol_2.clone()]);
-            let mut exchange = PacketExchange::new(protocol_1, bytes_1, now);
-            exchange.add_packet(protocol_2, bytes_2, future);
+            let mut exchange = PacketExchange::new(vec!(protocol_1), bytes_1, now);
+            exchange.add_packet(vec!(protocol_2), bytes_2, future);
             assert_eq!(exchange.protocols, protocols);
             assert_eq!(exchange.transmitted_bytes, bytes_1 + bytes_2);
             assert_eq!(exchange.first_exchange, now);
@@ -295,8 +295,8 @@ pub mod data {
             let bytes_1 = 100;
             let bytes_2 = 300;
             let protocols = HashSet::from([protocol_1.clone(), protocol_2.clone()]);
-            let mut exchange = PacketExchange::new(protocol_1, bytes_1, now);
-            exchange.add_packet(protocol_2, bytes_2, past);
+            let mut exchange = PacketExchange::new(vec!(protocol_1), bytes_1, now);
+            exchange.add_packet(vec!(protocol_2), bytes_2, past);
             assert_eq!(exchange.protocols, protocols);
             assert_eq!(exchange.transmitted_bytes, bytes_1 + bytes_2);
             assert_eq!(exchange.first_exchange, past);
