@@ -13,7 +13,7 @@ const MAX_TIME_LEN: usize = 24;
 const MAX_BYTES_LEN: usize = 16;
 
 /// Appends data to a report file, creates the file if it doesn't exist
-pub fn write_report(output_path: &str, mut data: HashMap<SourceDestination, PacketExchange>, first_generation: bool) -> Result<bool, io::Error> {
+pub fn write_report(output_path: &str, data: &mut HashMap<SourceDestination, PacketExchange>, first_generation: bool) -> Result<bool, io::Error> {
     let path = Path::new(&output_path);
     let mut file_exists = path.is_file();
     let file_extension = path.extension();
