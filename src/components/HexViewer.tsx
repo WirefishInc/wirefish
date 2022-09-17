@@ -42,51 +42,56 @@ const HewViewer: FC<HewViewerProps> = ({payload, over, setOver}) => {
     }
 
     return (
-        <Grid className={"payload"} container spacing={2}>
-            <Grid item xs={6}>
-                <table>
-                    <tbody>
-                    {hew_rows.map((r, i) =>
-                        <tr>
-                            {<td  className={"index"}>{"0x" + (i * 16).toString(16).toUpperCase()}</td>}
-                            {
-                                r.map((el, j) =>
-                                    <td key={i * 16 + j} id={(i * 16 + j).toString()}
-                                        onMouseOver={(ev) => {
-                                            // @ts-ignore
-                                            setOver(ev.target.id.toString())
-                                        }}
-                                        onMouseLeave={(ev) => {
-                                            setOver("")
-                                        }}
-                                        className={over === (i * 16 + j).toString() ? "hex active" : "hex"}>{el}</td>
-                                )}
-                        </tr>
-                    )}
-                    </tbody>
-                </table>
-            </Grid>
-            <Grid item xs={6}>
-                <table className={"ascii"}>
-                    <tbody>
-                    {ascii_rows.map((r, i) =>
-                        <tr>
-                            {
-                                r.map((el, j) =>
-                                    <td key={i * 16 + j} id={(i * 16 + j).toString()}
-                                        onMouseOver={(ev) => {
-                                            // @ts-ignore
-                                            setOver(ev.target.id.toString())
-                                        }}
-                                        onMouseLeave={(ev) => {
-                                            setOver("")
-                                        }}
-                                        className={over === (i * 16 + j).toString() ? "hex active" : "hex"}>{el}</td>
-                                )}
-                        </tr>
-                    )}
-                    </tbody>
-                </table>
+        <Grid container spacing={2} className={"container-main"}>
+            <Grid xs={12} item={true}>
+                <Grid container spacing={2} className={"container-main viewer"}>
+                    <Grid item xs={6}>
+                        <table>
+                            <tbody>
+                            {hew_rows.map((r, i) =>
+                                <tr>
+                                    {<td className={"index"}>{"0x" + (i * 16).toString(16).toUpperCase()}</td>}
+                                    {<td className={"index"}>|</td>}
+                                    {
+                                        r.map((el, j) =>
+                                            <td key={i * 16 + j} id={(i * 16 + j).toString()}
+                                                onMouseOver={(ev) => {
+                                                    // @ts-ignore
+                                                    setOver(ev.target.id.toString())
+                                                }}
+                                                onMouseLeave={(ev) => {
+                                                    setOver("")
+                                                }}
+                                                className={over === (i * 16 + j).toString() ? "hex active" : "hex"}>{el}</td>
+                                        )}
+                                </tr>
+                            )}
+                            </tbody>
+                        </table>
+                    </Grid>
+                    <Grid item xs={6}>
+                        <table className={"ascii"}>
+                            <tbody>
+                            {ascii_rows.map((r, i) =>
+                                <tr>
+                                    {
+                                        r.map((el, j) =>
+                                            <td key={i * 16 + j} id={(i * 16 + j).toString()}
+                                                onMouseOver={(ev) => {
+                                                    // @ts-ignore
+                                                    setOver(ev.target.id.toString())
+                                                }}
+                                                onMouseLeave={(ev) => {
+                                                    setOver("")
+                                                }}
+                                                className={over === (i * 16 + j).toString() ? "hex active" : "hex"}>{el}</td>
+                                        )}
+                                </tr>
+                            )}
+                            </tbody>
+                        </table>
+                    </Grid>
+                </Grid>
             </Grid>
         </Grid>
     )

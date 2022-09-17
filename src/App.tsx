@@ -2,7 +2,16 @@ import {createTheme, ThemeProvider} from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import React, {useState, useEffect, useRef} from 'react';
 import {
-    Accordion, AccordionDetails, AccordionSummary, Alert, Fab, FormControl, Grid, LinearProgress, List, Snackbar
+    Accordion,
+    AccordionDetails,
+    AccordionSummary,
+    Alert, Chip,
+    FormControl,
+    Grid,
+    LinearProgress,
+    List,
+    Modal,
+    Snackbar,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {Pause, PlayArrow, RestartAlt, Stop} from '@mui/icons-material';
@@ -12,7 +21,6 @@ import API from './API';
 import {SniffingStatus, GeneralPacket, FeedbackMessage} from "./types/sniffing";
 import InterfaceInput from './components/InterfaceInput';
 import TimeIntervalInput from './components/TimeIntervalInput';
-import CloseIcon from '@mui/icons-material/Close';
 import ReportFolderInput from "./components/ReportFolderInput";
 import ReportNameInput from "./components/ReportNameInput";
 import ToggleButton from "./components/ToggleButton";
@@ -88,6 +96,9 @@ function App() {
     const INITIAL_REPORT_NAME = "report";
     const INITIAL_REPORT_FOLDER = `.${separator}report${separator}`;
     const resetFeedback = {text: "", isError: false, duration: 0};
+    const [open, setOpen] = React.useState(false);
+    const handleOpen = () => setOpen(true);
+    const handleClose = () => setOpen(false);
 
     let [interfaces, setInterfaces] = useState<string[] | null>(null);
     let [currentInterface, setCurrentInterface] = useState<string>("");
@@ -339,7 +350,7 @@ function App() {
     return (
         <ThemeProvider theme={darkTheme}>
             <CssBaseline/>
-            <Grid container spacing={2} className={"container-main"}>
+            <Grid container spacing={2} className={open ? "container-main blur" : "container-main"}>
 
                 {/* Interface selection */}
 
@@ -414,7 +425,11 @@ function App() {
                 <Grid xs={12} item={true}>
                     <DataGrid style={{marginTop: "5px", marginBottom: "5px", height: "370px"}}
                               rows={capturedPackets.filter(packetFilter)} columns={columns}
-                              onCellClick={(ev) => setSelectedPacket(ev.row)}
+                              onCellClick={(ev) => {
+                                  setSelectedPacket(ev.row)
+                                  handleOpen();
+                              }
+                              }
                               rowHeight={40}/>
                 </Grid>
 
@@ -434,93 +449,112 @@ function App() {
                     </Alert>
                 </Snackbar>
 
+                {/* INFO VIEWER */}
 
-                {/* Info selected Packet */}
+                <Modal
+                    className={"modal"}
+                    open={open}
+                    onClose={handleClose}
+                >
 
-                {
-                    !selectedPacket ? null :
-                        <>
+                    <>
+                        <Grid className={"title"}>
+                            <Chip size={"medium"} className={"chip"} variant="outlined"
+                                  label={"Selected Packet Layers"}/>
+                        </Grid>
 
-                            {/* TODO: remove close button? */}
-                            <Fab className={"close-btn"} size={"small"}
-                                 onClick={() => setSelectedPacket(null)}><CloseIcon/></Fab>
-                            {/* -------------------------- */}
+                        <Grid container spacing={2} className={"container-main"}>
 
-                            <Grid xs={12} item={true}>
-                                {!selectedPacket.packet.link_layer_packet ? null :
-                                    <Accordion>
-                                        <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
-                                            {selectedPacket.packet.link_layer_packet?.toString()}
-                                        </AccordionSummary>
-                                        <AccordionDetails>
-                                            <List component="nav" aria-label="mailbox folders">
-                                                <Fields
-                                                    packetInfo={selectedPacket.packet.link_layer_packet.toDisplay()}/>
-                                            </List>
-                                        </AccordionDetails>
-                                    </Accordion>
-                                }
-                                {!selectedPacket.packet.network_layer_packet ? null :
-                                    <Accordion>
-                                        <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
-                                            {selectedPacket.packet.network_layer_packet?.toString()}
-                                        </AccordionSummary>
-                                        <AccordionDetails>
-                                            <List component="nav" aria-label="mailbox folders">
-                                                <Fields
-                                                    packetInfo={selectedPacket.packet.network_layer_packet.toDisplay()}/>
-                                            </List>
-                                        </AccordionDetails>
-                                    </Accordion>
-                                }
-                                {!selectedPacket.packet.transport_layer_packet ? null :
-                                    <Accordion>
-                                        <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
-                                            {selectedPacket.packet.transport_layer_packet?.toString()}
-                                        </AccordionSummary>
-                                        <AccordionDetails>
-                                            <List component="nav" aria-label="mailbox folders">
-                                                <Fields
-                                                    packetInfo={selectedPacket.packet.transport_layer_packet.toDisplay()}/>
-                                            </List>
-                                        </AccordionDetails>
-                                    </Accordion>
-                                }
-                                {!selectedPacket.packet.application_layer_packet ? null :
-                                    <Accordion>
-                                        <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
-                                            {selectedPacket.packet.application_layer_packet?.toString()}
-                                        </AccordionSummary>
-                                        <AccordionDetails>
-                                            <List component="nav" aria-label="mailbox folders">
-                                                {
-                                                    selectedPacket.packet.application_layer_packet.getType() === "TLS" ?
-                                                        <TlsFields
-                                                            packetInfo={selectedPacket.packet.application_layer_packet.toDisplay()}/>
-                                                        :
-                                                        selectedPacket.packet.application_layer_packet.getType() === "DNS" ?
-                                                            <DnsFields
-                                                                packetInfo={selectedPacket.packet.application_layer_packet.toDisplay()}/>
-                                                            :
+                            {/* Info selected Packet */}
+
+                            {
+                                !selectedPacket ? null :
+                                    <>
+
+                                        <Grid xs={12} item={true}>
+                                            {!selectedPacket.packet.link_layer_packet ? null :
+                                                <Accordion>
+                                                    <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
+                                                        {selectedPacket.packet.link_layer_packet?.toString()}
+                                                    </AccordionSummary>
+                                                    <AccordionDetails>
+                                                        <List component="nav" aria-label="mailbox folders">
                                                             <Fields
-                                                                packetInfo={selectedPacket.packet.application_layer_packet.toDisplay()}/>
-                                                }
-                                            </List>
-                                        </AccordionDetails>
-                                    </Accordion>
-                                }
+                                                                packetInfo={selectedPacket.packet.link_layer_packet.toDisplay()}/>
+                                                        </List>
+                                                    </AccordionDetails>
+                                                </Accordion>
+                                            }
+                                            {!selectedPacket.packet.network_layer_packet ? null :
+                                                <Accordion>
+                                                    <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
+                                                        {selectedPacket.packet.network_layer_packet?.toString()}
+                                                    </AccordionSummary>
+                                                    <AccordionDetails>
+                                                        <List component="nav" aria-label="mailbox folders">
+                                                            <Fields
+                                                                packetInfo={selectedPacket.packet.network_layer_packet.toDisplay()}/>
+                                                        </List>
+                                                    </AccordionDetails>
+                                                </Accordion>
+                                            }
+                                            {!selectedPacket.packet.transport_layer_packet ? null :
+                                                <Accordion>
+                                                    <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
+                                                        {selectedPacket.packet.transport_layer_packet?.toString()}
+                                                    </AccordionSummary>
+                                                    <AccordionDetails>
+                                                        <List component="nav" aria-label="mailbox folders">
+                                                            <Fields
+                                                                packetInfo={selectedPacket.packet.transport_layer_packet.toDisplay()}/>
+                                                        </List>
+                                                    </AccordionDetails>
+                                                </Accordion>
+                                            }
+                                            {!selectedPacket.packet.application_layer_packet ? null :
+                                                <Accordion>
+                                                    <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
+                                                        {selectedPacket.packet.application_layer_packet?.toString()}
+                                                    </AccordionSummary>
+                                                    <AccordionDetails>
+                                                        <List component="nav" aria-label="mailbox folders">
+                                                            {
+                                                                selectedPacket.packet.application_layer_packet.getType() === "TLS" ?
+                                                                    <TlsFields
+                                                                        packetInfo={selectedPacket.packet.application_layer_packet.toDisplay()}/>
+                                                                    :
+                                                                    selectedPacket.packet.application_layer_packet.getType() === "DNS" ?
+                                                                        <DnsFields
+                                                                            packetInfo={selectedPacket.packet.application_layer_packet.toDisplay()}/>
+                                                                        :
+                                                                        <Fields
+                                                                            packetInfo={selectedPacket.packet.application_layer_packet.toDisplay()}/>
+                                                            }
+                                                        </List>
+                                                    </AccordionDetails>
+                                                </Accordion>
+                                            }
 
-                            </Grid>
-                        </>
-                }
+                                        </Grid>
+                                    </>
+                            }
+                        </Grid>
 
-                {/* Payload (hex viewer) */}
+                        {/* Payload (hex viewer) */}
 
-                {!selectedPacket ? null :
-                    <HewViewer
-                        over={over}
-                        setOver={setOver}
-                        payload={selectedPacket.packet.link_layer_packet.getPayload()}/>}
+                        <Grid className={"title"}>
+                            <Chip size={"medium"} className={"chip"} variant="outlined"
+                                  label={"Selected Packet Payload Viewer"}/>
+                        </Grid>
+
+                        {!selectedPacket ? null :
+                            <HewViewer
+                                over={over}
+                                setOver={setOver}
+                                payload={selectedPacket.packet.link_layer_packet.getPayload()}/>
+                        }
+                    </>
+                </Modal>
 
             </Grid>
         </ThemeProvider>
