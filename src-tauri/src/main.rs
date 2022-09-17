@@ -7,50 +7,92 @@ mod report;
 use dotenv;
 use env_logger::Builder;
 use log::{error, info};
+use serde::Serialize;
 use std::io::Write;
 
 use pnet::datalink::Channel::Ethernet;
-use pnet::datalink::{self, ChannelType, Config, DataLinkReceiver, NetworkInterface};
+use pnet::datalink::{self, ChannelType, Config, NetworkInterface};
 use pnet::packet::ethernet::EthernetPacket;
 
-use tauri::async_runtime::Mutex;
-use tauri::{async_runtime, State, Manager, Window, Wry};
-use report::{write_report, data::{SourceDestination, PacketExchange}};
-use std::collections::HashMap;
 use chrono::Local;
+use report::{
+    data::{PacketExchange, SourceDestination},
+    write_report,
+};
+use std::collections::HashMap;
+use tauri::{Manager, Window, Wry};
 
-use std::sync::Arc;
-use std::cell::RefCell;
+use std::sync::mpsc::{channel, Sender};
+use std::sync::{Arc, Mutex};
 use tauri_awesome_rpc::{AwesomeEmit, AwesomeRpc};
 
-use sniffer_parser::{parse_ethernet_frame, cleanup_sniffing_state, serializable_packet::{SerializablePacket, ParsedPacket}};
+use sniffer_parser::{
+    cleanup_sniffing_state, parse_ethernet_frame,
+    serializable_packet::{ParsedPacket, SerializablePacket},
+};
 
-struct SniffingInfoState {
-    sniffing_info: Mutex<SniffingInfo>,
-    exchanged_packets: Mutex<RefCell<HashMap<SourceDestination, PacketExchange>>>,
+const CONFIG: Config = Config {
+    write_buffer_size: 16384,
+    read_buffer_size: 16384,
+    read_timeout: Some(std::time::Duration::from_secs(0)),
+    write_timeout: Some(std::time::Duration::from_secs(0)),
+    channel_type: ChannelType::Layer2,
+    bpf_fd_attempts: 1000,
+    linux_fanout: None,
+    promiscuous: true,
+};
+
+#[derive(Serialize, Debug)]
+enum SniffingError<'a> {
+    InterfaceNotFound(&'a str),
+    StartSniffingWithoutInterfaceSelection(&'a str),
+    UnhandledChannelType(&'a str),
+    FailedChannelCreation(&'a str),
+    StopSniffingWithoutPriorStart(&'a str),
+    ReportGenerationFailed(String),
+}
+
+struct SniffingState {
+    sniffers: Arc<Mutex<HashMap<String, Sender<()>>>>,
+    exchanged_packets: Arc<Mutex<HashMap<SourceDestination, PacketExchange>>>,
+    info: Arc<Mutex<SniffingInfo>>,
+}
+
+impl SniffingState {
+    fn new() -> Self {
+        Self {
+            sniffers: Arc::new(Mutex::new(HashMap::new())),
+            exchanged_packets: Arc::new(Mutex::new(HashMap::new())),
+            info: Arc::new(Mutex::new(SniffingInfo::new())),
+        }
+    }
 }
 
 struct SniffingInfo {
-    interface_channel: Option<Box<dyn DataLinkReceiver>>,
     interface_name: Option<String>,
-    is_sniffing: bool,
+    interface: Option<NetworkInterface>,
 }
 
 impl SniffingInfo {
     fn new() -> Self {
         SniffingInfo {
-            interface_channel: None,
             interface_name: None,
-            is_sniffing: false,
+            interface: None,
         }
     }
 }
 
 #[tauri::command]
-async fn get_interfaces_list() -> Vec<String> {
+fn get_interfaces_list() -> Vec<String> {
     let interfaces = datalink::interfaces()
         .into_iter()
-        .map(|i| if cfg!(target_os = "windows") { i.description } else { i.name })
+        .map(|i| {
+            if cfg!(target_os = "windows") {
+                i.description
+            } else {
+                i.name
+            }
+        })
         .collect::<Vec<String>>();
     info!("Interfaces retrieved: {:#?}", interfaces);
 
@@ -58,12 +100,17 @@ async fn get_interfaces_list() -> Vec<String> {
 }
 
 #[tauri::command]
-async fn select_interface(
-    state: tauri::State<'_, Arc<SniffingInfoState>>,
+fn select_interface(
+    state: tauri::State<SniffingState>,
     interface_name: String,
-) -> Result<(), ()> {
-    let interface_names_match = |iface: &NetworkInterface|
-        if cfg!(target_os = "windows") { iface.description == interface_name } else { iface.name == interface_name };
+) -> Result<(), SniffingError> {
+    let interface_names_match = |iface: &NetworkInterface| {
+        if cfg!(target_os = "windows") {
+            iface.description == interface_name
+        } else {
+            iface.name == interface_name
+        }
+    };
 
     // Find the network interface with the provided name
     let interfaces = datalink::interfaces();
@@ -71,107 +118,103 @@ async fn select_interface(
         .into_iter()
         .filter(interface_names_match)
         .next()
-        .unwrap();
+        .ok_or(SniffingError::InterfaceNotFound(
+            "The provided interface is inexistent",
+        ))?;
 
     info!("Interface selected: {}", interface_name);
 
-    let config = Config {
-        write_buffer_size: 16384,
-        read_buffer_size: 16384,
-        read_timeout: None,
-        write_timeout: None,
-        channel_type: ChannelType::Layer2,
-        bpf_fd_attempts: 1000,
-        linux_fanout: None,
-        promiscuous: true,
-    };
-
-    // Create a new channel, dealing with layer 2 packets
-    let (_, rx) = match datalink::channel(&interface, config) {
-        Ok(Ethernet(tx, rx)) => (tx, rx),
-        Ok(_) => panic!("Unhandled channel type"),
-        Err(e) => panic!(
-            "An error occurred when creating the datalink channel: {}",
-            e
-        ),
-    };
-
-    let mut sniffing_state = state.sniffing_info.lock().await;
-    sniffing_state.interface_channel = Some(rx);
-    sniffing_state.interface_name = Some(interface_name);
+    let mut sniffing_info = state.info.lock().unwrap();
+    sniffing_info.interface = Some(interface);
+    sniffing_info.interface_name = Some(interface_name);
 
     info!(
         "[{}] Channel created",
-        sniffing_state.interface_name.as_ref().unwrap()
+        sniffing_info.interface_name.as_ref().unwrap()
     );
 
     Ok(())
 }
 
 #[tauri::command]
-async fn start_sniffing(
-    state: tauri::State<'_, Arc<SniffingInfoState>>,
+fn start_sniffing(
+    state: tauri::State<SniffingState>,
     window: Window<Wry>,
-) -> Result<(), String> {
-    let mut sniffing_state = state.sniffing_info.lock().await;
+) -> Result<(), SniffingError> {
+    let sniffing_state = state.info.lock().unwrap();
+    let mut sniffers = state.sniffers.lock().unwrap();
 
-    if sniffing_state.interface_name.is_none() {
-        error!("Start sniffing without prior selection of the inteface");
-        return Err("Start sniffing without prior selection of the inteface".to_owned());
-    }
+    let interface_name = sniffing_state.interface_name.as_ref().ok_or(
+        SniffingError::StartSniffingWithoutInterfaceSelection(
+            "Start sniffing without prior selection of the inteface",
+        ),
+    )?;
 
-    sniffing_state.is_sniffing = true;
-    info!(
-        "[{}] Sniffing started",
-        sniffing_state.interface_name.as_ref().unwrap()
-    );
+    let interface = sniffing_state.interface.as_ref().ok_or(
+        SniffingError::StartSniffingWithoutInterfaceSelection(
+            "Start sniffing without prior selection of the inteface",
+        ),
+    )?;
 
-    let ss = Arc::clone(&state);
-    tauri::async_runtime::spawn(async move {
-        loop {
-            let mut sniffing_state = ss.sniffing_info.lock().await;
+    info!("[{}] Sniffing started", interface_name);
 
-            if !sniffing_state.is_sniffing {
-                break;
+    let sniffer = sniffers.get_mut(interface_name);
+    if sniffer.is_none() || sniffer.unwrap().send(()).is_err() {
+        // Create a new channel, dealing with layer 2 packets
+        let (_, mut interface_channel) = match datalink::channel(interface, CONFIG) {
+            Ok(Ethernet(tx, rx)) => Ok((tx, rx)),
+            Ok(_) => Err(SniffingError::UnhandledChannelType(
+                "Unhandled channel type",
+            )),
+            Err(e) => {
+                error!("Unexpected channel creation failure: {}", e);
+                Err(SniffingError::FailedChannelCreation(
+                    "Unexpected channel creation failure",
+                ))
             }
+        }?;
 
-            match sniffing_state.interface_channel.as_mut().unwrap().next() {
-                Ok(packet) => {
-                    let ethernet_packet = EthernetPacket::new(packet).unwrap();
-                    let new_packet = parse_ethernet_frame(&ethernet_packet);
+        let (send_stop, receive_stop) = channel();
+        sniffers.insert(interface_name.to_string(), send_stop);
 
-                    /* Save packet in HashMap */
-                    let now = Local::now();
-                    let sender_receiver = get_sender_receiver(&new_packet);
-                    let mut transmitted_bytes = 0;
-                    let mut protocols: Vec<String> = sender_receiver.1;
-                    if let SerializablePacket::EthernetPacket(link_packet) = new_packet.get_link_layer_packet().unwrap() {
-                        transmitted_bytes = link_packet.payload.len(); // TODO: Add ethernet header size
-                        protocols.push(link_packet.ethertype.clone());
+        let exchanged_packets = Arc::clone(&state.exchanged_packets);
+        std::thread::spawn(move || {
+            loop {
+                match interface_channel.next() {
+                    Ok(packet) if receive_stop.try_recv().is_err() => {
+                        let ethernet_packet = EthernetPacket::new(packet).unwrap();
+                        let new_packet = parse_ethernet_frame(&ethernet_packet);
+
+                        /* Save packet in HashMap */
+                        let now = Local::now();
+                        let sender_receiver = get_sender_receiver(&new_packet);
+                        let mut transmitted_bytes = 0;
+                        let mut protocols: Vec<String> = sender_receiver.1;
+                        if let SerializablePacket::EthernetPacket(link_packet) = new_packet.get_link_layer_packet().unwrap() {
+                            transmitted_bytes = link_packet.payload.len(); // TODO: Add ethernet header size
+                            protocols.push(link_packet.ethertype.clone());
+                        }
+
+                        let mut exchanged_packets = exchanged_packets.lock().unwrap();
+                        exchanged_packets
+                            .entry(sender_receiver.0)
+                            .and_modify(|exchange| exchange.add_packet(protocols.clone(), transmitted_bytes, now))
+                            .or_insert(PacketExchange::new(protocols, transmitted_bytes, now));
+                        drop(exchanged_packets);
+
+                        window
+                            .state::<AwesomeEmit>()
+                            .emit("main", "packet_received", new_packet);
+                        }
+                    _ => {
+                        // Clean the channel
+                        while !receive_stop.try_recv().is_err() {}
+                        break;
                     }
-
-                    let exchanged_packets = ss.exchanged_packets.lock().await;
-                    exchanged_packets.borrow_mut()
-                        .entry(sender_receiver.0)
-                        .and_modify(|exchange| exchange.add_packet(protocols.clone(), transmitted_bytes, now))
-                        .or_insert(PacketExchange::new(protocols, transmitted_bytes, now));
-                    drop(exchanged_packets);
-
-                    window
-                        .state::<AwesomeEmit>()
-                        .emit("main", "packet_received", new_packet);
-                }
-                Err(e) => {
-                    // If an error occurs, we can handle it here
-                    // TODO: The application should properly indicate any failure of the sniffing process, providing meaningful and actionable feedback
-                    error!("An error occurred while reading");
-                    panic!("An error occurred while reading: {}", e);
                 }
             }
-
-            // drop(sniffing_state);
-        }
-    });
+        });
+    }
 
     Ok(())
 }
@@ -216,41 +259,57 @@ fn get_sender_receiver(packet: &ParsedPacket) -> (SourceDestination, Vec<String>
             _ => {}
         }
     }
+
     (SourceDestination::new(network_source, network_destination, transport_source, transport_destination), protocols)
 }
 
 #[tauri::command]
 /// stop: true => terminate sniffing process, false: pause sniffing process
-async fn stop_sniffing(state: tauri::State<'_, Arc<SniffingInfoState>>, stop: bool) -> Result<(), ()> {
-    let mut sniffing_state = state.sniffing_info.lock().await;
-    sniffing_state.is_sniffing = false;
+fn stop_sniffing(state: tauri::State<SniffingState>, stop: bool) -> Result<(), SniffingError> {
+    let sniffing_state = state.info.lock().unwrap();
+    let mut sniffers = state.sniffers.lock().unwrap();
 
-    if stop {
-        let exchanged_packets = state.exchanged_packets.lock().await;
-        drop(exchanged_packets.take());
-        drop(exchanged_packets);
+    let interface_name = sniffing_state.interface_name.as_ref().ok_or(
+        SniffingError::StopSniffingWithoutPriorStart(
+            "Stop sniffing without prior starting of the process",
+        ),
+    )?;
+
+    let send_stop = sniffers
+        .get(&sniffing_state.interface_name.as_ref().unwrap().to_string())
+        .unwrap();
+
+    match send_stop.send(()) {
+        Ok(_) => (),
+        Err(_) => {
+            // When Stop Sniffing provided before the thread sniffer is created
+            sniffers.remove(&sniffing_state.interface_name.as_ref().unwrap().to_string());
+        }
     }
 
+    if stop {
+        let mut exchanged_packets = state.exchanged_packets.lock().unwrap();
+        std::mem::take(&mut *exchanged_packets);
+    }
     cleanup_sniffing_state();
 
-    info!(
-        "[{}] Sniffing stopped",
-        sniffing_state.interface_name.as_ref().unwrap()
-    );
+    info!("[{}] Sniffing stopped", interface_name);
 
     Ok(())
 }
 
 #[tauri::command]
-async fn generate_report(state: tauri::State<'_, Arc<SniffingInfoState>>, report_path: String, first_generation: bool) -> Result<bool, String> {
-    let packets = state.exchanged_packets.lock().await;
-    let exchanged_packets = packets.take();
-    drop(packets);
-    let result = write_report(&report_path, exchanged_packets, first_generation);
-    return match result {
-        Err(why) => Err(why.to_string()),
-        Ok(_) => Ok(true)
-    };
+fn generate_report(
+    state: tauri::State<SniffingState>,
+    report_path: String,
+    first_generation: bool,
+) -> Result<bool, SniffingError> {
+    let mut exchanged_packets = state.exchanged_packets.lock().unwrap();
+    let mut packets = std::mem::take(&mut *exchanged_packets);
+
+    write_report(&report_path, &mut packets, first_generation).map_err(|e| {
+        SniffingError::ReportGenerationFailed(format!("Report generation failed: {}", e))
+    })
 }
 
 fn main() {
@@ -259,12 +318,15 @@ fn main() {
         // sudo::escalate_if_needed();
     }
 
-    // env_logger::init();
-
     let mut builder = Builder::from_default_env();
     builder
         .format(|buf, r| {
-            writeln!(buf, "[{}] {}", buf.default_styled_level(r.level()), r.args())
+            writeln!(
+                buf,
+                "[{}] {}",
+                buf.default_styled_level(r.level()),
+                r.args()
+            )
         })
         .init();
 
@@ -276,14 +338,7 @@ fn main() {
             awesome_rpc.start(app.handle());
             Ok(())
         })
-        .manage(
-            Arc::new(
-                SniffingInfoState {
-                    sniffing_info: Mutex::new(SniffingInfo::new()),
-                    exchanged_packets: Mutex::new(RefCell::new(HashMap::<SourceDestination, PacketExchange>::new())),
-                },
-            )
-        )
+        .manage(SniffingState::new())
         .invoke_handler(tauri::generate_handler![
             start_sniffing,
             stop_sniffing,
@@ -292,5 +347,5 @@ fn main() {
             select_interface
         ])
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .expect("Error while running tauri application");
 }
