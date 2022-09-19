@@ -174,6 +174,7 @@ function App() {
 
     useEffect(() => {
         const setup = async () => {
+
             /* Interfaces initialization */
             try {
                 const interfaces = await API.getInterfacesList();
@@ -329,19 +330,19 @@ function App() {
             if (filter.arp)
                 condition = condition || packet.layers.includes("ARP");
             if (filter.src_ip)
-                condition = condition && packet.sourceIP === srcIpForm
+                condition = condition || packet.sourceIP === srcIpForm
             if (filter.dst_ip)
-                condition = condition && packet.destinationIP === dstIpForm
+                condition = condition || packet.destinationIP === dstIpForm
             if (filter.src_mac)
-                condition = condition && packet.sourceMAC === srcMacForm
+                condition = condition || packet.sourceMAC === srcMacForm
             if (filter.dst_mac)
-                condition = condition && packet.destinationMAC === dstMacForm
+                condition = condition || packet.destinationMAC === dstMacForm
             if (filter.src_port)
-                condition = condition && packet.sourcePort !== null && packet.sourcePort.toString() === srcPortForm
+                condition = condition || (packet.sourcePort !== null && packet.sourcePort.toString() === srcPortForm)
             if (filter.dst_port)
-                condition = condition && packet.destinationPort !== null && packet.destinationPort.toString() === dstPortForm
+                condition = condition || (packet.destinationPort !== null && packet.destinationPort.toString() === dstPortForm)
             if (filter.info)
-                condition = condition && packet.info.toLowerCase().includes(infoForm.toLowerCase())
+                condition = condition || packet.info.toLowerCase().includes(infoForm.toLowerCase())
         }
 
         return condition;
@@ -405,8 +406,9 @@ function App() {
                 </Grid>
 
 
-                {/* Report generation Status */
+                {/* Report generation Status */}
 
+                {
                     sniffingStatus !== SniffingStatus.Inactive && <Grid xs={12} item={true}>
                         Next report generated in: {secondsToReportGeneration}s
                         <LinearProgress variant="determinate" value={reportProgress}/>
@@ -414,6 +416,7 @@ function App() {
                 }
 
                 {/* Filters */}
+
                 <Filters filter={filter} setFilter={setFilter}
                          setSrcIpForm={setSrcIpForm} setDstIpForm={setDstIpForm}
                          setSrcMacForm={setSrcMacForm} setDstMacForm={setDstMacForm}
@@ -423,15 +426,16 @@ function App() {
                 {/* Sniffing Results */}
 
                 <Grid xs={12} item={true}>
-                    <DataGrid style={{marginTop: "5px", marginBottom: "5px", height: "370px"}}
-                              rows={capturedPackets.filter(packetFilter)} columns={columns}
+                    <DataGrid className={"grid"}
+                              rows={capturedPackets.filter(packetFilter)} rowHeight={40} columns={columns}
                               onCellClick={(ev) => {
                                   setSelectedPacket(ev.row)
                                   handleOpen();
-                              }
-                              }
-                              rowHeight={40}/>
+                              }}
+                    />
                 </Grid>
+
+                {/* Report result feedback */}
 
                 <Snackbar anchorOrigin={{vertical: "bottom", horizontal: "right"}}
                           open={feedbackMessage.text.length > 0}
@@ -442,14 +446,13 @@ function App() {
                           onClose={(event: React.SyntheticEvent | Event, reason?: string) => {
                               if (reason === 'clickaway') return;
                               setFeedbackMessage(resetFeedback);
-                          }}
-                >
+                          }}>
                     <Alert severity={feedbackMessage.isError ? 'error' : 'success'}>
                         {feedbackMessage.text}
                     </Alert>
                 </Snackbar>
 
-                {/* INFO VIEWER */}
+                {/* Packet Info Viewer */}
 
                 <Modal
                     className={"modal"}
@@ -472,23 +475,27 @@ function App() {
                                     <>
 
                                         <Grid xs={12} item={true}>
-                                            {!selectedPacket.packet.link_layer_packet ? null :
-                                                <Accordion>
-                                                    <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
-                                                        {selectedPacket.packet.link_layer_packet?.toString()}
-                                                    </AccordionSummary>
-                                                    <AccordionDetails>
-                                                        <List component="nav" aria-label="mailbox folders">
-                                                            <Fields
-                                                                packetInfo={selectedPacket.packet.link_layer_packet.toDisplay()}/>
-                                                        </List>
-                                                    </AccordionDetails>
-                                                </Accordion>
-                                            }
+
+                                            {/* Link Layer */}
+
+                                            <Accordion>
+                                                <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
+                                                    {selectedPacket.packet.link_layer_packet.toString()}
+                                                </AccordionSummary>
+                                                <AccordionDetails>
+                                                    <List component="nav" aria-label="mailbox folders">
+                                                        <Fields
+                                                            packetInfo={selectedPacket.packet.link_layer_packet.toDisplay()}/>
+                                                    </List>
+                                                </AccordionDetails>
+                                            </Accordion>
+
+                                            {/* Network Layer */}
+
                                             {!selectedPacket.packet.network_layer_packet ? null :
                                                 <Accordion>
                                                     <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
-                                                        {selectedPacket.packet.network_layer_packet?.toString()}
+                                                        {selectedPacket.packet.network_layer_packet.toString()}
                                                     </AccordionSummary>
                                                     <AccordionDetails>
                                                         <List component="nav" aria-label="mailbox folders">
@@ -498,10 +505,13 @@ function App() {
                                                     </AccordionDetails>
                                                 </Accordion>
                                             }
+
+                                            {/* Transport Layer */}
+
                                             {!selectedPacket.packet.transport_layer_packet ? null :
                                                 <Accordion>
                                                     <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
-                                                        {selectedPacket.packet.transport_layer_packet?.toString()}
+                                                        {selectedPacket.packet.transport_layer_packet.toString()}
                                                     </AccordionSummary>
                                                     <AccordionDetails>
                                                         <List component="nav" aria-label="mailbox folders">
@@ -511,10 +521,13 @@ function App() {
                                                     </AccordionDetails>
                                                 </Accordion>
                                             }
+
+                                            {/* Application Layer */}
+
                                             {!selectedPacket.packet.application_layer_packet ? null :
                                                 <Accordion>
                                                     <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
-                                                        {selectedPacket.packet.application_layer_packet?.toString()}
+                                                        {selectedPacket.packet.application_layer_packet.toString()}
                                                     </AccordionSummary>
                                                     <AccordionDetails>
                                                         <List component="nav" aria-label="mailbox folders">

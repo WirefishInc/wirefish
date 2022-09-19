@@ -17,6 +17,34 @@ function hexToAscii(byte: number) {
     return char;
 }
 
+interface RowProps {
+    row: string[];
+    i: number;
+    over: string | null;
+    setOver: (params: any) => any;
+}
+
+const Row: FC<RowProps> = ({row, i, over, setOver}) => {
+    return (
+        <>
+            {
+                row.map((el, j) =>
+                    <td key={i * 16 + j} id={(i * 16 + j).toString()}
+                        onMouseOver={(ev) => {
+                            // @ts-ignore
+                            setOver(ev.target.id.toString())
+                        }}
+                        onMouseLeave={(ev) => {
+                            setOver("")
+                        }}
+                        className={over === (i * 16 + j).toString() ? "hex active" : "hex"}>{el}</td>
+                )
+            }
+        </>
+    )
+
+}
+
 interface HewViewerProps {
     payload: number[]; // dec
     over: string | null;
@@ -52,18 +80,7 @@ const HewViewer: FC<HewViewerProps> = ({payload, over, setOver}) => {
                                 <tr>
                                     {<td className={"index"}>{"0x" + (i * 16).toString(16).toUpperCase()}</td>}
                                     {<td className={"index"}>|</td>}
-                                    {
-                                        r.map((el, j) =>
-                                            <td key={i * 16 + j} id={(i * 16 + j).toString()}
-                                                onMouseOver={(ev) => {
-                                                    // @ts-ignore
-                                                    setOver(ev.target.id.toString())
-                                                }}
-                                                onMouseLeave={(ev) => {
-                                                    setOver("")
-                                                }}
-                                                className={over === (i * 16 + j).toString() ? "hex active" : "hex"}>{el}</td>
-                                        )}
+                                    <Row row={r} i={i} over={over} setOver={setOver}/>
                                 </tr>
                             )}
                             </tbody>
@@ -74,18 +91,7 @@ const HewViewer: FC<HewViewerProps> = ({payload, over, setOver}) => {
                             <tbody>
                             {ascii_rows.map((r, i) =>
                                 <tr>
-                                    {
-                                        r.map((el, j) =>
-                                            <td key={i * 16 + j} id={(i * 16 + j).toString()}
-                                                onMouseOver={(ev) => {
-                                                    // @ts-ignore
-                                                    setOver(ev.target.id.toString())
-                                                }}
-                                                onMouseLeave={(ev) => {
-                                                    setOver("")
-                                                }}
-                                                className={over === (i * 16 + j).toString() ? "hex active" : "hex"}>{el}</td>
-                                        )}
+                                    <Row row={r} i={i} over={over} setOver={setOver}/>
                                 </tr>
                             )}
                             </tbody>

@@ -149,3 +149,9 @@ div.title {
 div.viewer {
     background-color: rgb(30,30,30);
 }
+
+div.grid {
+    margin-top: 5px;
+    margin-bottom: 5px;
+    height: 370px;
+}

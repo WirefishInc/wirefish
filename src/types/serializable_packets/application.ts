@@ -1,4 +1,4 @@
-import {MalformedPacket, SerializableApplicationLayerPacket} from "../types/sniffing";
+import {MalformedPacket, SerializableApplicationLayerPacket} from "../sniffing";
 import {
     CertificateMessage,
     CertificateRequestMessage, CertificateStatusMessage,
@@ -192,7 +192,7 @@ export class TlsPacket implements SerializableApplicationLayerPacket {
 }
 
 class HttpContentType {
-    static getPayloadType(payload: any): any {
+    static setPayloadType(payload: any): any {
         let result: any = {};
 
         switch (payload.type) {
@@ -254,7 +254,7 @@ export class HttpResponsePacket implements SerializableApplicationLayerPacket {
         this.reason = reason;
         this.headers = headers;
 
-        let res = HttpContentType.getPayloadType(payload);
+        let res = HttpContentType.setPayloadType(payload);
         this.payload_type = res.payload_type;
         this.payload = res.payload;
 
@@ -262,7 +262,7 @@ export class HttpResponsePacket implements SerializableApplicationLayerPacket {
     }
 
     getInfo(): string {
-        return "Response";
+        return "HTTP Response";
     }
 
     getType(): string {
@@ -319,7 +319,7 @@ export class HttpRequestPacket implements SerializableApplicationLayerPacket {
         this.version = version;
         this.headers = headers;
 
-        let res = HttpContentType.getPayloadType(payload);
+        let res = HttpContentType.setPayloadType(payload);
         this.payload_type = res.payload_type;
         this.payload = res.payload;
 
