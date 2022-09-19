@@ -1,4 +1,4 @@
-import {SerializableLinkLayerPacket} from "../types/sniffing"
+import {SerializableLinkLayerPacket} from "../sniffing"
 
 export class EthernetPacket implements SerializableLinkLayerPacket {
     destination: string;

@@ -64,11 +64,6 @@ input.filename-input {
     padding-right: 0;
 }
 
-button.close-btn {
-    margin-top: 40px;
-    margin-left: auto;
-    margin-right: auto;
-}
 
 td.hex {
     padding: 5px;
@@ -81,11 +76,10 @@ td.active {
     color: black;
 }
 
-div.payload {
-    margin-top: 20px;
-    margin-left: 17px;
-    padding-left: 30px;
-    background-color: rgb(80,80,80);
+p.title {
+    position: absolute;
+    top: 10px;
+    left: 35px;
 }
 
 td.index {
@@ -94,12 +88,12 @@ td.index {
 }
 
 div.inner-acc {
-    width: 1280px;
+    width: 100%;
     background-color: rgb(40,40,40);
 }
 
 div.d-inner-acc {
-    width: 1200px;
+    width: 100%;
     background-color: rgb(87,87,87)
 }
 
@@ -124,4 +118,40 @@ div.center div.MuiAccordionSummary-content {
     justify-content: center !important;
     font-weight: inherit;
     font-family: sans-serif;
+}
+
+div.modal {
+    margin: 6%;
+    overflow: scroll;
+    display: block;
+    background-color: rgb(100,100,100);
+}
+
+div.header {
+    margin-bottom: 40px;
+}
+
+div.blur {
+    filter: blur(4px);
+}
+
+div.chip {
+    font-weight: bold;
+}
+
+div.title {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-top: 1%;
+}
+
+div.viewer {
+    background-color: rgb(30,30,30);
+}
+
+div.grid {
+    margin-top: 5px;
+    margin-bottom: 5px;
+    height: 370px;
 }

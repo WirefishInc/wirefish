@@ -1,4 +1,4 @@
-import {SerializableNetworkLayerPacket} from "../types/sniffing";
+import {SerializableNetworkLayerPacket} from "../sniffing";
 
 export class ArpPacket implements SerializableNetworkLayerPacket {
     hardware_type: string;

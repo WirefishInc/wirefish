@@ -939,7 +939,7 @@ class ClientEcdhParameters implements ClientParameters {
     }
 
     toDisplay(): any {
-        let result: any = {};
+        let result: any;
 
         result = {"Point": this.point}
 

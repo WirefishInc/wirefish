@@ -1,7 +1,7 @@
-import {EchoReply, EchoRequest, IcmpPacket, Icmpv6Packet, TcpPacket, UdpPacket} from "../serializable_packet/transport";
-import {EthernetPacket, UnknownPacket} from "../serializable_packet/link";
-import {ArpPacket, Ipv4Packet, Ipv6Packet} from "../serializable_packet/network";
-import {DnsPacket, HttpRequestPacket, HttpResponsePacket, TlsPacket} from "../serializable_packet/application";
+import {EchoReply, EchoRequest, IcmpPacket, Icmpv6Packet, TcpPacket, UdpPacket} from "./serializable_packets/transport";
+import {EthernetPacket, UnknownPacket} from "./serializable_packets/link";
+import {ArpPacket, Ipv4Packet, Ipv6Packet} from "./serializable_packets/network";
+import {DnsPacket, HttpRequestPacket, HttpResponsePacket, TlsPacket} from "./serializable_packets/application";
 
 export enum SniffingStatus {
     Inactive,
@@ -138,10 +138,9 @@ export class GeneralPacket {
 
         this.packet = new Packet(link_layer, network_layer, transport_layer, application_layer);
     }
-
 }
 
-/* ParsedPacket */
+/* Parsed Packet */
 
 export class Packet {
     link_layer_packet: SerializableLinkLayerPacket | UnknownPacket | MalformedPacket;

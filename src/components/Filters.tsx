@@ -8,9 +8,8 @@ import {
     FormGroup,
     FormLabel, Grid, Switch, TextField
 } from "@mui/material";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import Box from "@mui/material/Box";
-import {ArrowDropDownCircleTwoTone, FilterAlt, FilterList} from "@mui/icons-material";
+import {FilterList} from "@mui/icons-material";
 
 
 interface FiltersProps {
@@ -44,17 +43,28 @@ const Filters: FC<FiltersProps> = ({
     return (
         <Grid xs={12} item={true} className={"container-center"}>
             <Accordion>
-                <AccordionSummary className={"center"} expandIcon={<FilterList/>}>Filters
+                <AccordionSummary className={"center"} expandIcon={<FilterList/>}>
+                    Filters
                 </AccordionSummary>
+
                 <AccordionDetails>
+
+                    {/* Enable/Disabled Filters */}
+
                     <Grid className={"container-center"}>
                         <FormGroup>
                             <FormControlLabel control={<Switch checked={enabled}/>}
                                               label={enabled ? "Disable Filters" : "Enable Filters"}
-                                              onChange={(event:any) => setEnabled(event.target.checked)}/>
+                                              onChange={(event: any) => setEnabled(event.target.checked)}/>
                         </FormGroup>
                     </Grid>
+
+                    {/* Filters */}
+
                     <Box sx={{display: 'flex'}}>
+
+                        {/* Link Layer Filters */}
+
                         <FormControl sx={{m: 3}} component="fieldset" variant="standard">
                             <FormLabel component="legend">Link Layer</FormLabel>
                             <FormGroup>
@@ -93,6 +103,9 @@ const Filters: FC<FiltersProps> = ({
                                     label="Malformed"
                                 />
                             </FormGroup>
+
+                            {/* Network Layer Filters */}
+
                         </FormControl>
                         <FormControl sx={{m: 3}} component="fieldset" variant="standard">
                             <FormLabel component="legend">Network Layer</FormLabel>
@@ -132,6 +145,9 @@ const Filters: FC<FiltersProps> = ({
                                 />
                             </FormGroup>
                         </FormControl>
+
+                        {/* Transport Layer Filters */}
+
                         <FormControl sx={{m: 3}} component="fieldset" variant="standard">
                             <FormLabel component="legend">Transport Layer</FormLabel>
                             <FormGroup>
@@ -181,6 +197,9 @@ const Filters: FC<FiltersProps> = ({
                                 />
                             </FormGroup>
                         </FormControl>
+
+                        {/* Application Layer Filters */}
+
                         <FormControl sx={{m: 3}} component="fieldset" variant="standard">
                             <FormLabel component="legend">Application Layer</FormLabel>
                             <FormGroup>
@@ -219,6 +238,9 @@ const Filters: FC<FiltersProps> = ({
                                 />
                             </FormGroup>
                         </FormControl>
+
+                        {/* Other Filters */}
+
                         <FormControl sx={{m: 3}} component="fieldset" variant="standard">
                             <FormGroup>
                                 <FormControlLabel className={"text-field"}
@@ -232,8 +254,8 @@ const Filters: FC<FiltersProps> = ({
                                                                             setFilter((f: any) => Object.assign({}, f, {src_ip: false}));
                                                                     }} name="src_ip"/>
                                                           <TextField disabled={!enabled}
-                                                              onChange={(s) => setSrcIpForm(s.target.value)}
-                                                              id="src_ip" label="SOURCE IP" variant="standard"/>
+                                                                     onChange={(s) => setSrcIpForm(s.target.value)}
+                                                                     id="src_ip" label="SOURCE IP" variant="standard"/>
                                                       </>
                                                   }
                                                   label=""
@@ -249,8 +271,9 @@ const Filters: FC<FiltersProps> = ({
                                                                             setFilter((f: any) => Object.assign({}, f, {dst_ip: false}));
                                                                     }} name="dst_ip"/>
                                                           <TextField disabled={!enabled}
-                                                              onChange={(s) => setDstIpForm(s.target.value)}
-                                                              id="dst_ip" label="DESTINATION IP" variant="standard"/>
+                                                                     onChange={(s) => setDstIpForm(s.target.value)}
+                                                                     id="dst_ip" label="DESTINATION IP"
+                                                                     variant="standard"/>
                                                       </>
                                                   }
                                                   label=""
@@ -266,8 +289,9 @@ const Filters: FC<FiltersProps> = ({
                                                                             setFilter((f: any) => Object.assign({}, f, {src_mac: false}));
                                                                     }} name="src_mac"/>
                                                           <TextField disabled={!enabled}
-                                                              onChange={(s) => setSrcMacForm(s.target.value)}
-                                                              id="src_mac" label="SOURCE MAC" variant="standard"/>
+                                                                     onChange={(s) => setSrcMacForm(s.target.value)}
+                                                                     id="src_mac" label="SOURCE MAC"
+                                                                     variant="standard"/>
                                                       </>
                                                   }
                                                   label=""
@@ -283,8 +307,9 @@ const Filters: FC<FiltersProps> = ({
                                                                             setFilter((f: any) => Object.assign({}, f, {dst_mac: false}));
                                                                     }} name="dst_mac"/>
                                                           <TextField disabled={!enabled}
-                                                              onChange={(s) => setDstMacForm(s.target.value)}
-                                                              id="dst_mac" label="DESTINATION MAC" variant="standard"/>
+                                                                     onChange={(s) => setDstMacForm(s.target.value)}
+                                                                     id="dst_mac" label="DESTINATION MAC"
+                                                                     variant="standard"/>
                                                       </>
                                                   }
                                                   label=""
@@ -304,8 +329,9 @@ const Filters: FC<FiltersProps> = ({
                                                                             setFilter((f: any) => Object.assign({}, f, {src_port: false}));
                                                                     }} name="src_port"/>
                                                           <TextField disabled={!enabled}
-                                                              onChange={(s) => setSrcPortForm(s.target.value)}
-                                                              id="src_port" label="SOURCE PORT" variant="standard"/>
+                                                                     onChange={(s) => setSrcPortForm(s.target.value)}
+                                                                     id="src_port" label="SOURCE PORT"
+                                                                     variant="standard"/>
                                                       </>
                                                   }
                                                   label=""
@@ -321,9 +347,9 @@ const Filters: FC<FiltersProps> = ({
                                                                             setFilter((f: any) => Object.assign({}, f, {dst_port: false}));
                                                                     }} name="dst_port"/>
                                                           <TextField disabled={!enabled}
-                                                              onChange={(s) => setDstPortForm(s.target.value)}
-                                                              id="dst_port" label="DESTINATION PORT"
-                                                              variant="standard"/>
+                                                                     onChange={(s) => setDstPortForm(s.target.value)}
+                                                                     id="dst_port" label="DESTINATION PORT"
+                                                                     variant="standard"/>
                                                       </>
                                                   }
                                                   label=""
@@ -339,8 +365,8 @@ const Filters: FC<FiltersProps> = ({
                                                                             setFilter((f: any) => Object.assign({}, f, {info: false}));
                                                                     }} name="info"/>
                                                           <TextField disabled={!enabled}
-                                                              onChange={(s) => setInfoForm(s.target.value)}
-                                                              id="info" label="Packet Info" variant="standard"/>
+                                                                     onChange={(s) => setInfoForm(s.target.value)}
+                                                                     id="info" label="Packet Info" variant="standard"/>
                                                       </>
                                                   }
                                                   label=""

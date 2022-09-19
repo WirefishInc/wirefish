@@ -1,4 +1,4 @@
-import {SerializableTransportLayerPacket} from "../types/sniffing";
+import {SerializableTransportLayerPacket} from "../sniffing";
 
 const TCPflags = ["FIN", "SYN", "RST", "PSH", "ACK", "URG", "ECN", "CWR", "Nonce", "Reserved"]
 
