@@ -3,10 +3,10 @@ use std::net::IpAddr;
 use log::debug;
 use log::error;
 use log::warn;
-use tls_parser::{
-    parse_tls_encrypted, parse_tls_raw_record, parse_tls_record_with_header, TlsMessage,
-    TlsMessageHandshake, TlsRecordType,
-};
+use tls_parser::nom::error::ErrorKind;
+use tls_parser::parse_tls_plaintext;
+use tls_parser::parse_tls_record_header;
+use tls_parser::{parse_tls_encrypted, TlsMessage, TlsMessageHandshake};
 
 use crate::serializable_packet::application::*;
 use crate::serializable_packet::ParsedPacket;
@@ -28,123 +28,189 @@ pub fn handle_tls_packet(
             .and_modify(|payload| payload.append(packet.to_vec().as_mut()))
             .or_insert(packet.to_vec());
 
-        ////////////////////////////
-
         let mut tls_packet = SerializableTlsPacket::default();
         let mut custom_messages = vec![];
 
         while !current_payload.is_empty() {
-            let result = parse_tls_raw_record(current_payload);
+            let result = parse_tls_plaintext(current_payload);
             match result {
-                Ok((_, record)) => {
+                Ok((rem, record)) => {
+                    for (i, msg) in record.msg.iter().enumerate() {
+                        debug!(
+                            "[{i}]: TLS Record Packet: {}:{} > {}:{}; Version: {}, Record Type: {:?}, Len: {}, Payload: {:?}",
+                            source_ip, source_port, dest_ip, dest_port, record.hdr.version, record.hdr.record_type, record.hdr.len, msg
+                        );
+                    }
 
-                    match record.hdr.record_type {
-                        TlsRecordType::ApplicationData => {
-                            let result = parse_tls_encrypted(current_payload);
-                            match result {
-                                Ok((rem, record)) => {
-                                    debug!(
-                                        "TLS Encrypted Packet: {}:{} > {}:{}; Version: {}, Record Type: {:?}, Len: {}",
-                                        source_ip, source_port, dest_ip, dest_port, record.hdr.version, record.hdr.record_type, record.hdr.len
-                                    );
+                    parse_messages(record.msg, &mut custom_messages);
 
-                                    custom_messages.push(CustomTlsMessage::Encrypted(
-                                        CustomEncryptedMessage::new(record.msg.blob)
-                                    ));
+                    if rem.is_empty() {
+                        tls_packet.set_version(record.hdr.version);
+                        tls_packet.set_length(record.hdr.len);
 
-                                    if rem.is_empty() {
-                                        tls_packet.set_version(record.hdr.version);
-                                        tls_packet.set_messages(custom_messages);
-                                        tls_packet.set_length(record.hdr.len);
-
-                                        parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
-                                        break;
-                                    } else {
-                                        let end = current_payload.len() - rem.len();
-                                        current_payload.drain(..end);
-                                        continue;
-                                    }
-                                }
-                                Err(tls_parser::nom::Err::Incomplete(needed)) => {
-                                    warn!("Incomplete TLS: {:?}", needed);
-                                    parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
-                                    break;
-                                }
-                                Err(tls_parser::nom::Err::Error(e)) => {
-                                    warn!("Malformed TLS: {:?}", e.code);
-                                    parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
-                                    break;
-                                }
-                                Err(tls_parser::nom::Err::Failure(_)) => {
-                                    error!("Malformed TLS");
-                                    parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
-                                    break;
-                                }
-                            }
-                        },
-                        _ =>  {
-                            let result = parse_tls_record_with_header(record.data, &record.hdr);
-                            match result {
-                                Ok((rem, messages)) => {
-                                    for (i, msg) in messages.iter().enumerate() {
-                                        debug!(
-                                            "[{i}]: TLS Record Packet: {}:{} > {}:{}; Version: {}, Record Type: {:?}, Len: {}, Payload: {:?}",
-                                            source_ip, source_port, dest_ip, dest_port, record.hdr.version, record.hdr.record_type, record.hdr.len, msg
-                                        );
-                                    }
-
-                                    parse_messages(messages, &mut custom_messages);
-
-                                    if rem.is_empty() {
-                                        tls_packet.set_version(record.hdr.version);
-                                        tls_packet.set_messages(custom_messages);
-                                        tls_packet.set_length(record.hdr.len);
-
-                                        parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
-                                        break;
-                                    } else {
-                                        let end = current_payload.len() - rem.len();
-                                        current_payload.drain(..end);
-                                    }
-                                },
-                                Err(tls_parser::nom::Err::Incomplete(_)) => {
-                                    // Needs defragmentation
-                                    break;
-                                },
-                                Err(tls_parser::nom::Err::Error(e)) => {
-                                    warn!("[ERROR] Malformed TLS: {:?}", e.code);
-                                    parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
-                                    break;
-                                }
-                                Err(tls_parser::nom::Err::Failure(_)) => {
-                                    error!("[FAILURE] Malformed TLS");
-                                    parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
-                                    break;
-                                }
-                            };
-                        }
+                        current_payload.clear();
+                        parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
+                        break;
+                    } else {
+                        let end = current_payload.len() - rem.len();
+                        current_payload.drain(..end);
+                        continue;
                     }
                 },
-                Err(tls_parser::nom::Err::Incomplete(_)) => {
-                    break;
-                },
+                Err(tls_parser::nom::Err::Incomplete(_)) => break,
                 Err(tls_parser::nom::Err::Error(e)) => {
-                    warn!("[INFO] {}:{} > {}:{}; Malformed TLS: {:?}", source_ip, source_port, dest_ip, dest_port, e.code);
-                    parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
-                    break;
+                    match e.code {
+                        ErrorKind::Switch => {
+                            warn!(
+                                "TLS Ignored unknown record: {}:{} > {}:{}; Length: {}",
+                                source_ip, source_port, dest_ip, dest_port, current_payload.len()
+                            );
+                            custom_messages.push(CustomTlsMessage::Malformed(
+                                CustomMalformedMessage::new(
+                                    None,
+                                    None,
+                                    TlsMalformedError::UnknownRecord(
+                                        "Unknown record type".to_owned()
+                                    ),
+                                    current_payload
+                                )
+                            ));
+
+                            current_payload.clear();
+                            parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
+                            break;
+                        },
+                        ErrorKind::TooLarge => {
+                            let result = parse_tls_record_header(current_payload);
+                            match result {
+                                Ok((_, record)) => {
+                                    warn!(
+                                        "TLS Length Error: {}:{} > {}:{}; Length: {}",
+                                        source_ip, source_port, dest_ip, dest_port, current_payload.len()
+                                    );
+
+                                    custom_messages.push(CustomTlsMessage::Malformed(
+                                        CustomMalformedMessage::new(
+                                            Some(record.version),
+                                            Some(record.record_type),
+                                            TlsMalformedError::LengthTooLarge(
+                                                "Max Record size exceeded (RFC8446 5.1)".to_owned()
+                                            ),
+                                            current_payload
+                                        )
+                                    ));
+                                },
+                                _ => ()
+                            }
+
+                            current_payload.clear();
+                            parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
+                            break;
+                        },
+                        _ => ()
+                    }
                 }
                 Err(tls_parser::nom::Err::Failure(_)) => {
-                    error!("[INFO] Malformed TLS");
+                    error!("[FAILURE] Malformed TLS");
+                    current_payload.clear();
                     parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
                     break;
                 }
+            };
+
+            let result = parse_tls_encrypted(current_payload);
+            match result {
+                Ok((rem, record)) => {
+                    debug!(
+                        "TLS Encrypted Packet: {}:{} > {}:{}; Version: {}, Record Type: {:?}, Len: {}",
+                        source_ip, source_port, dest_ip, dest_port, record.hdr.version, record.hdr.record_type, record.hdr.len
+                    );
+
+                    custom_messages.push(CustomTlsMessage::Encrypted(
+                        CustomEncryptedMessage::new(record.msg.blob, record.hdr.version, record.hdr.record_type)
+                    ));
+
+                    if rem.is_empty() {
+                        tls_packet.set_version(record.hdr.version);
+                        tls_packet.set_length(record.hdr.len);
+
+                        current_payload.clear();
+                        parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
+                        break;
+                    } else {
+                        let end = current_payload.len() - rem.len();
+                        current_payload.drain(..end);
+                        continue;
+                    }
+                }
+                Err(tls_parser::nom::Err::Incomplete(_)) => break,
+                Err(tls_parser::nom::Err::Error(e)) => {
+                    match e.code {
+                        ErrorKind::Switch => {
+                            warn!(
+                                "TLS Ignored unknown record: {}:{} > {}:{}; Length: {}",
+                                source_ip, source_port, dest_ip, dest_port, current_payload.len()
+                            );
+
+                            custom_messages.push(CustomTlsMessage::Malformed(
+                                CustomMalformedMessage::new(
+                                    None,
+                                    None,
+                                    TlsMalformedError::UnknownRecord(
+                                        "Unknown record type".to_owned()
+                                    ),
+                                    current_payload
+                                )
+                            ));
+                        },
+                        ErrorKind::TooLarge => {
+                            let result = parse_tls_record_header(current_payload);
+                            match result {
+                                Ok((_, record)) => {
+                                    warn!(
+                                        "TLS Length Error: {}:{} > {}:{}; Length: {}",
+                                        source_ip, source_port, dest_ip, dest_port, current_payload.len()
+                                    );
+        
+                                    custom_messages.push(CustomTlsMessage::Malformed(
+                                        CustomMalformedMessage::new(
+                                            Some(record.version),
+                                            Some(record.record_type),
+                                            TlsMalformedError::LengthTooLarge(
+                                                "Max Record size exceeded (RFC8446 5.1)".to_owned()
+                                            ),
+                                            current_payload
+                                        )
+                                    ));
+                                },
+                                _ => ()
+                            }
+                        },
+                        e => {
+                            warn!("ENC [{:?}] {}:{} > {}:{}; Malformed TLS", e, source_ip, source_port, dest_ip, dest_port);
+                        }
+                    }
+
+                    current_payload.clear();
+                    parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
+                    break;
+                },
+                Err(_) => {
+                    current_payload.clear();
+                    parsers.remove(&((source_ip, source_port), (dest_ip, dest_port)));
+                    break;
+                },
             }
         }
 
-        if !tls_packet.is_default() {
+        if !custom_messages.is_empty() {
             parsed_packet.set_application_layer_packet(Some(
                 SerializablePacket::TlsPacket(
-                    tls_packet
+                    SerializableTlsPacket {
+                        version: tls_packet.version,
+                        messages: custom_messages,
+                        length: tls_packet.length,
+                    }
                 ),
             ));
         }
@@ -295,7 +361,7 @@ mod tests {
     use crate::serializable_packet::{
         application::{
             ClientParameters, CustomEcContent, CustomHandshakeMessage, CustomTlsMessage,
-            ServerParameters,
+            ServerParameters, TlsMalformedError,
         },
         ParsedPacket, SerializablePacket,
     };
@@ -429,6 +495,16 @@ mod tests {
     ];
 
     const ALERT: &[u8] = &[0x15, 0x03, 0x01, 0x00, 0x02, 0x02, 0x46];
+
+    const UNKNOWN_RECORD : &[u8] = &[
+        0x63, 0x0e, 0x00, 0x00, 0x03, 0x0f, 0xf8, 0xec,     
+    ];
+
+    const TOO_LARGE_RECORD : &[u8] = &[
+        0x17, 0x03, 0x03, 0x40, 0x11, 0x0f, 0xf8, 0xec,     
+    ];
+          
+      
 
     #[test]
     fn valid_server_hello_tls_packet() {
@@ -817,6 +893,84 @@ mod tests {
                 }
             }
             _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn unknown_tls_record() {
+        let mut parsed_packet = ParsedPacket::new();
+        handle_tls_packet(
+            IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
+            4444,
+            IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),
+            443,
+            UNKNOWN_RECORD,
+            &mut parsed_packet,
+        );
+
+        match parsed_packet.get_application_layer_packet().unwrap() {
+            SerializablePacket::TlsPacket(new_tls_packet) => {
+                assert_eq!(new_tls_packet.version, "");
+                assert_eq!(new_tls_packet.length, 0);
+                assert_eq!(new_tls_packet.messages.len(), 1);
+
+                match &new_tls_packet.messages[0] {
+                    CustomTlsMessage::Malformed(new_message) => {
+                        assert_eq!(new_message.version, "Unknown");
+                        assert_eq!(new_message.message_type, "Unknown");
+                        assert_eq!(new_message.data, UNKNOWN_RECORD);
+                        
+                        match &new_message.error_type {
+                            TlsMalformedError::UnknownRecord(str) => {
+                                assert_eq!(str, "Unknown record type");
+                            },
+                            _ => unreachable!()
+                        }
+
+                    },
+                    _ => unreachable!()
+                }
+            },
+            _ => unreachable!()
+        }
+    }
+
+    #[test]
+    fn too_large_tls_record() {
+        let mut parsed_packet = ParsedPacket::new();
+        handle_tls_packet(
+            IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
+            4444,
+            IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),
+            443,
+            TOO_LARGE_RECORD,
+            &mut parsed_packet,
+        );
+
+        match parsed_packet.get_application_layer_packet().unwrap() {
+            SerializablePacket::TlsPacket(new_tls_packet) => {
+                assert_eq!(new_tls_packet.version, "");
+                assert_eq!(new_tls_packet.length, 0);
+                assert_eq!(new_tls_packet.messages.len(), 1);
+
+                match &new_tls_packet.messages[0] {
+                    CustomTlsMessage::Malformed(new_message) => {
+                        assert_eq!(new_message.version, "Tls12");
+                        assert_eq!(new_message.message_type, "ApplicationData");
+                        assert_eq!(new_message.data, TOO_LARGE_RECORD);
+                        
+                        match &new_message.error_type {
+                            TlsMalformedError::LengthTooLarge(str) => {
+                                assert_eq!(str, "Max Record size exceeded (RFC8446 5.1)");
+                            },
+                            _ => unreachable!()
+                        }
+
+                    },
+                    _ => unreachable!()
+                }
+            },
+            _ => unreachable!()
         }
     }
 }
