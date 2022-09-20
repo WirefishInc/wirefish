@@ -349,3 +349,19 @@ fn main() {
         .run(tauri::generate_context!())
         .expect("Error while running tauri application");
 }
+
+// - Select interface
+//   - Inexistent
+// - Start sniffing
+//   - Without prior selection of the interface
+//   - (?) Unhandled channel type
+//   - (?) Failed channel creation
+//   - Empty interface
+// - Re-Start sniffing
+//   - Same interface
+//   - Another interface never selected
+//   - Another interface selected previously
+// - Stop Sniffing
+//   - Without prior starting of the process
+// - Generate report
+//   - Generation failed

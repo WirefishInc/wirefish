@@ -12,8 +12,8 @@ use tls_parser::{
     ServerECDHParams, TlsCertificateContents, TlsCertificateRequestContents,
     TlsCertificateStatusContents, TlsClientHelloContents, TlsClientKeyExchangeContents,
     TlsHelloRetryRequestContents, TlsMessageAlert, TlsMessageHeartbeat, TlsNewSessionTicketContent,
-    TlsNextProtocolContent, TlsServerHelloContents, TlsServerHelloV13Draft18Contents,
-    TlsServerKeyExchangeContents, TlsVersion,
+    TlsNextProtocolContent, TlsRecordType, TlsServerHelloContents,
+    TlsServerHelloV13Draft18Contents, TlsServerKeyExchangeContents, TlsVersion,
 };
 use x509_parser::{parse_x509_certificate, prelude::X509Certificate};
 
@@ -102,6 +102,12 @@ impl<'a, 'b> SerializableHttpResponsePacket {
 /// TLS Packet Representation
 
 #[derive(Serialize, Debug)]
+pub enum TlsMalformedError {
+    LengthTooLarge(String),
+    UnknownRecord(String),
+}
+
+#[derive(Serialize, Debug)]
 pub struct SerializableTlsPacket {
     pub version: String,
     pub messages: Vec<CustomTlsMessage>,
@@ -144,7 +150,9 @@ pub enum CustomTlsMessage {
     Handshake(CustomHandshakeMessage),
     ApplicationData(CustomApplicationDataMessage),
     Heartbeat(CustomHeartbeatMessage),
+
     Encrypted(CustomEncryptedMessage),
+    Malformed(CustomMalformedMessage),
 }
 
 #[derive(Serialize, Debug)]
@@ -664,12 +672,16 @@ impl ServerKeyExchangeMessage {
 
 #[derive(Serialize, Debug)]
 pub struct CustomEncryptedMessage {
+    pub version: String,
+    pub message_type: String,
     pub data: Vec<u8>,
 }
 
 impl CustomEncryptedMessage {
-    pub fn new(message: &[u8]) -> Self {
+    pub fn new(message: &[u8], version: TlsVersion, message_type: TlsRecordType) -> Self {
         CustomEncryptedMessage {
+            version: format!("{}", version),
+            message_type: message_type.to_string(),
             data: message.to_vec(),
         }
     }
@@ -684,6 +696,36 @@ impl CustomApplicationDataMessage {
     pub fn new(message: &[u8]) -> Self {
         CustomApplicationDataMessage {
             data: message.to_vec(),
+        }
+    }
+}
+
+#[derive(Serialize, Debug)]
+pub struct CustomMalformedMessage {
+    pub version: String,
+    pub message_type: String,
+    pub error_type: TlsMalformedError,
+    pub data: Vec<u8>,
+}
+
+impl CustomMalformedMessage {
+    pub fn new(
+        version: Option<TlsVersion>,
+        message_type: Option<TlsRecordType>,
+        error_type: TlsMalformedError,
+        data: &[u8],
+    ) -> Self {
+        CustomMalformedMessage {
+            version: version
+                .and_then(|x| Some(format!("{}", x)))
+                .or(Some("Unknown".to_owned()))
+                .unwrap(),
+            message_type: message_type
+                .and_then(|x| Some(x.to_string()))
+                .or(Some("Unknown".to_owned()))
+                .unwrap(),
+            error_type,
+            data: data.to_vec(),
         }
     }
 }
