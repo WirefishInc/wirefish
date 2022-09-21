@@ -47,7 +47,7 @@ const columns: GridColDef[] = [
     {
         field: 'sourceMAC',
         headerName: 'Source MAC',
-        width: 200,
+        width: 150,
         valueGetter: p => p.row.sourceMAC,
         disableColumnMenu: true,
         sortable: false
@@ -55,7 +55,7 @@ const columns: GridColDef[] = [
     {
         field: 'destinationMAC',
         headerName: 'Destination MAC',
-        width: 200,
+        width: 150,
         valueGetter: p => p.row.destinationMAC, disableColumnMenu: true, sortable: false
     },
     {
@@ -81,7 +81,7 @@ const columns: GridColDef[] = [
     {
         field: 'info',
         headerName: 'Info',
-        width: 1000,
+        width: 420,
         valueGetter: p => p.row.info,
         disableColumnMenu: true,
         sortable: false
@@ -182,7 +182,7 @@ function App() {
             } catch (exception) {
                 setFeedbackMessage({
                     isError: true,
-                    duration: -1,
+                    duration: 8000,
                     text: "Unable to retrieve interfaces, try running this App as administrator"
                 });
             }
@@ -231,8 +231,16 @@ function App() {
     }
 
     const selectInterface = async (interfaceName: string) => {
-        await API.selectInterface(interfaceName);
-        setCurrentInterface(interfaceName);
+        try {
+            await API.selectInterface(interfaceName);
+            setCurrentInterface(interfaceName);
+        } catch (e: any) {
+            setFeedbackMessage({
+                isError: true,
+                duration: 8000,
+                text: e.error
+            });
+        }
     }
 
     const clearTimers = () => {
@@ -246,43 +254,87 @@ function App() {
 
     const stopSniffing = async () => {
         if (sniffingStatus !== SniffingStatus.Active) return;
-        setActionLoading("stop");
-        clearTimers();
-        await API.stopSniffing(true);
-        firstReportGeneration.current = true;
-        setSniffingStatus(SniffingStatus.Inactive);
+
+        try {
+            await API.stopSniffing(true);
+            setActionLoading("stop");
+            clearTimers();
+            firstReportGeneration.current = true;
+            setSniffingStatus(SniffingStatus.Inactive);
+
+        } catch (e: any) {
+            setFeedbackMessage({
+                isError: true,
+                duration: 8000,
+                text: e.error
+            });
+        }
     }
 
     const startSniffing = async () => {
         if (currentInterface === null || sniffingStatus !== SniffingStatus.Inactive) return;
-        setActionLoading("start");
-        timerStartTime.current = Date.now();
-        setReportGenerationTimer(setInterval(generateReport, reportUpdateTime * 1000));
-        setReportProgressTimer(setInterval(updateReportProgress, 500));
-        await API.startSniffing();
-        setSniffingStatus(SniffingStatus.Active);
+
+        try {
+            await API.startSniffing();
+
+            setActionLoading("start");
+            timerStartTime.current = Date.now();
+            setReportGenerationTimer(setInterval(generateReport, reportUpdateTime * 1000));
+            setReportProgressTimer(setInterval(updateReportProgress, 500));
+            setSniffingStatus(SniffingStatus.Active);
+
+        } catch (e: any) {
+            setFeedbackMessage({
+                isError: true,
+                duration: 8000,
+                text: e.error
+            });
+        }
+
     }
 
     const pauseSniffing = async () => {
         if (sniffingStatus !== SniffingStatus.Active) return;
-        setActionLoading("pause");
 
-        clearTimers();
-        const elapsedTime = Date.now() - timerStartTime.current;
-        setTimerRemainingTime(Math.max(0, reportUpdateTime * 1000 - elapsedTime));
+        try {
+            await API.stopSniffing(false);
 
-        await API.stopSniffing(false);
-        setSniffingStatus(SniffingStatus.Paused);
+            setActionLoading("pause");
+
+            clearTimers();
+            const elapsedTime = Date.now() - timerStartTime.current;
+            setTimerRemainingTime(Math.max(0, reportUpdateTime * 1000 - elapsedTime));
+
+            setSniffingStatus(SniffingStatus.Paused);
+        } catch (e: any) {
+            setFeedbackMessage({
+                isError: true,
+                duration: 8000,
+                text: e.error
+            });
+        }
+
     }
 
     const resumeSniffing = async () => {
         if (currentInterface === null || sniffingStatus !== SniffingStatus.Paused) return;
-        setActionLoading("resume");
-        timerStartTime.current = Date.now() - (reportUpdateTime * 1000 - timerRemainingTime);
-        setReportResumeTimeout(setTimeout(resumeReportGenerationTimer, timerRemainingTime));
-        setReportProgressTimer(setInterval(updateReportProgress, 500));
-        await API.startSniffing();
-        setSniffingStatus(SniffingStatus.Active);
+
+        try {
+            await API.startSniffing();
+
+            setActionLoading("resume");
+            timerStartTime.current = Date.now() - (reportUpdateTime * 1000 - timerRemainingTime);
+            setReportResumeTimeout(setTimeout(resumeReportGenerationTimer, timerRemainingTime));
+            setReportProgressTimer(setInterval(updateReportProgress, 500));
+
+            setSniffingStatus(SniffingStatus.Active);
+        } catch (e: any) {
+            setFeedbackMessage({
+                isError: true,
+                duration: 8000,
+                text: e.error
+            });
+        }
     }
 
     const startStopSniffing = async () => {

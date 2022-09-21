@@ -34,8 +34,8 @@ use sniffer_parser::{
 const CONFIG: Config = Config {
     write_buffer_size: 16384,
     read_buffer_size: 16384,
-    read_timeout: Some(std::time::Duration::from_secs(0)),
-    write_timeout: Some(std::time::Duration::from_secs(0)),
+    read_timeout: None,
+    write_timeout: None,
     channel_type: ChannelType::Layer2,
     bpf_fd_attempts: 1000,
     linux_fanout: None,
@@ -43,6 +43,7 @@ const CONFIG: Config = Config {
 };
 
 #[derive(Serialize, Debug)]
+#[serde(tag = "type", content = "error")]
 enum SniffingError<'a> {
     InterfaceNotFound(&'a str),
     StartSniffingWithoutInterfaceSelection(&'a str),

@@ -1,7 +1,18 @@
 import {EchoReply, EchoRequest, IcmpPacket, Icmpv6Packet, TcpPacket, UdpPacket} from "./serializable_packets/transport";
-import {EthernetPacket, UnknownPacket} from "./serializable_packets/link";
+import {EthernetPacket, UnknownLinkPacket} from "./serializable_packets/link";
 import {ArpPacket, Ipv4Packet, Ipv6Packet} from "./serializable_packets/network";
 import {DnsPacket, HttpRequestPacket, HttpResponsePacket, TlsPacket} from "./serializable_packets/application";
+
+/* TODO
+* -------- Add type and version fields in Encrypted
+* -------- Add Malformed in case switch and unknown (new) in default
+* -------- Add TLS MALFORMED PACKET
+* -------- Cipher and Compression missing server hello
+* -------- Frontend error handling
+* Filters management (&&/||)
+* -------- Http Response Image Converting
+* Improve performance (display only few packets)
+*/
 
 export enum SniffingStatus {
     Inactive,
@@ -93,10 +104,10 @@ export class GeneralPacket {
         this.sourcePort = null;
         this.destinationPort = null;
 
-        let link_layer: SerializableLinkLayerPacket | MalformedPacket | UnknownPacket;
-        let network_layer: SerializableNetworkLayerPacket | MalformedPacket | null;
-        let transport_layer: SerializableTransportLayerPacket | MalformedPacket | null;
-        let application_layer: SerializableApplicationLayerPacket | MalformedPacket | null;
+        let link_layer: SerializableLinkLayerPacket | MalformedPacket | UnknownLinkPacket | UnknownPacket;
+        let network_layer: SerializableNetworkLayerPacket | MalformedPacket | UnknownPacket | null;
+        let transport_layer: SerializableTransportLayerPacket | MalformedPacket | UnknownPacket | null;
+        let application_layer: SerializableApplicationLayerPacket | MalformedPacket | UnknownPacket | null;
 
         link_layer = make_link_level_packet(packet.linkLayerPacket);
         network_layer = make_network_level_packet(packet.networkLayerPacket);
@@ -143,16 +154,16 @@ export class GeneralPacket {
 /* Parsed Packet */
 
 export class Packet {
-    link_layer_packet: SerializableLinkLayerPacket | UnknownPacket | MalformedPacket;
-    network_layer_packet: SerializableNetworkLayerPacket | MalformedPacket | null;
-    transport_layer_packet: SerializableTransportLayerPacket | MalformedPacket | null;
-    application_layer_packet: SerializableTransportLayerPacket | MalformedPacket | null;
+    link_layer_packet: SerializableLinkLayerPacket | UnknownLinkPacket | MalformedPacket | UnknownPacket;
+    network_layer_packet: SerializableNetworkLayerPacket | MalformedPacket | UnknownPacket | null;
+    transport_layer_packet: SerializableTransportLayerPacket | MalformedPacket | UnknownPacket | null;
+    application_layer_packet: SerializableTransportLayerPacket | MalformedPacket | UnknownPacket | null;
 
     constructor(
-        link_layer_packet: SerializableLinkLayerPacket | UnknownPacket | MalformedPacket,
-        network_layer_packet: SerializableNetworkLayerPacket | MalformedPacket | null,
-        transport_layer_packet: SerializableTransportLayerPacket | MalformedPacket | null,
-        application_layer_packet: SerializableTransportLayerPacket | MalformedPacket | null
+        link_layer_packet: SerializableLinkLayerPacket | UnknownLinkPacket | MalformedPacket | UnknownPacket,
+        network_layer_packet: SerializableNetworkLayerPacket | MalformedPacket | UnknownPacket | null,
+        transport_layer_packet: SerializableTransportLayerPacket | MalformedPacket | UnknownPacket | null,
+        application_layer_packet: SerializableTransportLayerPacket | MalformedPacket | UnknownPacket | null
     ) {
         this.link_layer_packet = link_layer_packet;
         this.network_layer_packet = network_layer_packet;
@@ -163,7 +174,7 @@ export class Packet {
 
 const make_transport_level_packet = (transport: any) => {
     if (!transport) return null;
-    let transport_layer: SerializableTransportLayerPacket | MalformedPacket;
+    let transport_layer: SerializableTransportLayerPacket | MalformedPacket | UnknownPacket;
 
     switch (transport.type) {
         case "TcpPacket":
@@ -233,15 +244,19 @@ const make_transport_level_packet = (transport: any) => {
             )
             break;
 
-        default:
+        case "MalformedPacket":
             transport_layer = new MalformedPacket();
+            break;
+
+        default:
+            transport_layer = new UnknownPacket();
     }
 
     return transport_layer;
 }
 
 const make_link_level_packet = (link: any) => {
-    let link_layer: SerializableLinkLayerPacket | MalformedPacket | UnknownPacket;
+    let link_layer: SerializableLinkLayerPacket | MalformedPacket | UnknownLinkPacket | UnknownPacket;
 
     switch (link.type) {
         case "EthernetPacket":
@@ -254,7 +269,7 @@ const make_link_level_packet = (link: any) => {
             break;
 
         case "UnknownPacket":
-            link_layer = new UnknownPacket(
+            link_layer = new UnknownLinkPacket(
                 link.packet.destination,
                 link.packet.source,
                 link.packet.ethertype,
@@ -262,8 +277,12 @@ const make_link_level_packet = (link: any) => {
             )
             break;
 
-        default:
+        case "MalformedPacket":
             link_layer = new MalformedPacket();
+            break;
+
+        default:
+            link_layer = new UnknownPacket();
     }
 
     return link_layer;
@@ -271,7 +290,7 @@ const make_link_level_packet = (link: any) => {
 
 const make_network_level_packet = (network: any) => {
     if (!network) return null;
-    let network_layer: SerializableNetworkLayerPacket | MalformedPacket;
+    let network_layer: SerializableNetworkLayerPacket | MalformedPacket | UnknownPacket;
 
     switch (network.type) {
         case "ArpPacket":
@@ -322,8 +341,12 @@ const make_network_level_packet = (network: any) => {
             )
             break;
 
-        default:
+        case "MalformedPacket":
             network_layer = new MalformedPacket();
+            break;
+
+        default:
+            network_layer = new UnknownPacket();
     }
 
     return network_layer;
@@ -331,7 +354,7 @@ const make_network_level_packet = (network: any) => {
 
 const make_application_level = (application: any) => {
     if (!application) return null;
-    let application_layer: SerializableApplicationLayerPacket | MalformedPacket;
+    let application_layer: SerializableApplicationLayerPacket | MalformedPacket | UnknownPacket;
 
     switch (application.type) {
         case "TlsPacket":
@@ -372,12 +395,18 @@ const make_application_level = (application: any) => {
             )
             break;
 
-        default:
+        case "MalformedPacket":
             application_layer = new MalformedPacket();
+            break;
+
+        default:
+            application_layer = new UnknownPacket();
     }
 
     return application_layer;
 }
+
+/* Malformed and Unknown Packets */
 
 export class MalformedPacket {
     type: string;
@@ -391,7 +420,7 @@ export class MalformedPacket {
     }
 
     toString(): string {
-        return this.type
+        return "Malformed Packet"
     }
 
     getType(): string {
@@ -400,6 +429,42 @@ export class MalformedPacket {
 
     getInfo(): string {
         return "Malformed Packet"
+    }
+
+    getSource(): string {
+        return ""
+    }
+
+    getDestination(): string {
+        return ""
+    }
+
+    getPayload(): number[] {
+        return []
+    }
+}
+
+export class UnknownPacket {
+    type: string;
+
+    constructor() {
+        this.type = "Unknown"
+    }
+
+    toDisplay() {
+        return []
+    }
+
+    toString(): string {
+        return "Unknown Packet"
+    }
+
+    getType(): string {
+        return this.type
+    }
+
+    getInfo(): string {
+        return "Unknown Packet"
     }
 
     getSource(): string {

@@ -102,6 +102,7 @@ impl<'a, 'b> SerializableHttpResponsePacket {
 /// TLS Packet Representation
 
 #[derive(Serialize, Debug)]
+#[serde(tag = "type", content = "error")]
 pub enum TlsMalformedError {
     LengthTooLarge(String),
     UnknownRecord(String),
