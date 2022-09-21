@@ -11,8 +11,8 @@ use tls_parser::{
     ECParametersContent, ECPoint, ExplicitPrimeContent, NamedGroup, ServerDHParams,
     ServerECDHParams, TlsCertificateContents, TlsCertificateRequestContents,
     TlsCertificateStatusContents, TlsClientHelloContents, TlsClientKeyExchangeContents,
-    TlsHelloRetryRequestContents, TlsMessageAlert, TlsMessageHeartbeat, TlsNewSessionTicketContent,
-    TlsNextProtocolContent, TlsRecordType, TlsServerHelloContents,
+    TlsExtension, TlsHelloRetryRequestContents, TlsMessageAlert, TlsMessageHeartbeat,
+    TlsNewSessionTicketContent, TlsNextProtocolContent, TlsRecordType, TlsServerHelloContents,
     TlsServerHelloV13Draft18Contents, TlsServerKeyExchangeContents, TlsVersion,
 };
 use x509_parser::{parse_x509_certificate, prelude::X509Certificate};
@@ -231,11 +231,193 @@ impl ClientHelloMessage {
             ciphers: message.ciphers.iter().map(|c| format!("{:?}", c)).collect(),
             compressions: message.comp.iter().map(|c| format!("{:?}", c)).collect(),
             extensions: match parse_tls_extensions(message.ext.unwrap_or(b"")) {
-                Ok((_, exts)) => exts.iter().map(|x| format!("{:?}", x)).collect(),
+                Ok((_, exts)) => parse_custom_tls_extensions(exts),
                 Err(_) => vec!["Error parsing".to_owned()],
             },
         }
     }
+}
+
+fn parse_custom_tls_extensions(exts: Vec<TlsExtension>) -> Vec<String> {
+    let mut new_extensions = vec![];
+
+    for ext in exts {
+        match ext {
+            TlsExtension::SNI(data) => {
+                let mut sni = "SNI: ".to_owned();
+                for (i, (sni_type, data)) in data.into_iter().enumerate() {
+                    sni.push_str(&format!(
+                        "{sni_type} = {}",
+                        std::str::from_utf8(data).unwrap_or("-")
+                    ));
+
+                    if i != data.len() - 1 {
+                        sni.push_str(", ");
+                    }
+                }
+
+                new_extensions.push(sni);
+            }
+            TlsExtension::MaxFragmentLength(length) => {
+                new_extensions.push(format!("MaxFragmentLength: {length}"));
+            }
+            TlsExtension::StatusRequest(req) => {
+                if let Some((cert_type, data)) = req {
+                    new_extensions.push(format!("{}, {:?}", cert_type, data));
+                } else {
+                    new_extensions.push("-".to_owned());
+                }
+            }
+            TlsExtension::EllipticCurves(ecs) => {
+                new_extensions.push(format!(
+                    "Elliptic Curves: {:?}",
+                    ecs.into_iter()
+                        .map(|ec| ec.to_string())
+                        .collect::<Vec<String>>()
+                ));
+            }
+            TlsExtension::EcPointFormats(point) => {
+                new_extensions.push(format!("Ec Point Formats: {:?}", point))
+            }
+            TlsExtension::SignatureAlgorithms(algos) => {
+                new_extensions.push(format!(
+                    "Signature Algorithms: {:?}",
+                    algos
+                        .into_iter()
+                        .map(|algo| parse_signature_algorithm(&algo))
+                        .collect::<Vec<String>>()
+                ));
+            }
+            TlsExtension::SessionTicket(ticket) => {
+                new_extensions.push(format!("Session Ticket: {:?}", ticket));
+            }
+            TlsExtension::RecordSizeLimit(limit) => {
+                new_extensions.push(format!("Record Size Limit: {}", limit));
+            }
+            TlsExtension::KeyShareOld(ks) => {
+                new_extensions.push(format!("Key share Old: {:?}", ks));
+            }
+            TlsExtension::KeyShare(ks) => {
+                new_extensions.push(format!("Key share: {:?}", ks));
+            }
+            TlsExtension::PreSharedKey(psk) => {
+                new_extensions.push(format!("Pre-Shared Key: {:?}", psk));
+            }
+            TlsExtension::EarlyData(data) => {
+                new_extensions.push(format!(
+                    "Early Data: {}",
+                    match data {
+                        Some(x) => x.to_string(),
+                        _ => "-".to_owned(),
+                    }
+                ));
+            }
+            TlsExtension::SupportedVersions(versions) => {
+                new_extensions.push(format!(
+                    "Supported Versions: {:?}",
+                    versions
+                        .into_iter()
+                        .map(|x| x.to_string())
+                        .collect::<Vec<String>>()
+                ));
+            }
+            TlsExtension::Cookie(cookie) => {
+                new_extensions.push(format!("Cookie: {:?}", cookie));
+            }
+            TlsExtension::PskExchangeModes(modes) => {
+                new_extensions.push(format!("Psk Exchange Modes: {:?}", modes));
+            }
+            TlsExtension::Heartbeat(hb) => {
+                new_extensions.push(format!("Heartbeat: {}", hb));
+            }
+            TlsExtension::ALPN(alpn) => {
+                new_extensions.push(format!(
+                    "ALPN: {:?}",
+                    alpn.into_iter()
+                        .map(|algo| std::str::from_utf8(algo).unwrap_or("-").to_owned())
+                        .collect::<Vec<String>>()
+                ));
+            }
+            TlsExtension::SignedCertificateTimestamp(timestamp) => {
+                new_extensions.push(format!(
+                    "Signed Certificate Timestamp: {}",
+                    match timestamp {
+                        Some(x) => format!("{:?}", x),
+                        _ => "-".to_owned(),
+                    }
+                ));
+            }
+            TlsExtension::Padding(p) => {
+                new_extensions.push(format!("Padding: {:?}", p));
+            }
+            TlsExtension::EncryptThenMac => {
+                new_extensions.push("Encrypt-then-mac: true".to_owned());
+            }
+            TlsExtension::ExtendedMasterSecret => {
+                new_extensions.push("Extended Master Secret: true".to_owned());
+            }
+            TlsExtension::OidFilters(oids) => {
+                new_extensions.push(format!(
+                    "OID Filters: {:?}",
+                    oids.into_iter()
+                        .map(|oid| format!("({:?}, {:?}), ", oid.cert_ext_oid, oid.cert_ext_val))
+                        .collect::<Vec<String>>()
+                ));
+            }
+            TlsExtension::PostHandshakeAuth => {
+                new_extensions.push("Post Handshake Auth: true".to_owned());
+            }
+            TlsExtension::NextProtocolNegotiation => {
+                new_extensions.push("Next Protocol Negotiation: true".to_owned());
+            }
+            TlsExtension::RenegotiationInfo(info) => {
+                new_extensions.push(format!("Renegotiation Info: {:?}", info));
+            }
+            TlsExtension::EncryptedServerName {
+                ciphersuite,
+                group,
+                key_share,
+                record_digest,
+                encrypted_sni,
+            } => {
+                new_extensions.push(format!(
+                    "Encrypted Server Name: (ciphersuite: {}, group: {}, KeyShare: {:?}, RecordDigest: {:?}, EncryptedSni: {:?})",
+                    ciphersuite, group, key_share, record_digest, encrypted_sni
+                ));
+            }
+            TlsExtension::Grease(a, b) => {
+                new_extensions.push(format!("Grease: ({}, {:?})", a, b));
+            }
+            TlsExtension::Unknown(x, y) => {
+                new_extensions.push(format!("Unknown: {} = {:?}", x, y));
+            }
+        }
+    }
+
+    new_extensions
+}
+
+fn parse_signature_algorithm(data: &u16) -> String {
+    match data {
+        0x0401 => "rsa_pkcs1_sha256",
+        0x0501 => "rsa_pkcs1_sha384",
+        0x0601 => "rsa_pkcs1_sha512",
+        0x0403 => "ecdsa_secp256r1_sha256",
+        0x0503 => "ecdsa_secp384r1_sha384",
+        0x0603 => "ecdsa_secp521r1_sha512",
+        0x0804 => "rsa_pss_rsae_sha256",
+        0x0805 => "rsa_pss_rsae_sha384",
+        0x0806 => "rsa_pss_rsae_sha512",
+        0x0807 => "ed25519",
+        0x0808 => "ed448",
+        0x0809 => "rsa_pss_pss_sha256",
+        0x080a => "rsa_pss_pss_sha384",
+        0x080b => "rsa_pss_pss_sha512",
+        0x0201 => "rsa_pkcs1_sha1",
+        0x0203 => "ecdsa_sha1",
+        _ => "Unknown/Reserved",
+    }
+    .to_owned()
 }
 
 #[derive(Serialize, Debug)]
@@ -257,9 +439,9 @@ impl ServerHelloMessage {
             rand_data: message.rand_data.to_vec(),
             session_id: message.session_id.map_or(None, |v| Some(v.to_vec())),
             cipher: format!("{:?}", message.cipher),
-            compression: format!("{:?}", message.compression),
+            compression: format!("{}", message.compression),
             extensions: match parse_tls_extensions(message.ext.unwrap_or(b"")) {
-                Ok((_, exts)) => exts.iter().map(|x| format!("{:?}", x)).collect(),
+                Ok((_, exts)) => parse_custom_tls_extensions(exts),
                 Err(_) => vec!["Error parsing".to_owned()],
             },
         }
