@@ -22,8 +22,15 @@ const Fields: FC<FieldProps> = ({packetInfo}) => {
                                                 Object.values(el)[0].type}
                                         </AccordionSummary>
                                         <AccordionDetails>
-                                            {// @ts-ignore
-                                                Object.values(el)[0].content}
+                                            {
+                                                // @ts-ignore
+                                                Object.values(el)[0].src === "" ? Object.values(el)[0].content :
+                                                    <img className={"image"}
+                                                        // @ts-ignore
+                                                        src={Object.values(el)[0].src}
+                                                        // @ts-ignore
+                                                        alt={Object.values(el)[0].content}/>
+                                            }
                                         </AccordionDetails>
                                     </Accordion>
                                 </ListItem>

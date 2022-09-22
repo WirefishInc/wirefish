@@ -116,19 +116,23 @@ export class CustomApplicationDataMessage implements CustomTlsMessages {
 
 export class CustomEncryptedMessage implements CustomTlsMessages {
     data: number[];
+    version: string;
+    message_type: string;
     type: string;
 
-    constructor(data: number[]) {
+    constructor(data: number[], version: string, message_type: string) {
         this.data = data;
-        this.type = "Application Data (Encrypted)"
+        this.version = version;
+        this.message_type = message_type;
+        this.type = "Encrypted"
     }
 
     toDisplay(): any {
-        return [{"Data": this.data}];
+        return [{"Version": this.version}, {"Message Type": this.message_type}, {"Data": this.data}];
     }
 
     toString(): string {
-        return "TLS Record Layer: Application Data (Encrypted)";
+        return "TLS Record Layer: Encrypted";
     }
 
     getType(): string {
@@ -153,6 +157,44 @@ export class ChangeCipherSpecMessage implements CustomTlsMessages {
 
     getType(): string {
         return this.type
+    }
+}
+
+export class CustomMalformedMessage implements CustomTlsMessages {
+    version: string;
+    message_type: string;
+    error_type: string;
+    error: string;
+    data: number[];
+    type: string;
+
+    constructor(version: string, message_type: string, error_type: any, data: number[]) {
+        this.version = version;
+        this.message_type = message_type;
+        this.error_type = error_type.type;
+        this.error = error_type.error;
+        this.data = data;
+        this.type = "TLS Malformed"
+    }
+
+    getType(): string {
+        return this.type;
+    }
+
+    toDisplay(): any {
+        let packet_info = [];
+
+        packet_info.push({"Version": this.version});
+        packet_info.push({"Message Type": this.message_type});
+        packet_info.push({"Error Type": this.error_type});
+        packet_info.push({"Error": this.error});
+        packet_info.push({"Data": this.data});
+
+        return packet_info;
+    }
+
+    toString(): string {
+        return "TLS Malformed Packet";
     }
 }
 

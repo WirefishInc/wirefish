@@ -1,4 +1,4 @@
-import {MalformedPacket, SerializableApplicationLayerPacket} from "../sniffing";
+import {MalformedPacket, SerializableApplicationLayerPacket, UnknownPacket} from "../sniffing";
 import {
     CertificateMessage,
     CertificateRequestMessage, CertificateStatusMessage,
@@ -10,7 +10,7 @@ import {
     CustomApplicationDataMessage,
     CustomEncryptedMessage,
     CustomHandshakeMessage,
-    CustomHeartbeatMessage,
+    CustomHeartbeatMessage, CustomMalformedMessage,
     CustomTlsMessages,
     EndOfEarlyData,
     FinishedMessage,
@@ -20,6 +20,7 @@ import {
     ServerHelloMessage, ServerHelloV13Draft18Message, ServerKeyExchangeMessage
 } from "./tls";
 import {DnsHeader, DnsQuestion, DnsResourceRecord} from "./dns";
+import {Buffer} from "buffer";
 
 export class TlsPacket implements SerializableApplicationLayerPacket {
     version: string;
@@ -49,7 +50,7 @@ export class TlsPacket implements SerializableApplicationLayerPacket {
                     result.push(new CustomHeartbeatMessage(message.heartbeat_type, message.payload, message.payload_len))
                     break;
                 case "Encrypted":
-                    result.push(new CustomEncryptedMessage(message.data))
+                    result.push(new CustomEncryptedMessage(message.data, message.version, message.message_type))
                     break;
                 case "ChangeCipherSpec":
                     result.push(new ChangeCipherSpecMessage())
@@ -59,8 +60,16 @@ export class TlsPacket implements SerializableApplicationLayerPacket {
                     if (packet)
                         result.push(packet)
                     break;
+                case "Malformed":
+                    result.push(new CustomMalformedMessage(
+                        message.version,
+                        message.message_type,
+                        message.error_type,
+                        message.data
+                    ))
+                    break;
                 default:
-                    result.push(new MalformedPacket())
+                    result.push(new UnknownPacket())
             }
         })
 
@@ -89,8 +98,8 @@ export class TlsPacket implements SerializableApplicationLayerPacket {
                     p.rand_time,
                     p.rand_data,
                     p.session_id,
-                    p.ciphers,
-                    p.compressions,
+                    p.cipher,
+                    p.compression,
                     p.extensions
                 )
                 break;
@@ -240,6 +249,7 @@ export class HttpResponsePacket implements SerializableApplicationLayerPacket {
     headers: [[string, string]];
     payload: number[] | string;
     payload_type: string;
+    src: string;
     type: string;
 
     constructor(
@@ -257,6 +267,10 @@ export class HttpResponsePacket implements SerializableApplicationLayerPacket {
         let res = HttpContentType.setPayloadType(payload);
         this.payload_type = res.payload_type;
         this.payload = res.payload;
+        if (res.payload_type === "Image")
+            this.src = "data:image/png;base64," + Buffer.from(this.payload).toString('base64')
+        else
+            this.src = "";
 
         this.type = "Hypertext Transfer Protocol"
     }
@@ -287,7 +301,7 @@ export class HttpResponsePacket implements SerializableApplicationLayerPacket {
         })
 
         if (this.payload.length > 0)
-            packet_info.push({"HTTPResp": {"type": this.payload_type, "content": this.payload}})
+            packet_info.push({"HTTPResp": {"type": this.payload_type, "content": this.payload, "src": this.src}})
 
         return packet_info;
     }

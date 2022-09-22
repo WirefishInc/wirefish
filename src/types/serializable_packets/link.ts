@@ -50,7 +50,7 @@ export class EthernetPacket implements SerializableLinkLayerPacket {
     }
 }
 
-export class UnknownPacket implements SerializableLinkLayerPacket {
+export class UnknownLinkPacket implements SerializableLinkLayerPacket {
     destination: string;
     source: string;
     ethertype: string;
