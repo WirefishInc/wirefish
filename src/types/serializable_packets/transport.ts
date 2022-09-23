@@ -13,8 +13,8 @@ export class TcpPacket implements SerializableTransportLayerPacket {
     window: number;
     checksum: number;
     urgent_ptr: number;
+    length: number;
     options: [];
-    payload: [];
     type: string;
 
     constructor(
@@ -28,8 +28,8 @@ export class TcpPacket implements SerializableTransportLayerPacket {
         window: number,
         checksum: number,
         urgent_ptr: number,
+        length: number,
         options: [],
-        payload: [],
     ) {
         this.source = source;
         this.destination = destination;
@@ -42,7 +42,7 @@ export class TcpPacket implements SerializableTransportLayerPacket {
         this.checksum = checksum;
         this.urgent_ptr = urgent_ptr;
         this.options = options;
-        this.payload = payload;
+        this.length = length;
         this.type = "Transmission Control Protocol"
     }
 
@@ -53,7 +53,7 @@ export class TcpPacket implements SerializableTransportLayerPacket {
     getInfo(): string {
         return this.source + " -> " + this.destination + " " + this.getFlags(this.flags) + " " +
             "Seq=" + this.sequence + " Ack=" + this.acknowledgement + " " +
-            "Win=" + this.window + " Len=" + this.payload.length;
+            "Win=" + this.window + " Len=" + this.length;
     }
 
     getFlags(flags: number): string {
@@ -98,7 +98,6 @@ export class UdpPacket implements SerializableTransportLayerPacket {
     destination: number;
     length: number;
     checksum: number;
-    payload: [];
     type: string;
 
     constructor(
@@ -106,13 +105,11 @@ export class UdpPacket implements SerializableTransportLayerPacket {
         destination: number,
         length: number,
         checksum: number,
-        payload: []
     ) {
         this.source = source;
         this.destination = destination;
         this.length = length;
         this.checksum = checksum;
-        this.payload = payload;
         this.type = "User Datagram Protocol"
     }
 
@@ -132,7 +129,7 @@ export class UdpPacket implements SerializableTransportLayerPacket {
     }
 
     getInfo(): string {
-        return this.source + " -> " + this.destination + " Len=" + this.payload.length;
+        return this.source + " -> " + this.destination + " Len=" + this.length;
     }
 
     getType(): string {
@@ -145,19 +142,19 @@ export class Icmpv6Packet implements SerializableTransportLayerPacket {
     icmpv6_type: string;
     icmpv6_code: number;
     checksum: number;
-    payload: [];
+    length: number;
     type: string;
 
     constructor(
         icmpv6_type: string,
         icmpv6_code: number,
         checksum: number,
-        payload: []
+        length: number
     ) {
         this.icmpv6_type = icmpv6_type;
         this.icmpv6_code = icmpv6_code;
         this.checksum = checksum;
-        this.payload = payload;
+        this.length = length;
         this.type = "Internet Control Message Protocol v6"
     }
 
@@ -188,19 +185,19 @@ export class IcmpPacket implements SerializableTransportLayerPacket {
     icmp_type: string;
     icmp_code: number;
     checksum: number;
-    payload: [];
+    length: number;
     type: string;
 
     constructor(
         icmp_type: string,
         icmp_code: number,
         checksum: number,
-        payload: []
+        length: number
     ) {
         this.icmp_type = icmp_type;
         this.icmp_code = icmp_code;
         this.checksum = checksum;
-        this.payload = payload;
+        this.length = length;
         this.type = "Internet Control Message Protocol"
     }
 
@@ -233,7 +230,7 @@ export class EchoReply implements SerializableTransportLayerPacket {
     checksum: number;
     identifier: number;
     sequence_number: number;
-    payload: [];
+    length: number;
     type: string;
 
     constructor(
@@ -242,14 +239,14 @@ export class EchoReply implements SerializableTransportLayerPacket {
         checksum: number,
         identifier: number,
         sequence_number: number,
-        payload: []
+        length: number
     ) {
         this.icmp_type = icmp_type;
         this.icmp_code = icmp_code;
         this.checksum = checksum;
         this.identifier = identifier;
         this.sequence_number = sequence_number;
-        this.payload = payload;
+        this.length = length;
         this.type = "Internet Control Message Protocol - Echo Reply";
     }
 
@@ -284,7 +281,7 @@ export class EchoRequest implements SerializableTransportLayerPacket {
     checksum: number;
     identifier: number;
     sequence_number: number;
-    payload: [];
+    length: number;
     type: string;
 
     constructor(
@@ -293,14 +290,14 @@ export class EchoRequest implements SerializableTransportLayerPacket {
         checksum: number,
         identifier: number,
         sequence_number: number,
-        payload: []
+        length: number
     ) {
         this.icmp_type = icmp_type;
         this.icmp_code = icmp_code;
         this.checksum = checksum;
         this.identifier = identifier;
         this.sequence_number = sequence_number;
-        this.payload = payload;
+        this.length = length;
         this.type = "Internet Control Message Protocol - Echo Request";
     }
 

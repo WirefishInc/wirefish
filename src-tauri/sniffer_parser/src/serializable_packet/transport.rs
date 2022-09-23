@@ -1,15 +1,15 @@
+use pnet::packet::Packet;
 use pnet::packet::icmp::echo_reply::EchoReplyPacket;
 use pnet::packet::icmp::echo_request::EchoRequestPacket;
 use pnet::packet::icmp::{IcmpPacket, IcmpType, IcmpTypes};
 use pnet::packet::icmpv6::{Icmpv6Packet, Icmpv6Type, Icmpv6Types};
 use pnet::packet::tcp::TcpPacket;
 use pnet::packet::udp::UdpPacket;
-use pnet::packet::Packet;
 use serde::Serialize;
 
 /// TCP Packet Representation
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct SerializableTcpPacket {
     pub source: u16,
     pub destination: u16,
@@ -22,7 +22,7 @@ pub struct SerializableTcpPacket {
     pub checksum: u16,
     pub urgent_ptr: u16,
     pub options: Vec<u8>,
-    pub payload: Vec<u8>,
+    pub length: usize,
 }
 
 impl<'a> From<&TcpPacket<'a>> for SerializableTcpPacket {
@@ -39,20 +39,19 @@ impl<'a> From<&TcpPacket<'a>> for SerializableTcpPacket {
             checksum: packet.get_checksum(),
             urgent_ptr: packet.get_urgent_ptr(),
             options: packet.get_options_raw().to_vec(),
-            payload: packet.payload().to_vec(),
+            length: packet.payload().len(),
         }
     }
 }
 
 /// UDP Packet Representation
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct SerializableUdpPacket {
     pub source: u16,
     pub destination: u16,
     pub length: u16,
     pub checksum: u16,
-    pub payload: Vec<u8>,
 }
 
 impl<'a> From<&UdpPacket<'a>> for SerializableUdpPacket {
@@ -62,19 +61,18 @@ impl<'a> From<&UdpPacket<'a>> for SerializableUdpPacket {
             destination: packet.get_destination(),
             length: packet.get_length(),
             checksum: packet.get_checksum(),
-            payload: packet.payload().to_vec(),
         }
     }
 }
 
 /// ICMPv6 Packet Representation
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct SerializableIcmpv6Packet {
     pub icmpv6_type: String,
     pub icmpv6_code: u8,
     pub checksum: u16,
-    pub payload: Vec<u8>,
+    pub length: usize,
 }
 
 impl<'a> From<&Icmpv6Packet<'a>> for SerializableIcmpv6Packet {
@@ -83,7 +81,7 @@ impl<'a> From<&Icmpv6Packet<'a>> for SerializableIcmpv6Packet {
             icmpv6_type: icmpv6_type_to_string(packet.get_icmpv6_type()),
             icmpv6_code: packet.get_icmpv6_code().0,
             checksum: packet.get_checksum(),
-            payload: packet.payload().to_vec(),
+            length: packet.payload().len(),
         }
     }
 }
@@ -107,12 +105,12 @@ pub fn icmpv6_type_to_string(icmp_type: Icmpv6Type) -> String {
 
 /// ICMP Packet Representation
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct SerializableIcmpPacket {
     pub icmp_type: String,
     pub icmp_code: u8,
     pub checksum: u16,
-    pub payload: Vec<u8>,
+    pub length: usize,
 }
 
 impl<'a> From<&IcmpPacket<'a>> for SerializableIcmpPacket {
@@ -121,7 +119,7 @@ impl<'a> From<&IcmpPacket<'a>> for SerializableIcmpPacket {
             icmp_type: icmp_type_to_string(packet.get_icmp_type()),
             icmp_code: packet.get_icmp_code().0,
             checksum: packet.get_checksum(),
-            payload: packet.payload().to_vec(),
+            length: packet.payload().len(),
         }
     }
 }
@@ -150,14 +148,14 @@ pub fn icmp_type_to_string(icmp_type: IcmpType) -> String {
 
 /// ICMP Echo Reply Packet Representation
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct SerializableEchoReplyPacket {
     pub icmp_type: u8,
     pub icmp_code: u8,
     pub checksum: u16,
     pub identifier: u16,
     pub sequence_number: u16,
-    pub payload: Vec<u8>,
+    pub length: usize,
 }
 
 impl<'a> From<&EchoReplyPacket<'a>> for SerializableEchoReplyPacket {
@@ -168,21 +166,21 @@ impl<'a> From<&EchoReplyPacket<'a>> for SerializableEchoReplyPacket {
             checksum: packet.get_checksum(),
             identifier: packet.get_checksum(),
             sequence_number: packet.get_sequence_number(),
-            payload: packet.payload().to_vec(),
+            length: packet.payload().len(),
         }
     }
 }
 
 /// ICMP Echo Request Packet Representation
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct SerializableEchoRequestPacket {
     pub icmp_type: u8,
     pub icmp_code: u8,
     pub checksum: u16,
     pub identifier: u16,
     pub sequence_number: u16,
-    pub payload: Vec<u8>,
+    pub length: usize,
 }
 
 impl<'a> From<&EchoRequestPacket<'a>> for SerializableEchoRequestPacket {
@@ -193,7 +191,7 @@ impl<'a> From<&EchoRequestPacket<'a>> for SerializableEchoRequestPacket {
             checksum: packet.get_checksum(),
             identifier: packet.get_identifier(),
             sequence_number: packet.get_sequence_number(),
-            payload: packet.payload().to_vec(),
+            length: packet.payload().len(),
         }
     }
 }

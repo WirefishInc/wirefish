@@ -16,7 +16,7 @@ use self::transport::{
     SerializableIcmpv6Packet, SerializableTcpPacket, SerializableUdpPacket,
 };
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ParsedPacket {
     link_layer_packet: Option<SerializablePacket>,
@@ -74,7 +74,7 @@ impl ParsedPacket {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 #[serde(tag = "type", content = "packet")]
 pub enum SerializablePacket {
     EthernetPacket(SerializableEthernetPacket),
@@ -98,7 +98,7 @@ pub enum SerializablePacket {
 
 /// Ethernet Packet Representation
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct SerializableEthernetPacket {
     pub destination: MacAddr,
     pub source: MacAddr,
@@ -119,7 +119,7 @@ impl<'a> From<&EthernetPacket<'a>> for SerializableEthernetPacket {
 
 /// Unknown Packet Representation
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct SerializableUnknownPacket {
     pub destination: MacAddr,
     pub source: MacAddr,

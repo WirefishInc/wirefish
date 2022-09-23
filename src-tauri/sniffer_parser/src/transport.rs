@@ -258,7 +258,7 @@ mod tests {
                 assert_eq!(new_udp_packet.destination, udp_packet.get_destination());
                 assert_eq!(new_udp_packet.length, udp_packet.get_length());
                 assert_eq!(new_udp_packet.checksum, udp_packet.get_checksum());
-                assert_eq!(new_udp_packet.payload, udp_packet.payload().to_vec());
+                assert_eq!(new_udp_packet.length, udp_packet.get_length());
             }
             _ => unreachable!(),
         }
@@ -309,7 +309,7 @@ mod tests {
                 assert_eq!(new_tcp_packet.checksum, tcp_packet.get_checksum());
                 assert_eq!(new_tcp_packet.urgent_ptr, tcp_packet.get_urgent_ptr());
                 assert_eq!(new_tcp_packet.options, tcp_packet.get_options_raw());
-                assert_eq!(new_tcp_packet.payload, tcp_packet.payload().to_vec());
+                assert_eq!(new_tcp_packet.length, tcp_packet.payload().len());
             }
             _ => unreachable!(),
         }
@@ -367,8 +367,8 @@ mod tests {
                     echo_reply_packet.get_sequence_number()
                 );
                 assert_eq!(
-                    new_echo_reply_packet.payload,
-                    echo_reply_packet.payload().to_vec()
+                    new_echo_reply_packet.length,
+                    echo_reply_packet.payload().len()
                 );
             }
             _ => unreachable!(),
@@ -414,8 +414,8 @@ mod tests {
                     echo_request_packet.get_sequence_number()
                 );
                 assert_eq!(
-                    new_echo_reply_packet.payload,
-                    echo_request_packet.payload().to_vec()
+                    new_echo_reply_packet.length,
+                    echo_request_packet.payload().len()
                 );
             }
             _ => unreachable!(),
@@ -445,7 +445,7 @@ mod tests {
                 );
                 assert_eq!(new_icmp_packet.icmp_code, icmp_packet.get_icmp_code().0);
                 assert_eq!(new_icmp_packet.checksum, icmp_packet.get_checksum());
-                assert_eq!(new_icmp_packet.payload, icmp_packet.payload().to_vec());
+                assert_eq!(new_icmp_packet.length, icmp_packet.payload().len());
             }
             _ => unreachable!(),
         }
@@ -491,7 +491,7 @@ mod tests {
                     icmpv6_packet.get_icmpv6_code().0
                 );
                 assert_eq!(new_icmpv6_packet.checksum, icmpv6_packet.get_checksum());
-                assert_eq!(new_icmpv6_packet.payload, icmpv6_packet.payload().to_vec());
+                assert_eq!(new_icmpv6_packet.length, icmpv6_packet.payload().len());
             }
             _ => unreachable!(),
         }

@@ -47,6 +47,7 @@ const CONFIG: Config = Config {
 enum SniffingError {
     InterfaceNotFound(String),
     StartSniffingWithoutInterfaceSelection(String),
+    GetPacketsIndexNotValid(String),
     UnhandledChannelType(String),
     FailedChannelCreation(String),
     StopSniffingWithoutPriorStart(String),
@@ -58,6 +59,7 @@ struct SniffingState {
     sniffers: Arc<Mutex<HashMap<String, (Sender<()>, Receiver<SniffingError>)>>>,
     exchanged_packets: Arc<Mutex<HashMap<SourceDestination, PacketExchange>>>,
     info: Arc<Mutex<SniffingInfo>>,
+    packets: Arc<Mutex<Vec<ParsedPacket>>>,
 }
 
 impl SniffingState {
@@ -66,6 +68,7 @@ impl SniffingState {
             sniffers: Arc::new(Mutex::new(HashMap::new())),
             exchanged_packets: Arc::new(Mutex::new(HashMap::new())),
             info: Arc::new(Mutex::new(SniffingInfo::new())),
+            packets: Arc::new(Mutex::new(vec![])),
         }
     }
 }
@@ -182,7 +185,9 @@ fn start_sniffing(
         sniffers.insert(interface_name.to_string(), (send_stop, receive_error));
 
         let exchanged_packets = Arc::clone(&state.exchanged_packets);
+        let packets = Arc::clone(&state.packets);
         std::thread::spawn(move || {
+            let mut counter = 0;
             loop {
                 match interface_channel.next() {
                     Ok(packet) if receive_stop.try_recv().is_err() => {
@@ -201,6 +206,9 @@ fn start_sniffing(
                             protocols.push(link_packet.ethertype.clone());
                         }
 
+                        let mut packets = packets.lock().unwrap();
+                        packets.push(new_packet);
+
                         let mut exchanged_packets = exchanged_packets.lock().unwrap();
                         exchanged_packets
                             .entry(sender_receiver.0)
@@ -211,7 +219,10 @@ fn start_sniffing(
 
                         window
                             .state::<AwesomeEmit>()
-                            .emit("main", "packet_received", new_packet);
+                            .emit("main", "packet_received", ());
+
+                        println!("counter: {}", counter);
+                        counter += 1;
                     }
                     Ok(_) => {
                         // Clean the channel
@@ -236,6 +247,28 @@ fn start_sniffing(
     }
 
     Ok(())
+}
+
+#[tauri::command]
+fn get_packets(
+    start: usize,
+    end: usize,
+    state: tauri::State<SniffingState>,
+) -> Result<Vec<ParsedPacket>, SniffingError> {
+    let packets = state.packets.lock().unwrap();
+
+    if start > packets.len() {
+        return Err(SniffingError::GetPacketsIndexNotValid(
+            "The indexes are not valid".to_owned()
+        ));
+    }
+
+    let slice = match packets.get(start..end) {
+        Some(values) => values,
+        None => packets.get(start..).unwrap(),
+    };
+
+    return Ok(slice.to_vec());
 }
 
 fn get_sender_receiver(packet: &ParsedPacket) -> (SourceDestination, Vec<String>) {
@@ -375,7 +408,8 @@ fn main() {
             stop_sniffing,
             get_interfaces_list,
             generate_report,
-            select_interface
+            select_interface,
+            get_packets
         ])
         .run(tauri::generate_context!())
         .expect("Error while running tauri application");

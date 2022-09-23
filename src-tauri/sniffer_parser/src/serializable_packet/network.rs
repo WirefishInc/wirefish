@@ -1,15 +1,15 @@
 use std::net::{Ipv4Addr, Ipv6Addr};
 
+use pnet::packet::Packet;
 use pnet::packet::arp::{ArpOperations, ArpPacket};
 use pnet::packet::ipv4::Ipv4Packet;
 use pnet::packet::ipv6::Ipv6Packet;
-use pnet::packet::Packet;
 use pnet::util::MacAddr;
 use serde::Serialize;
 
 /// ARP Packet Representation
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct SerializableArpPacket {
     pub hardware_type: String,
     pub protocol_type: u16,
@@ -20,7 +20,7 @@ pub struct SerializableArpPacket {
     pub sender_proto_addr: Ipv4Addr,
     pub target_hw_addr: MacAddr,
     pub target_proto_addr: Ipv4Addr,
-    pub payload: Vec<u8>,
+    pub length: usize,
 }
 
 impl<'a> From<&ArpPacket<'a>> for SerializableArpPacket {
@@ -39,14 +39,14 @@ impl<'a> From<&ArpPacket<'a>> for SerializableArpPacket {
             sender_proto_addr: packet.get_sender_proto_addr(),
             target_hw_addr: packet.get_target_hw_addr(),
             target_proto_addr: packet.get_target_proto_addr(),
-            payload: packet.payload().to_vec(),
+            length: packet.payload().len(),
         }
     }
 }
 
 /// IPv6 Packet Representation
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct SerializableIpv6Packet {
     pub version: u8,
     pub traffic_class: u8,
@@ -56,7 +56,7 @@ pub struct SerializableIpv6Packet {
     pub hop_limit: u8,
     pub source: Ipv6Addr,
     pub destination: Ipv6Addr,
-    pub payload: Vec<u8>,
+    pub length: usize,
 }
 
 impl<'a> From<&Ipv6Packet<'a>> for SerializableIpv6Packet {
@@ -74,14 +74,14 @@ impl<'a> From<&Ipv6Packet<'a>> for SerializableIpv6Packet {
             hop_limit: packet.get_hop_limit(),
             source: packet.get_source(),
             destination: packet.get_destination(),
-            payload: packet.payload().to_vec(),
+            length: packet.payload().len(),
         }
     }
 }
 
 /// IPv4 Packet Representation
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct SerializableIpv4Packet {
     pub version: u8,
     pub header_length: u8,
@@ -96,7 +96,7 @@ pub struct SerializableIpv4Packet {
     pub checksum: u16,
     pub source: Ipv4Addr,
     pub destination: Ipv4Addr,
-    pub payload: Vec<u8>,
+    pub length: usize,
 }
 
 impl<'a> From<&Ipv4Packet<'a>> for SerializableIpv4Packet {
@@ -119,7 +119,7 @@ impl<'a> From<&Ipv4Packet<'a>> for SerializableIpv4Packet {
             checksum: packet.get_checksum(),
             source: packet.get_source(),
             destination: packet.get_destination(),
-            payload: packet.payload().to_vec(),
+            length: packet.payload().len(),
         }
     }
 }

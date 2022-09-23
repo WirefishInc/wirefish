@@ -17,7 +17,7 @@ use tls_parser::{
 };
 use x509_parser::{parse_x509_certificate, prelude::X509Certificate};
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 #[serde(tag = "type", content = "content")]
 pub enum HttpContentType {
     TextCorrectlyDecoded(String),
@@ -33,7 +33,7 @@ pub enum HttpContentType {
 
 /// HTTP Request Packet Representation
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct SerializableHttpRequestPacket {
     pub method: String,
     pub path: String,
@@ -67,7 +67,7 @@ impl<'a, 'b> SerializableHttpRequestPacket {
 
 /// HTTP Response Packet Representation
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct SerializableHttpResponsePacket {
     pub version: u8,
     pub code: u16,
@@ -101,14 +101,14 @@ impl<'a, 'b> SerializableHttpResponsePacket {
 
 /// TLS Packet Representation
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 #[serde(tag = "type", content = "error")]
 pub enum TlsMalformedError {
     LengthTooLarge(String),
     UnknownRecord(String),
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct SerializableTlsPacket {
     pub version: String,
     pub messages: Vec<CustomTlsMessage>,
@@ -143,7 +143,7 @@ impl Default for SerializableTlsPacket {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 #[serde(tag = "type")]
 pub enum CustomTlsMessage {
     ChangeCipherSpec,
@@ -156,7 +156,7 @@ pub enum CustomTlsMessage {
     Malformed(CustomMalformedMessage),
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 #[serde(tag = "subType", content = "content")]
 pub enum CustomHandshakeMessage {
     ClientHello(ClientHelloMessage),
@@ -178,7 +178,7 @@ pub enum CustomHandshakeMessage {
     ServerKeyExchange(ServerKeyExchangeMessage),
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct CustomAlertMessage {
     pub severity: String,
     pub description: String,
@@ -193,7 +193,7 @@ impl CustomAlertMessage {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct CustomHeartbeatMessage {
     pub heartbeat_type: String,
     pub payload: Vec<u8>,
@@ -210,7 +210,7 @@ impl CustomHeartbeatMessage {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct ClientHelloMessage {
     pub version: String,
     pub rand_time: u32,
@@ -420,7 +420,7 @@ fn parse_signature_algorithm(data: &u16) -> String {
     .to_owned()
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct ServerHelloMessage {
     pub version: String,
     pub rand_time: u32,
@@ -448,7 +448,7 @@ impl ServerHelloMessage {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct Certificate {
     pub signature_algorithm: String,
     pub signature_value: Vec<u8>,
@@ -489,7 +489,7 @@ impl Certificate {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct CertificateMessage {
     pub certificates: Vec<Certificate>,
 }
@@ -514,7 +514,7 @@ impl CertificateMessage {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct CertificateRequestMessage {
     pub sig_hash_algos: Vec<u16>,
 }
@@ -532,7 +532,7 @@ impl CertificateRequestMessage {
 }
 
 // TODO: CertificateStatusMessage
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct CertificateStatusMessage {
     pub status_type: String,
     pub data: Vec<u8>,
@@ -550,7 +550,7 @@ impl CertificateStatusMessage {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct CertificateVerifyMessage {
     pub data: Vec<u8>,
 }
@@ -563,7 +563,7 @@ impl CertificateVerifyMessage {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 #[serde(tag = "type", content = "parameters")]
 pub enum ClientParameters {
     Dh(ServerDhParameters),
@@ -572,7 +572,7 @@ pub enum ClientParameters {
     Unknown(Vec<u8>),
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct ClientEcdhParameters {
     pub point: Vec<u8>,
 }
@@ -585,7 +585,7 @@ impl ClientEcdhParameters {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct ClientKeyExchangeMessage {
     pub parameters: ClientParameters,
 }
@@ -620,7 +620,7 @@ impl ClientKeyExchangeMessage {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct FinishedMessage {
     pub data: Vec<u8>,
 }
@@ -633,7 +633,7 @@ impl FinishedMessage {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct HelloRetryRequestMessage {
     pub cipher: String,
     pub extensions: Vec<String>,
@@ -653,7 +653,7 @@ impl HelloRetryRequestMessage {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct NewSessionTicketMessage {
     pub ticket: Vec<u8>,
     pub ticket_lifetime_hint: u32,
@@ -668,7 +668,7 @@ impl NewSessionTicketMessage {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct NextProtocolMessage {
     pub selected_protocol: Vec<u8>,
     pub padding: Vec<u8>,
@@ -683,7 +683,7 @@ impl NextProtocolMessage {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct ServerDoneMessage {
     pub data: Vec<u8>,
 }
@@ -696,7 +696,7 @@ impl ServerDoneMessage {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct ServerHelloV13Draft18Message {
     pub version: String,
     pub random: Vec<u8>,
@@ -718,7 +718,7 @@ impl ServerHelloV13Draft18Message {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 #[serde(tag = "type", content = "parameters")]
 pub enum ServerParameters {
     Dh(ServerDhParameters),
@@ -727,7 +727,7 @@ pub enum ServerParameters {
     Unknown(Vec<u8>),
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct ServerEcdhParameters {
     pub public_point: Vec<u8>,
     pub curve: ServerEcParameters,
@@ -742,7 +742,7 @@ impl ServerEcdhParameters {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct ServerDhParameters {
     pub prime_modulus: Vec<u8>,
     pub generator: Vec<u8>,
@@ -759,14 +759,14 @@ impl ServerDhParameters {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 #[serde(tag = "type", content = "content")]
 pub enum CustomEcContent {
     ExplicitPrime(CustomExplicitPrime),
     NamedGroup(CustomNamedGroup),
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct CustomNamedGroup {
     pub group: String,
 }
@@ -779,7 +779,7 @@ impl CustomNamedGroup {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct CustomExplicitPrime {
     pub prime_p: Vec<u8>,
     pub curve: (Vec<u8>, Vec<u8>),
@@ -800,7 +800,7 @@ impl CustomExplicitPrime {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct ServerEcParameters {
     pub ec_type: String,
     pub ec_content: CustomEcContent,
@@ -822,7 +822,7 @@ impl ServerEcParameters {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct ServerKeyExchangeMessage {
     pub parameters: ServerParameters,
 }
@@ -853,7 +853,7 @@ impl ServerKeyExchangeMessage {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct CustomEncryptedMessage {
     pub version: String,
     pub message_type: String,
@@ -870,7 +870,7 @@ impl CustomEncryptedMessage {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct CustomApplicationDataMessage {
     pub data: Vec<u8>,
 }
@@ -883,7 +883,7 @@ impl CustomApplicationDataMessage {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct CustomMalformedMessage {
     pub version: String,
     pub message_type: String,
@@ -915,7 +915,7 @@ impl CustomMalformedMessage {
 
 /// DNS Packet Rapresentation
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct SerializableDnsPacket {
     pub header: CustomDnsHeader,
     pub questions: Vec<CustomQuestion>,
@@ -952,7 +952,7 @@ impl<'a> From<&DnsPacket<'a>> for SerializableDnsPacket {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct CustomQuestion {
     pub query_name: String,
     pub prefer_unicast: bool,
@@ -971,7 +971,7 @@ impl From<&Question<'_>> for CustomQuestion {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct CustomDnsHeader {
     pub id: u16,
     pub query: bool,
@@ -1010,7 +1010,7 @@ impl From<&DnsHeader> for CustomDnsHeader {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct CustomResourceRecord {
     pub name: String,
     pub multicast_unique: bool,
@@ -1031,7 +1031,7 @@ impl From<&ResourceRecord<'_>> for CustomResourceRecord {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 #[serde(tag = "type")]
 pub enum CustomResourceData {
     A(A),
@@ -1092,34 +1092,34 @@ impl From<&RData<'_>> for CustomResourceData {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct A {
     pub address: Ipv4Addr,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct Aaaa {
     pub address: Ipv6Addr,
 }
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct Cname {
     pub name: String,
 }
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct Mx {
     pub preference: u16,
     pub exchange: String,
 }
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct Ns {
     pub name: String,
 }
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct Ptr {
     pub name: String,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct Soa {
     pub primary_ns: String,
     pub mailbox: String,
@@ -1130,7 +1130,7 @@ pub struct Soa {
     pub minimum_ttl: u32,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct Srv {
     pub priority: u16,
     pub weight: u16,
@@ -1138,12 +1138,12 @@ pub struct Srv {
     pub target: String,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct Txt {
     pub data: Vec<u8>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct Unknown {
     pub data: Vec<u8>,
 }

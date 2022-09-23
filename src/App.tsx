@@ -92,7 +92,7 @@ function App() {
 
     // @ts-ignore
     const separator = window.__TAURI__.path.sep;
-    const REPORT_GENERATION_SECONDS = 30;
+    const REPORT_GENERATION_SECONDS = 300000;
     const INITIAL_REPORT_NAME = "report";
     const INITIAL_REPORT_FOLDER = `.${separator}report${separator}`;
     const resetFeedback = {text: "", isError: false, duration: 0};

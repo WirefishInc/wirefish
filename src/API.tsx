@@ -1,4 +1,5 @@
-import {invoke} from '@tauri-apps/api';
+import { invoke } from '@tauri-apps/api';
+import { GeneralPacket } from "./types/sniffing";
 
 async function startSniffing() {
     return invoke('start_sniffing')
@@ -20,12 +21,17 @@ async function generateReport(reportPath: string, firstGeneration: boolean): Pro
     return invoke('generate_report', {reportPath, firstGeneration})
 }
 
+async function getPackets(start: number, end: number): Promise<GeneralPacket[]> {
+    return invoke('get_packets', {start, end})
+}
+
 const API = {
     startSniffing,
     stopSniffing,
     getInterfacesList,
     selectInterface,
-    generateReport
+    generateReport,
+    getPackets
 };
 
 export default API;
