@@ -27,6 +27,7 @@ import ToggleButton from "./components/ToggleButton";
 import {DnsFields, Fields, TlsFields} from "./components/Fields";
 import HewViewer from "./components/HexViewer";
 import Filters from "./components/Filters";
+import { appWindow, WebviewWindow } from '@tauri-apps/api/window'
 
 const darkTheme = createTheme({
     palette: {
@@ -187,12 +188,11 @@ function App() {
                 });
             }
 
-            /* Packet reception event */
-            window.AwesomeEvent.listen("packet_received", (packet: any) => {
-                setCapturedPackets(packets => {
-                    return [...packets, new GeneralPacket(packets.length, packet)];
-                });
+            const unlisten = await appWindow.listen('packet_received', (packet: any) => {
+                console.log("Received!");
             });
+
+            return () => unlisten();
         };
 
         setup();

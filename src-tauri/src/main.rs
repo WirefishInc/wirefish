@@ -20,11 +20,10 @@ use report::{
     write_report,
 };
 use std::collections::HashMap;
-use tauri::{Manager, Window, Wry};
+use tauri::{Window, Wry};
 
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
-use tauri_awesome_rpc::{AwesomeEmit, AwesomeRpc};
 
 use sniffer_parser::{
     cleanup_sniffing_state, parse_ethernet_frame,
@@ -217,9 +216,7 @@ fn start_sniffing(
                             })
                             .or_insert(PacketExchange::new(protocols, transmitted_bytes, now));
 
-                        window
-                            .state::<AwesomeEmit>()
-                            .emit("main", "packet_received", ());
+                        let _result = window.emit("packet_received", ());
 
                         println!("counter: {}", counter);
                         counter += 1;
@@ -259,7 +256,7 @@ fn get_packets(
 
     if start > packets.len() {
         return Err(SniffingError::GetPacketsIndexNotValid(
-            "The indexes are not valid".to_owned()
+            "The indexes are not valid".to_owned(),
         ));
     }
 
@@ -394,14 +391,7 @@ fn main() {
         })
         .init();
 
-    let awesome_rpc = AwesomeRpc::new(vec!["tauri://localhost", "http://localhost:*"]);
-
     tauri::Builder::default()
-        .invoke_system(awesome_rpc.initialization_script(), AwesomeRpc::responder())
-        .setup(move |app| {
-            awesome_rpc.start(app.handle());
-            Ok(())
-        })
         .manage(SniffingState::new())
         .invoke_handler(tauri::generate_handler![
             start_sniffing,
