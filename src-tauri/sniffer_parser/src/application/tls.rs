@@ -361,7 +361,7 @@ mod tests {
     use crate::serializable_packet::{
         application::{
             ClientParameters, CustomEcContent, CustomHandshakeMessage, CustomTlsMessage,
-            ServerParameters, TlsMalformedError,
+            ServerParameters, TlsMalformedError, parse_custom_tls_extensions,
         },
         ParsedPacket, SerializablePacket,
     };
@@ -546,14 +546,13 @@ mod tests {
                                 format!("{:?}", message.compression)
                             );
 
-                            assert_eq!(
-                                new_message.extensions,
-                                match parse_tls_extensions(message.ext.unwrap_or(b"")) {
-                                    Ok((_, exts)) =>
-                                        exts.iter().map(|x| format!("{:?}", x)).collect(),
-                                    Err(_) => vec!["Error parsing".to_owned()],
-                                }
-                            );
+                            match parse_tls_extensions(message.ext.unwrap_or(b"")) {
+                                Ok((_, exts)) => assert_eq!(
+                                    new_message.extensions,
+                                    parse_custom_tls_extensions(exts)
+                                ),
+                                _ => unreachable!(),
+                            }
                         }
                         _ => unreachable!(),
                     },
@@ -758,9 +757,7 @@ mod tests {
                             match parse_tls_extensions(message.ext.unwrap_or(b"")) {
                                 Ok((_, exts)) => assert_eq!(
                                     new_message.extensions,
-                                    exts.iter()
-                                        .map(|x| format!("{:?}", x))
-                                        .collect::<Vec<String>>()
+                                    parse_custom_tls_extensions(exts)
                                 ),
                                 _ => unreachable!(),
                             }

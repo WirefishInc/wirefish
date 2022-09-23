@@ -238,7 +238,7 @@ impl ClientHelloMessage {
     }
 }
 
-fn parse_custom_tls_extensions(exts: Vec<TlsExtension>) -> Vec<String> {
+pub(crate) fn parse_custom_tls_extensions(exts: Vec<TlsExtension>) -> Vec<String> {
     let mut new_extensions = vec![];
 
     for ext in exts {
