@@ -27,7 +27,7 @@ import ToggleButton from "./components/ToggleButton";
 import {DnsFields, Fields, TlsFields} from "./components/Fields";
 import HewViewer from "./components/HexViewer";
 import Filters from "./components/Filters";
-import { appWindow, WebviewWindow } from '@tauri-apps/api/window'
+import {appWindow} from '@tauri-apps/api/window'
 
 const darkTheme = createTheme({
     palette: {
@@ -105,6 +105,8 @@ function App() {
     let [currentInterface, setCurrentInterface] = useState<string>("");
     let [sniffingStatus, setSniffingStatus] = useState<SniffingStatus>(SniffingStatus.Inactive);
     let [capturedPackets, setCapturedPackets] = useState<GeneralPacket[]>([]);
+    let [packetCount, setPacketCount] = useState<number>(0);
+    const [pageState, setPageState] = useState<number>(1);
     let [reportUpdateTime, setReportUpdateTime] = useState<number>(REPORT_GENERATION_SECONDS);
     let [reportFileName, setReportFileName] = useState<string>(INITIAL_REPORT_NAME);
     let [reportFolder, setReportFolder] = useState<string>(INITIAL_REPORT_FOLDER);
@@ -189,7 +191,7 @@ function App() {
             }
 
             const unlisten = await appWindow.listen('packet_received', (packet: any) => {
-                console.log("Received!");
+                setPacketCount((old) => old + 1)
             });
 
             return () => unlisten();
@@ -197,6 +199,24 @@ function App() {
 
         setup();
     }, []);
+
+    useEffect(() => {
+        const fetchData = async () => {
+
+            try {
+                let response: any[] = await API.getPackets((pageState - 1) * 100, (pageState - 1) * 100 + 100);
+                let packets = response.map((p, index) => new GeneralPacket((pageState - 1) * 100 + index, p))
+                setCapturedPackets(packets)
+            } catch (e: any) {
+                setFeedbackMessage({
+                    isError: true,
+                    duration: 8000,
+                    text: e.error
+                });
+            }
+        }
+        fetchData()
+    }, [pageState, packetCount])
 
     const generateReport = async () => {
         try {
@@ -479,10 +499,20 @@ function App() {
 
                 <Grid xs={12} item={true}>
                     <DataGrid className={"grid"}
-                              rows={capturedPackets.filter(packetFilter)} rowHeight={40} columns={columns}
+                              rows={capturedPackets.filter(packetFilter)}
+                              rowHeight={40} columns={columns}
                               onCellClick={(ev) => {
                                   setSelectedPacket(ev.row)
                                   handleOpen();
+                              }}
+                              rowCount={packetCount / 2} // TODO: beacuase of STRICT MODE
+                              rowsPerPageOptions={[100]}
+                              pageSize={100}
+                              pagination
+                              page={pageState - 1}
+                              paginationMode="server"
+                              onPageChange={(newPage) => {
+                                  setPageState(newPage + 1)
                               }}
                     />
                 </Grid>

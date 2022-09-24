@@ -3,17 +3,6 @@ import {EthernetPacket, UnknownLinkPacket} from "./serializable_packets/link";
 import {ArpPacket, Ipv4Packet, Ipv6Packet} from "./serializable_packets/network";
 import {DnsPacket, HttpRequestPacket, HttpResponsePacket, TlsPacket} from "./serializable_packets/application";
 
-/* TODO
-* -------- Add type and version fields in Encrypted
-* -------- Add Malformed in case switch and unknown (new) in default
-* -------- Add TLS MALFORMED PACKET
-* -------- Cipher and Compression missing server hello
-* -------- Frontend error handling
-* Filters management (&&/||)
-* -------- Http Response Image Converting
-* Improve performance (display only few packets)
-*/
-
 export enum SniffingStatus {
     Inactive,
     Paused,
