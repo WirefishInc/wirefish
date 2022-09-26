@@ -201,38 +201,26 @@ function App() {
         const fetchData = async () => {
 
             try {
-                let parameters: any = filter;
+                let filter_name: any[] = [];
+                let filter_value: any[] = [];
 
-                /* if (filterEnabled) {
-                    parameters = filter.src_ip ?
-                        Object.assign({}, filter, {src_ip: srcIpForm}) :
-                        Object.assign({}, filter, {src_ip: ""})
+                if (filterEnabled) {
+                    filter_name = Object.entries(filter);
 
-                    parameters = filter.dst_ip ?
-                        Object.assign({}, filter, {dst_ip: dstIpForm}) :
-                        Object.assign({}, filter, {dst_ip: ""})
-
-                    parameters = filter.src_mac ?
-                        Object.assign({}, filter, {src_mac: srcMacForm}) :
-                        Object.assign({}, filter, {src_mac: ""})
-
-                    parameters = filter.dst_mac ?
-                        Object.assign({}, filter, {dst_mac: dstMacForm}) :
-                        Object.assign({}, filter, {dst_mac: ""})
-
-                    parameters = filter.src_port ?
-                        Object.assign({}, filter, {src_port: srcPortForm}) :
-                        Object.assign({}, filter, {src_port: ""})
-
-                    parameters = filter.dst_port ?
-                        Object.assign({}, filter, {dst_port: dstPortForm}) :
-                        Object.assign({}, filter, {dst_port: ""})
-                } */
-
+                    filter_value.push(["src_ip", srcIpForm])
+                    filter_value.push(["dst_ip", dstIpForm])
+                    filter_value.push(["src_mac", srcMacForm])
+                    filter_value.push(["dst_mac", dstMacForm])
+                    filter_value.push(["src_port", srcPortForm])
+                    filter_value.push(["dst_port", dstPortForm])
+                }
+                console.log(filter_name)
+                console.log(filter_value)
                 let response: any[] = await API.getPackets(
                     (pageState - 1) * 100,
                     (pageState - 1) * 100 + 100,
-                    [["src_ip", true]]);
+                    filter_name,
+                    filter_value);
 
                 let packets = response.map((p, index) => new GeneralPacket((pageState - 1) * 100 + index, p))
                 setCapturedPackets(packets)
@@ -271,7 +259,8 @@ function App() {
         srcMacForm,
         dstMacForm,
         srcPortForm,
-        dstPortForm])
+        dstPortForm,
+        filterEnabled])
 
     const generateReport = async () => {
         try {
@@ -372,21 +361,6 @@ function App() {
         if (sniffingStatus !== SniffingStatus.Active) return;
 
         try {
-            try {
-                setCapturedPackets([]);
-                let response = await API.filterBySourceIP("192.168.122.49", 0, 10);
-                let packets = response.map((p, index) => new GeneralPacket(index, p))
-                setCapturedPackets(packets)
-
-            } catch (e: any) {
-                console.log(e);
-                setFeedbackMessage({
-                    isError: true,
-                    duration: 8000,
-                    text: e
-                });
-            }
-
             await API.stopSniffing(false);
 
             setActionLoading("pause");
