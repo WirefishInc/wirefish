@@ -22,8 +22,7 @@ interface FiltersProps {
     setSrcMacForm: any,
     setDstMacForm: any,
     setSrcPortForm: any,
-    setDstPortForm: any,
-    setInfoForm: any
+    setDstPortForm: any
 }
 
 const Filters: FC<FiltersProps> = ({
@@ -36,8 +35,7 @@ const Filters: FC<FiltersProps> = ({
                                        setDstPortForm,
                                        setSrcMacForm,
                                        setSrcPortForm,
-                                       setSrcIpForm,
-                                       setInfoForm
+                                       setSrcIpForm
                                    }) => {
 
     return (
@@ -350,23 +348,6 @@ const Filters: FC<FiltersProps> = ({
                                                                      onChange={(s) => setDstPortForm(s.target.value)}
                                                                      id="dst_port" label="DESTINATION PORT"
                                                                      variant="standard"/>
-                                                      </>
-                                                  }
-                                                  label=""
-                                />
-                                <FormControlLabel className={"text-field"}
-                                                  control={
-                                                      <>
-                                                          <Checkbox disabled={!enabled} checked={filter.info}
-                                                                    onChange={(ev) => {
-                                                                        if (ev.target.checked)
-                                                                            setFilter((f: any) => Object.assign({}, f, {info: true}));
-                                                                        else
-                                                                            setFilter((f: any) => Object.assign({}, f, {info: false}));
-                                                                    }} name="info"/>
-                                                          <TextField disabled={!enabled}
-                                                                     onChange={(s) => setInfoForm(s.target.value)}
-                                                                     id="info" label="Packet Info" variant="standard"/>
                                                       </>
                                                   }
                                                   label=""

@@ -1,5 +1,5 @@
-import { invoke } from '@tauri-apps/api';
-import { GeneralPacket } from "./types/sniffing";
+import {invoke} from '@tauri-apps/api';
+import {GeneralPacket} from "./types/sniffing";
 
 async function startSniffing() {
     return invoke('start_sniffing')
@@ -21,8 +21,8 @@ async function generateReport(reportPath: string, firstGeneration: boolean): Pro
     return invoke('generate_report', {reportPath, firstGeneration})
 }
 
-async function getPackets(start: number, end: number): Promise<GeneralPacket[]> {
-    return invoke('get_packets', {start, end})
+async function getPackets(start: number, end: number, parameters: any): Promise<GeneralPacket[]> {
+    return invoke('get_packets', {start, end, parameters})
 }
 
 async function filterBySourceIP(sourceIp: string, start: number, end: number): Promise<GeneralPacket[]> {

@@ -129,7 +129,6 @@ function App() {
     let [dstMacForm, setDstMacForm] = useState<string>("");
     let [srcPortForm, setSrcPortForm] = useState<string>("");
     let [dstPortForm, setDstPortForm] = useState<string>("");
-    let [infoForm, setInfoForm] = useState<string>("");
 
     let [filter, setFilter] = useState<{
         ethernet: boolean,
@@ -150,8 +149,7 @@ function App() {
         src_mac: boolean,
         dst_mac: boolean,
         src_port: boolean,
-        dst_port: boolean,
-        info: boolean
+        dst_port: boolean
     }>({
         ethernet: false,
         malformed: false,
@@ -171,8 +169,7 @@ function App() {
         src_mac: false,
         dst_mac: false,
         src_port: false,
-        dst_port: false,
-        info: false
+        dst_port: false
     });
 
     useEffect(() => {
@@ -204,9 +201,42 @@ function App() {
         const fetchData = async () => {
 
             try {
-                let response: any[] = await API.getPackets((pageState - 1) * 100, (pageState - 1) * 100 + 100);
+                let parameters: any = {};
+
+                if (filterEnabled) {
+                    parameters = filter.src_ip ?
+                        Object.assign({}, filter, {src_ip: srcIpForm}) :
+                        Object.assign({}, filter, {src_ip: ""})
+
+                    parameters = filter.dst_ip ?
+                        Object.assign({}, filter, {dst_ip: dstIpForm}) :
+                        Object.assign({}, filter, {dst_ip: ""})
+
+                    parameters = filter.src_mac ?
+                        Object.assign({}, filter, {src_mac: srcMacForm}) :
+                        Object.assign({}, filter, {src_mac: ""})
+
+                    parameters = filter.dst_mac ?
+                        Object.assign({}, filter, {dst_mac: dstMacForm}) :
+                        Object.assign({}, filter, {dst_mac: ""})
+
+                    parameters = filter.src_port ?
+                        Object.assign({}, filter, {src_port: srcPortForm}) :
+                        Object.assign({}, filter, {src_port: ""})
+
+                    parameters = filter.dst_port ?
+                        Object.assign({}, filter, {dst_port: dstPortForm}) :
+                        Object.assign({}, filter, {dst_port: ""})
+                }
+
+                let response: any[] = await API.getPackets(
+                    (pageState - 1) * 100,
+                    (pageState - 1) * 100 + 100,
+                    parameters);
+
                 let packets = response.map((p, index) => new GeneralPacket((pageState - 1) * 100 + index, p))
                 setCapturedPackets(packets)
+
             } catch (e: any) {
                 setFeedbackMessage({
                     isError: true,
@@ -216,7 +246,32 @@ function App() {
             }
         }
         fetchData()
-    }, [pageState, packetCount])
+    }, [pageState, packetCount,
+        filter.dns,
+        filter.arp,
+        filter.tls,
+        filter.udp,
+        filter.tcp,
+        filter.malformed,
+        filter.ethernet,
+        filter.unknown,
+        filter.http,
+        filter.ipv4,
+        filter.ipv6,
+        filter.src_port,
+        filter.src_mac,
+        filter.src_ip,
+        filter.dst_mac,
+        filter.dst_ip,
+        filter.dst_port,
+        filter.icmp,
+        filter.icmpv6,
+        srcIpForm,
+        dstIpForm,
+        srcMacForm,
+        dstMacForm,
+        srcPortForm,
+        dstPortForm])
 
     const generateReport = async () => {
         try {
@@ -323,7 +378,7 @@ function App() {
                 let packets = response.map((p, index) => new GeneralPacket(index, p))
                 setCapturedPackets(packets)
 
-            } catch(e: any) {
+            } catch (e: any) {
                 console.log(e);
                 setFeedbackMessage({
                     isError: true,
@@ -382,57 +437,6 @@ function App() {
         if (sniffingStatus === SniffingStatus.Paused) await resumeSniffing();
         else if (sniffingStatus === SniffingStatus.Active) await pauseSniffing();
         setActionLoading("");
-    }
-
-    const packetFilter = (packet: GeneralPacket) => {
-        let condition = !filterEnabled;
-
-        if (filterEnabled) {
-            if (filter.unknown)
-                condition = condition || packet.layers.includes("Unknown");
-            if (filter.malformed)
-                condition = condition || packet.layers.includes("Malformed");
-            if (filter.ethernet)
-                condition = condition || packet.layers.includes("Ethernet");
-            if (filter.tcp)
-                condition = condition || packet.layers.includes("TCP");
-            if (filter.udp)
-                condition = condition || packet.layers.includes("UDP");
-            if (filter.icmp)
-                condition = condition || packet.layers.includes("ICMP")
-                    || packet.layers.includes("Echo Reply") || packet.layers.includes("Echo Request");
-            if (filter.icmpv6)
-                condition = condition || packet.layers.includes("ICMPv6")
-                    || packet.layers.includes("Echo Reply") || packet.layers.includes("Echo Request");
-            if (filter.http)
-                condition = condition || packet.layers.includes("HTTP");
-            if (filter.tls)
-                condition = condition || packet.layers.includes("TLS");
-            if (filter.ipv4)
-                condition = condition || packet.layers.includes("IPv4");
-            if (filter.ipv6)
-                condition = condition || packet.layers.includes("IPv6");
-            if (filter.dns)
-                condition = condition || packet.layers.includes("DNS");
-            if (filter.arp)
-                condition = condition || packet.layers.includes("ARP");
-            if (filter.src_ip)
-                condition = condition || packet.sourceIP === srcIpForm
-            if (filter.dst_ip)
-                condition = condition || packet.destinationIP === dstIpForm
-            if (filter.src_mac)
-                condition = condition || packet.sourceMAC === srcMacForm
-            if (filter.dst_mac)
-                condition = condition || packet.destinationMAC === dstMacForm
-            if (filter.src_port)
-                condition = condition || (packet.sourcePort !== null && packet.sourcePort.toString() === srcPortForm)
-            if (filter.dst_port)
-                condition = condition || (packet.destinationPort !== null && packet.destinationPort.toString() === dstPortForm)
-            if (filter.info)
-                condition = condition || packet.info.toLowerCase().includes(infoForm.toLowerCase())
-        }
-
-        return condition;
     }
 
     return (
@@ -508,13 +512,13 @@ function App() {
                          setSrcIpForm={setSrcIpForm} setDstIpForm={setDstIpForm}
                          setSrcMacForm={setSrcMacForm} setDstMacForm={setDstMacForm}
                          setSrcPortForm={setSrcPortForm} setDstPortForm={setDstPortForm}
-                         setInfoForm={setInfoForm} enabled={filterEnabled} setEnabled={setFilterEnabled}/>
+                         enabled={filterEnabled} setEnabled={setFilterEnabled}/>
 
                 {/* Sniffing Results */}
 
                 <Grid xs={12} item={true}>
                     <DataGrid className={"grid"}
-                              rows={capturedPackets.filter(packetFilter)}
+                              rows={capturedPackets}
                               rowHeight={40} columns={columns}
                               onCellClick={(ev) => {
                                   setSelectedPacket(ev.row)
