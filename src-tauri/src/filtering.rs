@@ -32,7 +32,7 @@ mod FilterNamesValues {
     #[derive(Serialize, Deserialize)]
     pub struct Filter<'a> {
         pub name: &'a str,
-        pub value: &'a str,
+        pub value: bool,
     }
 }
 
@@ -232,7 +232,8 @@ fn get_slice(
 pub fn get_packets(
     start: usize,
     end: usize,
-    filters: Vec<Filter>,
+    filters_type: Vec<(String, bool)>,
+    filters_value: Vec<(String, String)>,
     state: tauri::State<SniffingState>,
 ) -> Result<Vec<ParsedPacket>, SniffingError> {
     let packets_collection = state.packets.lock().unwrap();
@@ -245,7 +246,7 @@ pub fn get_packets(
 
     let mut filtered_packets : &[Arc<ParsedPacket>] = &[];
 
-    for filter in filters {
+    /* for filter in filters {
         match filter {
             /* Filter {
                 name: FilterNamesValues::ETHERNET,
@@ -257,7 +258,7 @@ pub fn get_packets(
                 name: FilterNamesValues::SRC_IP,
                 value: source_ip,
             } => {
-                if !source_ip.is_empty() {
+                /* if !source_ip.is_empty() {
                     filtered_packets = apply_filter(
                         source_ip.to_owned(),
                         &packets_collection.source_ip_index,
@@ -266,11 +267,11 @@ pub fn get_packets(
                     );
 
 
-                }
+                } */
             }
             _ => (),
         }
-    }
+    } */
 
     return Ok(filtered_packets
         .iter()

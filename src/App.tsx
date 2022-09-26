@@ -201,9 +201,9 @@ function App() {
         const fetchData = async () => {
 
             try {
-                let parameters: any = {};
+                let parameters: any = filter;
 
-                if (filterEnabled) {
+                /* if (filterEnabled) {
                     parameters = filter.src_ip ?
                         Object.assign({}, filter, {src_ip: srcIpForm}) :
                         Object.assign({}, filter, {src_ip: ""})
@@ -227,12 +227,12 @@ function App() {
                     parameters = filter.dst_port ?
                         Object.assign({}, filter, {dst_port: dstPortForm}) :
                         Object.assign({}, filter, {dst_port: ""})
-                }
+                } */
 
                 let response: any[] = await API.getPackets(
                     (pageState - 1) * 100,
                     (pageState - 1) * 100 + 100,
-                    parameters);
+                    [["src_ip", true]]);
 
                 let packets = response.map((p, index) => new GeneralPacket((pageState - 1) * 100 + index, p))
                 setCapturedPackets(packets)
@@ -241,7 +241,7 @@ function App() {
                 setFeedbackMessage({
                     isError: true,
                     duration: 8000,
-                    text: e.error
+                    text: e
                 });
             }
         }
