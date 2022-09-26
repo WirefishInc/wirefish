@@ -1,12 +1,22 @@
 use std::{collections::BTreeMap, sync::Arc};
 
-use sniffer_parser::serializable_packet::ParsedPacket;
+use sniffer_parser::serializable_packet::{ParsedPacket, SerializablePacket};
 
 use crate::{SniffingError, SniffingState};
 
 pub struct PacketsCollection {
     pub packets: Vec<Arc<ParsedPacket>>,
     pub source_ip_index: BTreeMap<String, Vec<Arc<ParsedPacket>>>,
+    pub tcp_packets: Vec<Arc<ParsedPacket>>,
+    pub udp_packets: Vec<Arc<ParsedPacket>>,
+    pub icmp_packets: Vec<Arc<ParsedPacket>>,
+    pub icmpv6_packets: Vec<Arc<ParsedPacket>>,
+    pub http_packets: Vec<Arc<ParsedPacket>>,
+    pub tls_packets: Vec<Arc<ParsedPacket>>,
+    pub ipv4_packets: Vec<Arc<ParsedPacket>>,
+    pub ipv6_packets: Vec<Arc<ParsedPacket>>,
+    pub dns_packets: Vec<Arc<ParsedPacket>>,
+    pub arp_packets: Vec<Arc<ParsedPacket>>,
 }
 
 impl PacketsCollection {
@@ -14,8 +24,112 @@ impl PacketsCollection {
         PacketsCollection {
             packets: vec![],
             source_ip_index: BTreeMap::new(),
+            tcp_packets: vec![],
+            udp_packets: vec![],
+            icmp_packets: vec![],
+            icmpv6_packets: vec![],
+            http_packets: vec![],
+            tls_packets: vec![],
+            ipv4_packets: vec![],
+            ipv6_packets: vec![],
+            dns_packets: vec![],
+            arp_packets: vec![]
         }
     }
+}
+
+pub fn contains_tcp(packet: Arc<ParsedPacket>) -> bool {
+    if let Some(SerializablePacket::TcpPacket(_)) =
+    packet.get_transport_layer_packet() {
+        return true;
+    }
+
+    return false;
+}
+
+pub fn contains_udp(packet: Arc<ParsedPacket>) -> bool {
+    if let Some(SerializablePacket::UdpPacket(_)) =
+    packet.get_transport_layer_packet() {
+        return true;
+    }
+
+    return false;
+}
+
+pub fn contains_icmp(packet: Arc<ParsedPacket>) -> bool {
+    if let Some(SerializablePacket::IcmpPacket(_)) |
+    Some(SerializablePacket::EchoReplyPacket(_)) |
+    Some(SerializablePacket::EchoRequestPacket(_)) =
+
+    packet.get_transport_layer_packet() {
+        return true;
+    }
+
+    return false;
+}
+
+pub fn contains_icmp6(packet: Arc<ParsedPacket>) -> bool {
+    if let Some(SerializablePacket::Icmpv6Packet(_)) =
+    packet.get_transport_layer_packet() {
+        return true;
+    }
+
+    return false;
+}
+
+pub fn contains_arp(packet: Arc<ParsedPacket>) -> bool {
+    if let Some(SerializablePacket::ArpPacket(_)) =
+    packet.get_network_layer_packet() {
+        return true;
+    }
+
+    return false;
+}
+
+pub fn contains_ipv6(packet: Arc<ParsedPacket>) -> bool {
+    if let Some(SerializablePacket::Ipv6Packet(_)) =
+    packet.get_network_layer_packet() {
+        return true;
+    }
+
+    return false;
+}
+
+pub fn contains_ipv4(packet: Arc<ParsedPacket>) -> bool {
+    if let Some(SerializablePacket::Ipv4Packet(_)) =
+    packet.get_network_layer_packet() {
+        return true;
+    }
+
+    return false;
+}
+
+pub fn contains_tls(packet: Arc<ParsedPacket>) -> bool {
+    if let Some(SerializablePacket::TlsPacket(_)) =
+    packet.get_application_layer_packet() {
+        return true;
+    }
+
+    return false;
+}
+
+pub fn contains_dns(packet: Arc<ParsedPacket>) -> bool {
+    if let Some(SerializablePacket::DnsPacket(_)) =
+    packet.get_application_layer_packet() {
+        return true;
+    }
+
+    return false;
+}
+
+pub fn contains_http(packet: Arc<ParsedPacket>) -> bool {
+    if let Some(SerializablePacket::HttpRequestPacket(_)) |
+    Some(SerializablePacket::HttpResponsePacket(_)) =
+    packet.get_application_layer_packet() {
+        return true;
+    }
+
+    return false;
 }
 
 fn get_slice<'a>(
@@ -46,7 +160,8 @@ pub fn get_packets(
     return Ok(get_slice(&packets_collection.packets, start, end)
         .iter()
         .map(|x| ParsedPacket::clone(&*x))
-        .collect::<Vec<ParsedPacket>>());
+        .collect()
+    );
 }
 
 #[tauri::command]
