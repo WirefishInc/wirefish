@@ -18,7 +18,7 @@ use pnet::packet::ethernet::EthernetPacket;
 use chrono::Local;
 use filtering::{
     contains_arp, contains_dns, contains_http, contains_icmp, contains_icmp6,
-    contains_ipv4, contains_ipv6, contains_tcp, contains_tls, contains_udp, filter_by_source_ip,
+    contains_ipv4, contains_ipv6, contains_tcp, contains_tls, contains_udp,
     get_packets, PacketsCollection,
 };
 use report::{
@@ -435,7 +435,6 @@ fn main() {
             generate_report,
             select_interface,
             get_packets,
-            filter_by_source_ip
         ])
         .run(tauri::generate_context!())
         .expect("Error while running tauri application");
