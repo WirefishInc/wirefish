@@ -317,6 +317,21 @@ function App() {
         if (sniffingStatus !== SniffingStatus.Active) return;
 
         try {
+            try {
+                setCapturedPackets([]);
+                let response = await API.filterBySourceIP("192.168.122.49", 0, 10);
+                let packets = response.map((p, index) => new GeneralPacket(index, p))
+                setCapturedPackets(packets)
+
+            } catch(e: any) {
+                console.log(e);
+                setFeedbackMessage({
+                    isError: true,
+                    duration: 8000,
+                    text: e
+                });
+            }
+
             await API.stopSniffing(false);
 
             setActionLoading("pause");

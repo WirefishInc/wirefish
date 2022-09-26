@@ -25,13 +25,18 @@ async function getPackets(start: number, end: number): Promise<GeneralPacket[]> 
     return invoke('get_packets', {start, end})
 }
 
+async function filterBySourceIP(sourceIp: string, start: number, end: number): Promise<GeneralPacket[]> {
+    return invoke('filter_by_source_ip', {sourceIp, start, end})
+}
+
 const API = {
     startSniffing,
     stopSniffing,
     getInterfacesList,
     selectInterface,
     generateReport,
-    getPackets
+    getPackets,
+    filterBySourceIP
 };
 
 export default API;

@@ -2,6 +2,7 @@ extern crate pnet;
 extern crate sniffer_parser;
 extern crate sudo;
 
+mod filtering;
 mod report;
 
 use dotenv;
@@ -15,6 +16,7 @@ use pnet::datalink::{self, ChannelType, Config, NetworkInterface};
 use pnet::packet::ethernet::EthernetPacket;
 
 use chrono::Local;
+use filtering::{filter_by_source_ip, get_packets, PacketsCollection};
 use report::{
     data::{PacketExchange, SourceDestination},
     write_report,
@@ -43,7 +45,7 @@ const CONFIG: Config = Config {
 
 #[derive(Serialize, Debug)]
 #[serde(tag = "type", content = "description")]
-enum SniffingError {
+pub enum SniffingError {
     InterfaceNotFound(String),
     StartSniffingWithoutInterfaceSelection(String),
     GetPacketsIndexNotValid(String),
@@ -54,11 +56,11 @@ enum SniffingError {
     ReadingChannelFailed(String),
 }
 
-struct SniffingState {
+pub struct SniffingState {
     sniffers: Arc<Mutex<HashMap<String, (Sender<()>, Receiver<SniffingError>)>>>,
     exchanged_packets: Arc<Mutex<HashMap<SourceDestination, PacketExchange>>>,
     info: Arc<Mutex<SniffingInfo>>,
-    packets: Arc<Mutex<Vec<ParsedPacket>>>,
+    packets: Arc<Mutex<PacketsCollection>>,
 }
 
 impl SniffingState {
@@ -67,7 +69,7 @@ impl SniffingState {
             sniffers: Arc::new(Mutex::new(HashMap::new())),
             exchanged_packets: Arc::new(Mutex::new(HashMap::new())),
             info: Arc::new(Mutex::new(SniffingInfo::new())),
-            packets: Arc::new(Mutex::new(vec![])),
+            packets: Arc::new(Mutex::new(PacketsCollection::new())),
         }
     }
 }
@@ -205,8 +207,18 @@ fn start_sniffing(
                             protocols.push(link_packet.ethertype.clone());
                         }
 
-                        let mut packets = packets.lock().unwrap();
-                        packets.push(new_packet);
+                        let mut packets_collection = packets.lock().unwrap();
+                        let new_packet = Arc::new(new_packet);
+
+                        // Index by Source IP
+                        packets_collection
+                            .source_ip_index
+                            .entry(sender_receiver.0.ip_source.clone())
+                            .and_modify(|packets| packets.push(Arc::clone(&new_packet)))
+                            .or_insert(vec![Arc::clone(&new_packet)]);
+
+                        // Insert packet
+                        packets_collection.packets.push(new_packet);
 
                         let mut exchanged_packets = exchanged_packets.lock().unwrap();
                         exchanged_packets
@@ -244,28 +256,6 @@ fn start_sniffing(
     }
 
     Ok(())
-}
-
-#[tauri::command]
-fn get_packets(
-    start: usize,
-    end: usize,
-    state: tauri::State<SniffingState>,
-) -> Result<Vec<ParsedPacket>, SniffingError> {
-    let packets = state.packets.lock().unwrap();
-
-    if start > packets.len() {
-        return Err(SniffingError::GetPacketsIndexNotValid(
-            "The indexes are not valid".to_owned(),
-        ));
-    }
-
-    let slice = match packets.get(start..end) {
-        Some(values) => values,
-        None => packets.get(start..).unwrap(),
-    };
-
-    return Ok(slice.to_vec());
 }
 
 fn get_sender_receiver(packet: &ParsedPacket) -> (SourceDestination, Vec<String>) {
@@ -399,7 +389,8 @@ fn main() {
             get_interfaces_list,
             generate_report,
             select_interface,
-            get_packets
+            get_packets,
+            filter_by_source_ip
         ])
         .run(tauri::generate_context!())
         .expect("Error while running tauri application");
