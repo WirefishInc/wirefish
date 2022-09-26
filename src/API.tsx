@@ -21,8 +21,8 @@ async function generateReport(reportPath: string, firstGeneration: boolean): Pro
     return invoke('generate_report', {reportPath, firstGeneration})
 }
 
-async function getPackets(start: number, end: number, filters_type: any[], filters_value: any[]): Promise<GeneralPacket[]> {
-    return invoke('get_packets', {start, end, filters_type, filters_value})
+async function getPackets(start: number, end: number, filtersType: any[], filtersValue: any[]): Promise<GeneralPacket[]> {
+    return invoke('get_packets', {start, end, filtersType, filtersValue})
 }
 
 const API = {

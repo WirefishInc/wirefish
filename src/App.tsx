@@ -207,12 +207,12 @@ function App() {
                 if (filterEnabled) {
                     filter_name = Object.entries(filter);
 
-                    filter_value.push(["src_ip", srcIpForm])
-                    filter_value.push(["dst_ip", dstIpForm])
-                    filter_value.push(["src_mac", srcMacForm])
-                    filter_value.push(["dst_mac", dstMacForm])
-                    filter_value.push(["src_port", srcPortForm])
-                    filter_value.push(["dst_port", dstPortForm])
+                    filter_value.push(["src_ip", [filter.src_ip, srcIpForm]])
+                    filter_value.push(["dst_ip", [filter.dst_ip, dstIpForm]])
+                    filter_value.push(["src_mac", [filter.src_mac, srcMacForm]])
+                    filter_value.push(["dst_mac", [filter.dst_mac, dstMacForm]])
+                    filter_value.push(["src_port", [filter.src_port, srcPortForm]])
+                    filter_value.push(["dst_port", [filter.dst_port, dstPortForm]])
                 }
                 console.log(filter_name)
                 console.log(filter_value)

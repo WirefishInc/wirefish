@@ -91,8 +91,7 @@ impl PacketsCollection {
 }
 
 pub fn contains_unknokn(packet: Arc<ParsedPacket>) -> bool {
-    if let Some(SerializablePacket::UnknownPacket(_)) =
-    packet.get_link_layer_packet() {
+    if let Some(SerializablePacket::UnknownPacket(_)) = packet.get_link_layer_packet() {
         return true;
     }
 
@@ -100,23 +99,19 @@ pub fn contains_unknokn(packet: Arc<ParsedPacket>) -> bool {
 }
 
 pub fn contains_malformed(packet: Arc<ParsedPacket>) -> bool {
-    if let Some(SerializablePacket::MalformedPacket(_)) =
-    packet.get_link_layer_packet() {
+    if let Some(SerializablePacket::MalformedPacket(_)) = packet.get_link_layer_packet() {
         return true;
     }
 
-    if let Some(SerializablePacket::MalformedPacket(_)) =
-    packet.get_network_layer_packet() {
+    if let Some(SerializablePacket::MalformedPacket(_)) = packet.get_network_layer_packet() {
         return true;
     }
 
-    if let Some(SerializablePacket::MalformedPacket(_)) =
-    packet.get_transport_layer_packet() {
+    if let Some(SerializablePacket::MalformedPacket(_)) = packet.get_transport_layer_packet() {
         return true;
     }
 
-    if let Some(SerializablePacket::MalformedPacket(_)) =
-    packet.get_application_layer_packet() {
+    if let Some(SerializablePacket::MalformedPacket(_)) = packet.get_application_layer_packet() {
         return true;
     }
 
@@ -124,8 +119,7 @@ pub fn contains_malformed(packet: Arc<ParsedPacket>) -> bool {
 }
 
 pub fn contains_ethernet(packet: Arc<ParsedPacket>) -> bool {
-    if let Some(SerializablePacket::EthernetPacket(_)) =
-    packet.get_link_layer_packet() {
+    if let Some(SerializablePacket::EthernetPacket(_)) = packet.get_link_layer_packet() {
         return true;
     }
 
@@ -217,66 +211,50 @@ pub fn contains_http(packet: Arc<ParsedPacket>) -> bool {
     return false;
 }
 
-fn get_slice(
-    packets: &Vec<Arc<ParsedPacket>>,
-    start: usize,
-    end: usize,
-) -> &[Arc<ParsedPacket>] {
+fn get_slice(packets: &Vec<Arc<ParsedPacket>>, start: usize, end: usize) -> &[Arc<ParsedPacket>] {
     match packets.get(start..end) {
         Some(values) => values,
-        None => packets.get(start..).unwrap(),
+        None => packets.get(start..).unwrap_or(&[]),
     }
 }
 
 #[tauri::command]
-pub fn get_packets(
+pub fn get_packets<'a>(
     start: usize,
     end: usize,
-    filters_type: Vec<(String, bool)>,
-    filters_value: Vec<(String, String)>,
+    filters_type: Vec<(&'a str, bool)>,
+    filters_value: Vec<(&'a str, (bool, &'a str))>,
     state: tauri::State<SniffingState>,
 ) -> Result<Vec<ParsedPacket>, SniffingError> {
     let packets_collection = state.packets.lock().unwrap();
 
-    if start > packets_collection.packets.len() {
-        return Err(SniffingError::GetPacketsIndexNotValid(
-            "The indexes are not valid".to_owned(),
-        ));
-    }
+    if !filters_type.is_empty() && !filters_value.is_empty() {
+        let mut filtered_packets: &[Arc<ParsedPacket>] = &[];
 
-    let mut filtered_packets : &[Arc<ParsedPacket>] = &[];
-
-    /* for filter in filters {
-        match filter {
-            /* Filter {
-                name: FilterNamesValues::ETHERNET,
-                value: "true",
-            } => {
-                // ...
-            } */
-            Filter {
-                name: FilterNamesValues::SRC_IP,
-                value: source_ip,
-            } => {
-                /* if !source_ip.is_empty() {
+        for filter in filters_value {
+            match filter {
+                (FilterNamesValues::SRC_IP, (true, source_ip)) => {
                     filtered_packets = apply_filter(
                         source_ip.to_owned(),
                         &packets_collection.source_ip_index,
                         start,
                         end,
                     );
-
-
-                } */
+                }
+                _ => (),
             }
-            _ => (),
         }
-    } */
 
-    return Ok(filtered_packets
-        .iter()
-        .map(|x| ParsedPacket::clone(&*x))
-        .collect());
+        return Ok(filtered_packets
+            .iter()
+            .map(|x| ParsedPacket::clone(&*x))
+            .collect());
+    } else {
+        return Ok(get_slice(&packets_collection.packets, start, end)
+            .iter()
+            .map(|x| ParsedPacket::clone(&*x))
+            .collect());
+    }
 }
 
 pub fn apply_filter<'a>(
@@ -299,12 +277,6 @@ pub fn filter_by_dest_ip(
 ) -> Result<Vec<ParsedPacket>, SniffingError> {
     let packets_collection = state.packets.lock().unwrap();
 
-    if start > packets_collection.packets.len() {
-        return Err(SniffingError::GetPacketsIndexNotValid(
-            "The indexes are not valid".to_owned(),
-        ));
-    }
-
     let slice = match packets_collection.dest_ip_index.get(&dest_ip) {
         Some(values) => get_slice(values, start, end),
         None => packets_collection.packets.get(start..).unwrap(),
@@ -323,13 +295,6 @@ pub fn filter_by_source_port(
     state: tauri::State<SniffingState>,
 ) -> Result<Vec<ParsedPacket>, SniffingError> {
     let packets_collection = state.packets.lock().unwrap();
-
-    if start > packets_collection.packets.len() {
-        return Err(SniffingError::GetPacketsIndexNotValid(
-            "The indexes are not valid".to_owned(),
-        ));
-    }
-
     let slice = match packets_collection.source_port_index.get(&source_port) {
         Some(values) => get_slice(values, start, end),
         None => packets_collection.packets.get(start..).unwrap(),
@@ -349,12 +314,6 @@ pub fn filter_by_dest_port(
 ) -> Result<Vec<ParsedPacket>, SniffingError> {
     let packets_collection = state.packets.lock().unwrap();
 
-    if start > packets_collection.packets.len() {
-        return Err(SniffingError::GetPacketsIndexNotValid(
-            "The indexes are not valid".to_owned(),
-        ));
-    }
-
     let slice = match packets_collection.dest_port_index.get(&dest_port) {
         Some(values) => get_slice(values, start, end),
         None => packets_collection.packets.get(start..).unwrap(),
@@ -373,13 +332,6 @@ pub fn filter_by_source_mac(
     state: tauri::State<SniffingState>,
 ) -> Result<Vec<ParsedPacket>, SniffingError> {
     let packets_collection = state.packets.lock().unwrap();
-
-    if start > packets_collection.packets.len() {
-        return Err(SniffingError::GetPacketsIndexNotValid(
-            "The indexes are not valid".to_owned(),
-        ));
-    }
-
     let slice = match packets_collection.source_mac_index.get(&source_mac) {
         Some(values) => get_slice(values, start, end),
         None => packets_collection.packets.get(start..).unwrap(),
