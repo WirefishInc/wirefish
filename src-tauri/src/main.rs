@@ -35,6 +35,7 @@ use sniffer_parser::{
     cleanup_sniffing_state, parse_ethernet_frame,
     serializable_packet::{ParsedPacket, SerializablePacket},
 };
+use crate::filtering::{contains_ethernet, contains_malformed, contains_unknokn};
 
 const CONFIG: Config = Config {
     write_buffer_size: 16384,
@@ -206,7 +207,7 @@ fn start_sniffing(
                         let mut transmitted_bytes = 0;
                         let mut protocols: Vec<String> = sender_receiver.1;
                         if let SerializablePacket::EthernetPacket(link_packet) =
-                            new_packet.get_link_layer_packet().unwrap()
+                        new_packet.get_link_layer_packet().unwrap()
                         {
                             transmitted_bytes = link_packet.payload.len(); // TODO: Add ethernet header size
                             protocols.push(link_packet.ethertype.clone());
@@ -221,6 +222,18 @@ fn start_sniffing(
                             .entry(sender_receiver.0.ip_source.clone())
                             .and_modify(|packets| packets.push(Arc::clone(&parsed_packet)))
                             .or_insert(vec![Arc::clone(&parsed_packet)]);
+
+                        if contains_ethernet(parsed_packet.clone()) {
+                            packets_collection.ethernet_packets.push(parsed_packet.clone());
+                        }
+
+                        if contains_malformed(parsed_packet.clone()) {
+                            packets_collection.malformed_packets.push(parsed_packet.clone());
+                        }
+
+                        if contains_unknokn(parsed_packet.clone()) {
+                            packets_collection.unknown_packets.push(parsed_packet.clone());
+                        }
 
                         if contains_tcp(parsed_packet.clone()) {
                             packets_collection.tcp_packets.push(parsed_packet.clone());

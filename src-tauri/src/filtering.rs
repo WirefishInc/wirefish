@@ -7,6 +7,9 @@ use crate::{SniffingError, SniffingState};
 pub struct PacketsCollection {
     pub packets: Vec<Arc<ParsedPacket>>,
     pub source_ip_index: BTreeMap<String, Vec<Arc<ParsedPacket>>>,
+    pub ethernet_packets: Vec<Arc<ParsedPacket>>,
+    pub malformed_packets: Vec<Arc<ParsedPacket>>,
+    pub unknown_packets: Vec<Arc<ParsedPacket>>,
     pub tcp_packets: Vec<Arc<ParsedPacket>>,
     pub udp_packets: Vec<Arc<ParsedPacket>>,
     pub icmp_packets: Vec<Arc<ParsedPacket>>,
@@ -24,6 +27,9 @@ impl PacketsCollection {
         PacketsCollection {
             packets: vec![],
             source_ip_index: BTreeMap::new(),
+            unknown_packets: vec![],
+            ethernet_packets: vec![],
+            malformed_packets: vec![],
             tcp_packets: vec![],
             udp_packets: vec![],
             icmp_packets: vec![],
@@ -33,9 +39,51 @@ impl PacketsCollection {
             ipv4_packets: vec![],
             ipv6_packets: vec![],
             dns_packets: vec![],
-            arp_packets: vec![]
+            arp_packets: vec![],
         }
     }
+}
+
+pub fn contains_unknokn(packet: Arc<ParsedPacket>) -> bool {
+    if let Some(SerializablePacket::UnknownPacket(_)) =
+    packet.get_link_layer_packet() {
+        return true;
+    }
+
+    return false;
+}
+
+pub fn contains_malformed(packet: Arc<ParsedPacket>) -> bool {
+    if let Some(SerializablePacket::MalformedPacket(_)) =
+    packet.get_link_layer_packet() {
+        return true;
+    }
+
+    if let Some(SerializablePacket::MalformedPacket(_)) =
+    packet.get_network_layer_packet() {
+        return true;
+    }
+
+    if let Some(SerializablePacket::MalformedPacket(_)) =
+    packet.get_transport_layer_packet() {
+        return true;
+    }
+
+    if let Some(SerializablePacket::MalformedPacket(_)) =
+    packet.get_application_layer_packet() {
+        return true;
+    }
+
+    return false;
+}
+
+pub fn contains_ethernet(packet: Arc<ParsedPacket>) -> bool {
+    if let Some(SerializablePacket::EthernetPacket(_)) =
+    packet.get_link_layer_packet() {
+        return true;
+    }
+
+    return false;
 }
 
 pub fn contains_tcp(packet: Arc<ParsedPacket>) -> bool {
@@ -132,11 +180,11 @@ pub fn contains_http(packet: Arc<ParsedPacket>) -> bool {
     return false;
 }
 
-fn get_slice<'a>(
-    packets: &'a Vec<Arc<ParsedPacket>>,
+fn get_slice(
+    packets: &Vec<Arc<ParsedPacket>>,
     start: usize,
     end: usize,
-) -> &'a [Arc<ParsedPacket>] {
+) -> &[Arc<ParsedPacket>] {
     match packets.get(start..end) {
         Some(values) => values,
         None => packets.get(start..).unwrap(),
