@@ -6,7 +6,7 @@ mod report;
 
 use dotenv;
 use env_logger::Builder;
-use log::{error, info};
+use log::{error, info, warn};
 use serde::Serialize;
 use std::io::Write;
 
@@ -20,6 +20,7 @@ use report::{
     write_report,
 };
 use std::collections::HashMap;
+use std::rc::Rc;
 use tauri::{Window, Wry};
 
 use std::sync::mpsc::{channel, Receiver, Sender};
@@ -29,6 +30,7 @@ use sniffer_parser::{
     cleanup_sniffing_state, parse_ethernet_frame,
     serializable_packet::{ParsedPacket, SerializablePacket},
 };
+use sniffer_parser::serializable_packet::application::CustomResourceData::A;
 
 const CONFIG: Config = Config {
     write_buffer_size: 16384,
@@ -54,11 +56,12 @@ enum SniffingError {
     ReadingChannelFailed(String),
 }
 
-struct SniffingState {
+struct SniffingState<> {
     sniffers: Arc<Mutex<HashMap<String, (Sender<()>, Receiver<SniffingError>)>>>,
     exchanged_packets: Arc<Mutex<HashMap<SourceDestination, PacketExchange>>>,
     info: Arc<Mutex<SniffingInfo>>,
-    packets: Arc<Mutex<Vec<ParsedPacket>>>,
+    packets: Arc<Mutex<Vec<Arc<ParsedPacket>>>>,
+    filtered_packets: Arc<Mutex<FilteredPackets>>,
 }
 
 impl SniffingState {
@@ -68,6 +71,37 @@ impl SniffingState {
             exchanged_packets: Arc::new(Mutex::new(HashMap::new())),
             info: Arc::new(Mutex::new(SniffingInfo::new())),
             packets: Arc::new(Mutex::new(vec![])),
+            filtered_packets: Arc::new(Mutex::new(FilteredPackets::new())),
+        }
+    }
+}
+
+struct FilteredPackets {
+    tcp_packets: Vec<Arc<ParsedPacket>>,
+    udp_packets: Vec<Arc<ParsedPacket>>,
+    icmp_packets: Vec<Arc<ParsedPacket>>,
+    icmpv6_packets: Vec<Arc<ParsedPacket>>,
+    http_packets: Vec<Arc<ParsedPacket>>,
+    tls_packets: Vec<Arc<ParsedPacket>>,
+    ipv4_packets: Vec<Arc<ParsedPacket>>,
+    ipv6_packets: Vec<Arc<ParsedPacket>>,
+    dns_packets: Vec<Arc<ParsedPacket>>,
+    arp_packets: Vec<Arc<ParsedPacket>>,
+}
+
+impl FilteredPackets {
+    fn new() -> Self {
+        Self {
+            tcp_packets: vec![],
+            udp_packets: vec![],
+            icmp_packets: vec![],
+            icmpv6_packets: vec![],
+            http_packets: vec![],
+            tls_packets: vec![],
+            ipv4_packets: vec![],
+            ipv6_packets: vec![],
+            dns_packets: vec![],
+            arp_packets: vec![],
         }
     }
 }
@@ -140,6 +174,100 @@ fn select_interface(
     Ok(())
 }
 
+fn contains_tcp(packet: Arc<ParsedPacket>) -> bool {
+    if let SerializablePacket::TcpPacket(_) =
+    packet.get_transport_layer_packet().unwrap() {
+        return true;
+    }
+
+    return false;
+}
+
+fn contains_udp(packet: Arc<ParsedPacket>) -> bool {
+    if let SerializablePacket::UdpPacket(_) =
+    packet.get_transport_layer_packet().unwrap() {
+        return true;
+    }
+
+    return false;
+}
+
+fn contains_icmp(packet: Arc<ParsedPacket>) -> bool {
+    if let SerializablePacket::IcmpPacket(_) |
+    SerializablePacket::EchoReplyPacket(_) |
+    SerializablePacket::EchoRequestPacket(_) =
+
+    packet.get_transport_layer_packet().unwrap() {
+        return true;
+    }
+
+    return false;
+}
+
+fn contains_icmp6(packet: Arc<ParsedPacket>) -> bool {
+    if let SerializablePacket::Icmpv6Packet(_) =
+    packet.get_transport_layer_packet().unwrap() {
+        return true;
+    }
+
+    return false;
+}
+
+fn contains_arp(packet: Arc<ParsedPacket>) -> bool {
+    if let SerializablePacket::ArpPacket(_) =
+    packet.get_network_layer_packet().unwrap() {
+        return true;
+    }
+
+    return false;
+}
+
+fn contains_ipv6(packet: Arc<ParsedPacket>) -> bool {
+    if let SerializablePacket::Ipv6Packet(_) =
+    packet.get_network_layer_packet().unwrap() {
+        return true;
+    }
+
+    return false;
+}
+
+fn contains_ipv4(packet: Arc<ParsedPacket>) -> bool {
+    if let SerializablePacket::Ipv4Packet(_) =
+    packet.get_network_layer_packet().unwrap() {
+        return true;
+    }
+
+    return false;
+}
+
+fn contains_tls(packet: Arc<ParsedPacket>) -> bool {
+    if let SerializablePacket::TlsPacket(_) =
+    packet.get_application_layer_packet().unwrap() {
+        return true;
+    }
+
+    return false;
+}
+
+fn contains_dns(packet: Arc<ParsedPacket>) -> bool {
+    if let SerializablePacket::DnsPacket(_) =
+    packet.get_application_layer_packet().unwrap() {
+        return true;
+    }
+
+    return false;
+}
+
+fn contains_http(packet: Arc<ParsedPacket>) -> bool {
+    if let SerializablePacket::HttpRequestPacket(_) |
+    SerializablePacket::HttpResponsePacket(_) =
+    packet.get_application_layer_packet().unwrap() {
+        return true;
+    }
+
+    return false;
+}
+
 #[tauri::command]
 fn start_sniffing(
     state: tauri::State<SniffingState>,
@@ -156,7 +284,7 @@ fn start_sniffing(
 
     let interface = sniffing_state.interface.as_ref().ok_or(
         SniffingError::StartSniffingWithoutInterfaceSelection(
-            "Start sniffing without prior selection of the inteface".to_owned(),
+            "Start sniffing without prior selection of the interface".to_owned(),
         ),
     )?;
 
@@ -185,6 +313,21 @@ fn start_sniffing(
 
         let exchanged_packets = Arc::clone(&state.exchanged_packets);
         let packets = Arc::clone(&state.packets);
+        let filtered_packets = Arc::clone(&state.filtered_packets);
+
+        /*
+        let tcp_packets = Arc::clone(&state.tcp_packets);
+        let tcp_packets = Arc::clone(&state.tcp_packets);
+        let udp_packets = Arc::clone(&state.udp_packets);
+        let icmp_packets = Arc::clone(&state.icmp_packets);
+        let icmpv6_packets = Arc::clone(&state.icmpv6_packets);
+        let http_packets = Arc::clone(&state.http_packets);
+        let tls_packets = Arc::clone(&state.tls_packets);
+        let ipv4_packets = Arc::clone(&state.ipv4_packets);
+        let ipv6_packets = Arc::clone(&state.ipv6_packets);
+        let dns_packets = Arc::clone(&state.dns_packets);
+        let arp_packets = Arc::clone(&state.arp_packets);*/
+
         std::thread::spawn(move || {
             let mut counter = 0;
             loop {
@@ -199,14 +342,56 @@ fn start_sniffing(
                         let mut transmitted_bytes = 0;
                         let mut protocols: Vec<String> = sender_receiver.1;
                         if let SerializablePacket::EthernetPacket(link_packet) =
-                            new_packet.get_link_layer_packet().unwrap()
+                        new_packet.get_link_layer_packet().unwrap()
                         {
                             transmitted_bytes = link_packet.payload.len(); // TODO: Add ethernet header size
                             protocols.push(link_packet.ethertype.clone());
                         }
 
+                        let parsed_packet = Arc::new(new_packet);
+
+                        if contains_tcp(parsed_packet.clone()) {
+                            filtered_packets.lock().unwrap().tcp_packets.push(parsed_packet.clone());
+                        }
+
+                        if contains_udp(parsed_packet.clone()) {
+                            filtered_packets.lock().unwrap().udp_packets.push(parsed_packet.clone());
+                        }
+
+                        if contains_icmp(parsed_packet.clone()) {
+                            filtered_packets.lock().unwrap().icmp_packets.push(parsed_packet.clone());
+                        }
+
+                        if contains_icmp6(parsed_packet.clone()) {
+                            filtered_packets.lock().unwrap().icmpv6_packets.push(parsed_packet.clone());
+                        }
+
+                        if contains_http(parsed_packet.clone()) {
+                            filtered_packets.lock().unwrap().http_packets.push(parsed_packet.clone());
+                        }
+
+                        if contains_tls(parsed_packet.clone()) {
+                            filtered_packets.lock().unwrap().tls_packets.push(parsed_packet.clone());
+                        }
+
+                        if contains_ipv4(parsed_packet.clone()) {
+                            filtered_packets.lock().unwrap().ipv4_packets.push(parsed_packet.clone());
+                        }
+
+                        if contains_ipv6(parsed_packet.clone()) {
+                            filtered_packets.lock().unwrap().ipv6_packets.push(parsed_packet.clone());
+                        }
+
+                        if contains_arp(parsed_packet.clone()) {
+                            filtered_packets.lock().unwrap().arp_packets.push(parsed_packet.clone());
+                        }
+
+                        if contains_dns(parsed_packet.clone()) {
+                            filtered_packets.lock().unwrap().dns_packets.push(parsed_packet.clone());
+                        }
+
                         let mut packets = packets.lock().unwrap();
-                        packets.push(new_packet);
+                        packets.push(parsed_packet);
 
                         let mut exchanged_packets = exchanged_packets.lock().unwrap();
                         exchanged_packets
@@ -244,28 +429,6 @@ fn start_sniffing(
     }
 
     Ok(())
-}
-
-#[tauri::command]
-fn get_packets(
-    start: usize,
-    end: usize,
-    state: tauri::State<SniffingState>,
-) -> Result<Vec<ParsedPacket>, SniffingError> {
-    let packets = state.packets.lock().unwrap();
-
-    if start > packets.len() {
-        return Err(SniffingError::GetPacketsIndexNotValid(
-            "The indexes are not valid".to_owned(),
-        ));
-    }
-
-    let slice = match packets.get(start..end) {
-        Some(values) => values,
-        None => packets.get(start..).unwrap(),
-    };
-
-    return Ok(slice.to_vec());
 }
 
 fn get_sender_receiver(packet: &ParsedPacket) -> (SourceDestination, Vec<String>) {
@@ -399,7 +562,7 @@ fn main() {
             get_interfaces_list,
             generate_report,
             select_interface,
-            get_packets
+            //get_packets
         ])
         .run(tauri::generate_context!())
         .expect("Error while running tauri application");
