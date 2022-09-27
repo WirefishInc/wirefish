@@ -22,7 +22,8 @@ interface FiltersProps {
     setSrcMacForm: any,
     setDstMacForm: any,
     setSrcPortForm: any,
-    setDstPortForm: any
+    setDstPortForm: any,
+    setIsPageFull: any,
 }
 
 const Filters: FC<FiltersProps> = ({
@@ -35,7 +36,8 @@ const Filters: FC<FiltersProps> = ({
                                        setDstPortForm,
                                        setSrcMacForm,
                                        setSrcPortForm,
-                                       setSrcIpForm
+                                       setSrcIpForm,
+                                       setIsPageFull,
                                    }) => {
 
     return (
@@ -53,7 +55,11 @@ const Filters: FC<FiltersProps> = ({
                         <FormGroup>
                             <FormControlLabel control={<Switch checked={enabled}/>}
                                               label={enabled ? "Disable Filters" : "Enable Filters"}
-                                              onChange={(event: any) => setEnabled(event.target.checked)}/>
+                                              onChange={(event: any) => {
+                                                    setIsPageFull(false);
+                                                    setEnabled(event.target.checked);
+                                                }}
+                            />
                         </FormGroup>
                     </Grid>
 

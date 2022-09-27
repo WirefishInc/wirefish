@@ -129,6 +129,7 @@ function App() {
     let [dstMacForm, setDstMacForm] = useState<string>("");
     let [srcPortForm, setSrcPortForm] = useState<string>("");
     let [dstPortForm, setDstPortForm] = useState<string>("");
+    let [isPageFull, setIsPageFull] = useState<boolean>(false);
 
     let [filter, setFilter] = useState<{
         ethernet: boolean,
@@ -216,15 +217,20 @@ function App() {
                 }
                 console.log(filter_name)
                 console.log(filter_value)
-                let response: any[] = await API.getPackets(
-                    (pageState - 1) * 100,
-                    (pageState - 1) * 100 + 100,
-                    filter_name,
-                    filter_value);
 
-                let packets = response.map((p, index) => new GeneralPacket((pageState - 1) * 100 + index, p))
-                setCapturedPackets(packets)
+                if (capturedPackets.length == 100)
+                    setIsPageFull(true);
 
+                if (!isPageFull) { 
+                    let response: any[] = await API.getPackets(
+                        (pageState - 1) * 100,
+                        (pageState - 1) * 100 + 100,
+                        filter_name,
+                        filter_value);
+    
+                    let packets = response.map((p, index) => new GeneralPacket((pageState - 1) * 100 + index, p))
+                    setCapturedPackets(packets)
+                }
             } catch (e: any) {
                 setFeedbackMessage({
                     isError: true,
@@ -402,7 +408,11 @@ function App() {
     }
 
     const startStopSniffing = async () => {
-        if (sniffingStatus === SniffingStatus.Inactive) await startSniffing();
+        if (sniffingStatus === SniffingStatus.Inactive) {
+            setCapturedPackets([]);
+            setIsPageFull(false);
+            await startSniffing();
+        }
         else if (sniffingStatus === SniffingStatus.Active) await stopSniffing();
         setActionLoading("");
     }
@@ -486,7 +496,9 @@ function App() {
                          setSrcIpForm={setSrcIpForm} setDstIpForm={setDstIpForm}
                          setSrcMacForm={setSrcMacForm} setDstMacForm={setDstMacForm}
                          setSrcPortForm={setSrcPortForm} setDstPortForm={setDstPortForm}
-                         enabled={filterEnabled} setEnabled={setFilterEnabled}/>
+                         enabled={filterEnabled} setEnabled={setFilterEnabled}
+                         setIsPageFull={setIsPageFull}
+                />
 
                 {/* Sniffing Results */}
 
@@ -505,7 +517,8 @@ function App() {
                               page={pageState - 1}
                               paginationMode="server"
                               onPageChange={(newPage) => {
-                                  setPageState(newPage + 1)
+                                setIsPageFull(false);
+                                setPageState(newPage + 1)
                               }}
                     />
                 </Grid>

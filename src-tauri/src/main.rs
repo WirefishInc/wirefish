@@ -194,7 +194,6 @@ fn start_sniffing(
         let packets = Arc::clone(&state.packets);
 
         std::thread::spawn(move || {
-            let mut counter = 0;
             loop {
                 match interface_channel.next() {
                     Ok(packet) if receive_stop.try_recv().is_err() => {
@@ -287,9 +286,6 @@ fn start_sniffing(
                             .or_insert(PacketExchange::new(protocols, transmitted_bytes, now));
 
                         let _result = window.emit("packet_received", ());
-
-                        println!("counter: {}", counter);
-                        counter += 1;
                     }
                     Ok(_) => {
                         // Clean the channel
