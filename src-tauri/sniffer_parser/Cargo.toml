@@ -20,3 +20,6 @@ tls-parser =  { version = "0.11.0", features = ["serialize"]}
 x509-parser = "0.14.0"
 dns-parser = "0.8.0"
 simple-dns = "0.4.7"
+
+[features]
+utils = []

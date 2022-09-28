@@ -9,6 +9,11 @@ use dotenv;
 use env_logger::Builder;
 use log::{error, info};
 use serde::Serialize;
+use sniffer_parser::serializable_packet::util::{
+    contains_arp, contains_dns, contains_ethernet, contains_http, contains_icmp, contains_icmp6,
+    contains_ipv4, contains_ipv6, contains_malformed, contains_tcp, contains_tls, contains_udp,
+    contains_unknokn, get_dest_mac, get_source_mac,
+};
 use std::io::Write;
 
 use pnet::datalink::Channel::Ethernet;
@@ -16,11 +21,7 @@ use pnet::datalink::{self, ChannelType, Config, NetworkInterface};
 use pnet::packet::ethernet::EthernetPacket;
 
 use chrono::Local;
-use filtering::{
-    contains_arp, contains_dns, contains_http, contains_icmp, contains_icmp6,
-    contains_ipv4, contains_ipv6, contains_tcp, contains_tls, contains_udp,
-    get_packets, PacketsCollection,
-};
+use filtering::{get_packets, PacketsCollection};
 use report::{
     data::{PacketExchange, SourceDestination},
     write_report,
@@ -35,7 +36,6 @@ use sniffer_parser::{
     cleanup_sniffing_state, parse_ethernet_frame,
     serializable_packet::{ParsedPacket, SerializablePacket},
 };
-use crate::filtering::{contains_ethernet, contains_malformed, contains_unknokn};
 
 const CONFIG: Config = Config {
     write_buffer_size: 16384,
@@ -59,6 +59,7 @@ pub enum SniffingError {
     StopSniffingWithoutPriorStart(String),
     ReportGenerationFailed(String),
     ReadingChannelFailed(String),
+    UnknownFilterType(String),
 }
 
 pub struct SniffingState {
@@ -206,7 +207,7 @@ fn start_sniffing(
                         let mut transmitted_bytes = 0;
                         let mut protocols: Vec<String> = sender_receiver.1;
                         if let SerializablePacket::EthernetPacket(link_packet) =
-                        new_packet.get_link_layer_packet().unwrap()
+                            new_packet.get_link_layer_packet().unwrap()
                         {
                             transmitted_bytes = link_packet.payload.len(); // TODO: Add ethernet header size
                             protocols.push(link_packet.ethertype.clone());
@@ -222,55 +223,98 @@ fn start_sniffing(
                             .and_modify(|packets| packets.push(Arc::clone(&parsed_packet)))
                             .or_insert(vec![Arc::clone(&parsed_packet)]);
 
-                        if contains_ethernet(parsed_packet.clone()) {
-                            packets_collection.ethernet_packets.push(parsed_packet.clone());
+                        // Index by Dest IP
+                        packets_collection
+                            .dest_ip_index
+                            .entry(sender_receiver.0.ip_destination.clone())
+                            .and_modify(|packets| packets.push(Arc::clone(&parsed_packet)))
+                            .or_insert(vec![Arc::clone(&parsed_packet)]);
+
+                        // Index by Source MAC
+                        packets_collection
+                            .source_mac_index
+                            .entry(get_source_mac(&parsed_packet).unwrap_or("".to_owned()))
+                            .and_modify(|packets| packets.push(Arc::clone(&parsed_packet)))
+                            .or_insert(vec![Arc::clone(&parsed_packet)]);
+
+                        // Index by Dest MAC
+                        packets_collection
+                            .dest_mac_index
+                            .entry(get_dest_mac(&parsed_packet).unwrap_or("".to_owned()))
+                            .and_modify(|packets| packets.push(Arc::clone(&parsed_packet)))
+                            .or_insert(vec![Arc::clone(&parsed_packet)]);
+
+                        // Index by Source Port
+                        packets_collection
+                            .source_port_index
+                            .entry(sender_receiver.0.port_source.clone())
+                            .and_modify(|packets| packets.push(Arc::clone(&parsed_packet)))
+                            .or_insert(vec![Arc::clone(&parsed_packet)]);
+
+                        // Index by Dest Port
+                        packets_collection
+                            .dest_port_index
+                            .entry(sender_receiver.0.port_destination.clone())
+                            .and_modify(|packets| packets.push(Arc::clone(&parsed_packet)))
+                            .or_insert(vec![Arc::clone(&parsed_packet)]);
+
+                        if contains_ethernet(&parsed_packet) {
+                            packets_collection
+                                .ethernet_packets
+                                .push(parsed_packet.clone());
                         }
 
-                        if contains_malformed(parsed_packet.clone()) {
-                            packets_collection.malformed_packets.push(parsed_packet.clone());
+                        if contains_malformed(&parsed_packet) {
+                            packets_collection
+                                .malformed_packets
+                                .push(parsed_packet.clone());
                         }
 
-                        if contains_unknokn(parsed_packet.clone()) {
-                            packets_collection.unknown_packets.push(parsed_packet.clone());
+                        if contains_unknokn(&parsed_packet) {
+                            packets_collection
+                                .unknown_packets
+                                .push(parsed_packet.clone());
                         }
 
-                        if contains_tcp(parsed_packet.clone()) {
+                        if contains_tcp(&parsed_packet) {
                             packets_collection.tcp_packets.push(parsed_packet.clone());
                         }
 
-                        if contains_udp(parsed_packet.clone()) {
+                        if contains_udp(&parsed_packet) {
                             packets_collection.udp_packets.push(parsed_packet.clone());
                         }
 
-                        if contains_icmp(parsed_packet.clone()) {
+                        if contains_icmp(&parsed_packet) {
                             packets_collection.icmp_packets.push(parsed_packet.clone());
                         }
 
-                        if contains_icmp6(parsed_packet.clone()) {
-                            packets_collection.icmpv6_packets.push(parsed_packet.clone());
+                        if contains_icmp6(&parsed_packet) {
+                            packets_collection
+                                .icmpv6_packets
+                                .push(parsed_packet.clone());
                         }
 
-                        if contains_http(parsed_packet.clone()) {
+                        if contains_http(&parsed_packet) {
                             packets_collection.http_packets.push(parsed_packet.clone());
                         }
 
-                        if contains_tls(parsed_packet.clone()) {
+                        if contains_tls(&parsed_packet) {
                             packets_collection.tls_packets.push(parsed_packet.clone());
                         }
 
-                        if contains_ipv4(parsed_packet.clone()) {
+                        if contains_ipv4(&parsed_packet) {
                             packets_collection.ipv4_packets.push(parsed_packet.clone());
                         }
 
-                        if contains_ipv6(parsed_packet.clone()) {
+                        if contains_ipv6(&parsed_packet) {
                             packets_collection.ipv6_packets.push(parsed_packet.clone());
                         }
 
-                        if contains_arp(parsed_packet.clone()) {
+                        if contains_arp(&parsed_packet) {
                             packets_collection.arp_packets.push(parsed_packet.clone());
                         }
 
-                        if contains_dns(parsed_packet.clone()) {
+                        if contains_dns(&parsed_packet) {
                             packets_collection.dns_packets.push(parsed_packet.clone());
                         }
 
