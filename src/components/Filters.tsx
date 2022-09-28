@@ -23,7 +23,8 @@ interface FiltersProps {
     setDstMacForm: any,
     setSrcPortForm: any,
     setDstPortForm: any,
-    setIsPageFull: any,
+    setMakeRequest: any,
+    setPageState: any
 }
 
 const Filters: FC<FiltersProps> = ({
@@ -37,7 +38,8 @@ const Filters: FC<FiltersProps> = ({
                                        setSrcMacForm,
                                        setSrcPortForm,
                                        setSrcIpForm,
-                                       setIsPageFull,
+                                       setMakeRequest,
+                                       setPageState
                                    }) => {
 
     return (
@@ -56,9 +58,11 @@ const Filters: FC<FiltersProps> = ({
                             <FormControlLabel control={<Switch checked={enabled}/>}
                                               label={enabled ? "Disable Filters" : "Enable Filters"}
                                               onChange={(event: any) => {
-                                                    setIsPageFull(false);
-                                                    setEnabled(event.target.checked);
-                                                }}
+                                                  setPageState(1)
+                                                  setPageState(1)
+                                                  setMakeRequest(true)
+                                                  setEnabled(event.target.checked);
+                                              }}
                             />
                         </FormGroup>
                     </Grid>
@@ -75,6 +79,8 @@ const Filters: FC<FiltersProps> = ({
                                 <FormControlLabel
                                     control={
                                         <Checkbox disabled={!enabled} checked={filter.ethernet} onChange={(ev) => {
+                                            setPageState(1)
+                                            setMakeRequest(true)
                                             if (ev.target.checked)
                                                 setFilter((f: any) => Object.assign({}, f, {ethernet: true}));
                                             else
@@ -86,6 +92,8 @@ const Filters: FC<FiltersProps> = ({
                                 <FormControlLabel
                                     control={
                                         <Checkbox disabled={!enabled} checked={filter.unknown} onChange={(ev) => {
+                                            setPageState(1)
+                                            setMakeRequest(true)
                                             if (ev.target.checked)
                                                 setFilter((f: any) => Object.assign({}, f, {unknown: true}));
                                             else
@@ -98,6 +106,8 @@ const Filters: FC<FiltersProps> = ({
                                 <FormControlLabel
                                     control={
                                         <Checkbox disabled={!enabled} checked={filter.malformed} onChange={(ev) => {
+                                            setPageState(1)
+                                            setMakeRequest(true)
                                             if (ev.target.checked)
                                                 setFilter((f: any) => Object.assign({}, f, {malformed: true}));
                                             else
@@ -117,6 +127,8 @@ const Filters: FC<FiltersProps> = ({
                                 <FormControlLabel
                                     control={
                                         <Checkbox disabled={!enabled} checked={filter.ipv6} onChange={(ev) => {
+                                            setPageState(1)
+                                            setMakeRequest(true)
                                             if (ev.target.checked)
                                                 setFilter((f: any) => Object.assign({}, f, {ipv6: true}));
                                             else
@@ -128,6 +140,8 @@ const Filters: FC<FiltersProps> = ({
                                 <FormControlLabel
                                     control={
                                         <Checkbox disabled={!enabled} checked={filter.ipv4} onChange={(ev) => {
+                                            setPageState(1)
+                                            setMakeRequest(true)
                                             if (ev.target.checked)
                                                 setFilter((f: any) => Object.assign({}, f, {ipv4: true}));
                                             else
@@ -139,6 +153,8 @@ const Filters: FC<FiltersProps> = ({
                                 <FormControlLabel
                                     control={
                                         <Checkbox disabled={!enabled} checked={filter.arp} onChange={(ev) => {
+                                            setPageState(1)
+                                            setMakeRequest(true)
                                             if (ev.target.checked)
                                                 setFilter((f: any) => Object.assign({}, f, {arp: true}));
                                             else
@@ -158,6 +174,8 @@ const Filters: FC<FiltersProps> = ({
                                 <FormControlLabel
                                     control={
                                         <Checkbox disabled={!enabled} checked={filter.tcp} onChange={(ev) => {
+                                            setPageState(1)
+                                            setMakeRequest(true)
                                             if (ev.target.checked)
                                                 setFilter((f: any) => Object.assign({}, f, {tcp: true}));
                                             else
@@ -169,6 +187,8 @@ const Filters: FC<FiltersProps> = ({
                                 <FormControlLabel
                                     control={
                                         <Checkbox disabled={!enabled} checked={filter.udp} onChange={(ev) => {
+                                            setPageState(1)
+                                            setMakeRequest(true)
                                             if (ev.target.checked)
                                                 setFilter((f: any) => Object.assign({}, f, {udp: true}));
                                             else
@@ -180,6 +200,8 @@ const Filters: FC<FiltersProps> = ({
                                 <FormControlLabel
                                     control={
                                         <Checkbox disabled={!enabled} checked={filter.icmpv6} onChange={(ev) => {
+                                            setPageState(1)
+                                            setMakeRequest(true)
                                             if (ev.target.checked)
                                                 setFilter((f: any) => Object.assign({}, f, {icmpv6: true}));
                                             else
@@ -191,6 +213,8 @@ const Filters: FC<FiltersProps> = ({
                                 <FormControlLabel
                                     control={
                                         <Checkbox disabled={!enabled} checked={filter.icmp} onChange={(ev) => {
+                                            setPageState(1)
+                                            setMakeRequest(true)
                                             if (ev.target.checked)
                                                 setFilter((f: any) => Object.assign({}, f, {icmp: true}));
                                             else
@@ -210,6 +234,8 @@ const Filters: FC<FiltersProps> = ({
                                 <FormControlLabel
                                     control={
                                         <Checkbox disabled={!enabled} checked={filter.http} onChange={(ev) => {
+                                            setPageState(1)
+                                            setMakeRequest(true)
                                             if (ev.target.checked)
                                                 setFilter((f: any) => Object.assign({}, f, {http: true}));
                                             else
@@ -221,6 +247,8 @@ const Filters: FC<FiltersProps> = ({
                                 <FormControlLabel
                                     control={
                                         <Checkbox disabled={!enabled} checked={filter.tls} onChange={(ev) => {
+                                            setPageState(1)
+                                            setMakeRequest(true)
                                             if (ev.target.checked)
                                                 setFilter((f: any) => Object.assign({}, f, {tls: true}));
                                             else
@@ -232,6 +260,8 @@ const Filters: FC<FiltersProps> = ({
                                 <FormControlLabel
                                     control={
                                         <Checkbox disabled={!enabled} checked={filter.dns} onChange={(ev) => {
+                                            setPageState(1)
+                                            setMakeRequest(true)
                                             if (ev.target.checked)
                                                 setFilter((f: any) => Object.assign({}, f, {dns: true}));
                                             else
@@ -252,13 +282,19 @@ const Filters: FC<FiltersProps> = ({
                                                       <>
                                                           <Checkbox disabled={!enabled} checked={filter.src_ip}
                                                                     onChange={(ev) => {
+                                                                        setPageState(1)
+                                                                        setMakeRequest(true)
                                                                         if (ev.target.checked)
                                                                             setFilter((f: any) => Object.assign({}, f, {src_ip: true}));
                                                                         else
                                                                             setFilter((f: any) => Object.assign({}, f, {src_ip: false}));
                                                                     }} name="src_ip"/>
                                                           <TextField disabled={!enabled}
-                                                                     onChange={(s) => setSrcIpForm(s.target.value)}
+                                                                     onChange={(s) => {
+                                                                         setPageState(1)
+                                                                         setMakeRequest(true);
+                                                                         setSrcIpForm(s.target.value)
+                                                                     }}
                                                                      id="src_ip" label="SOURCE IP" variant="standard"/>
                                                       </>
                                                   }
@@ -269,13 +305,19 @@ const Filters: FC<FiltersProps> = ({
                                                       <>
                                                           <Checkbox disabled={!enabled} checked={filter.dst_ip}
                                                                     onChange={(ev) => {
+                                                                        setPageState(1)
+                                                                        setMakeRequest(true)
                                                                         if (ev.target.checked)
                                                                             setFilter((f: any) => Object.assign({}, f, {dst_ip: true}));
                                                                         else
                                                                             setFilter((f: any) => Object.assign({}, f, {dst_ip: false}));
                                                                     }} name="dst_ip"/>
                                                           <TextField disabled={!enabled}
-                                                                     onChange={(s) => setDstIpForm(s.target.value)}
+                                                                     onChange={(s) => {
+                                                                         setPageState(1)
+                                                                         setMakeRequest(true);
+                                                                         setDstIpForm(s.target.value)
+                                                                     }}
                                                                      id="dst_ip" label="DESTINATION IP"
                                                                      variant="standard"/>
                                                       </>
@@ -287,13 +329,19 @@ const Filters: FC<FiltersProps> = ({
                                                       <>
                                                           <Checkbox disabled={!enabled} checked={filter.src_mac}
                                                                     onChange={(ev) => {
+                                                                        setPageState(1)
+                                                                        setMakeRequest(true)
                                                                         if (ev.target.checked)
                                                                             setFilter((f: any) => Object.assign({}, f, {src_mac: true}));
                                                                         else
                                                                             setFilter((f: any) => Object.assign({}, f, {src_mac: false}));
                                                                     }} name="src_mac"/>
                                                           <TextField disabled={!enabled}
-                                                                     onChange={(s) => setSrcMacForm(s.target.value)}
+                                                                     onChange={(s) => {
+                                                                         setPageState(1)
+                                                                         setMakeRequest(true);
+                                                                         setSrcMacForm(s.target.value)
+                                                                     }}
                                                                      id="src_mac" label="SOURCE MAC"
                                                                      variant="standard"/>
                                                       </>
@@ -305,13 +353,19 @@ const Filters: FC<FiltersProps> = ({
                                                       <>
                                                           <Checkbox disabled={!enabled} checked={filter.dst_mac}
                                                                     onChange={(ev) => {
+                                                                        setPageState(1)
+                                                                        setMakeRequest(true)
                                                                         if (ev.target.checked)
                                                                             setFilter((f: any) => Object.assign({}, f, {dst_mac: true}));
                                                                         else
                                                                             setFilter((f: any) => Object.assign({}, f, {dst_mac: false}));
                                                                     }} name="dst_mac"/>
                                                           <TextField disabled={!enabled}
-                                                                     onChange={(s) => setDstMacForm(s.target.value)}
+                                                                     onChange={(s) => {
+                                                                         setPageState(1)
+                                                                         setMakeRequest(true);
+                                                                         setDstMacForm(s.target.value)
+                                                                     }}
                                                                      id="dst_mac" label="DESTINATION MAC"
                                                                      variant="standard"/>
                                                       </>
@@ -327,13 +381,19 @@ const Filters: FC<FiltersProps> = ({
                                                       <>
                                                           <Checkbox disabled={!enabled} checked={filter.src_port}
                                                                     onChange={(ev) => {
+                                                                        setPageState(1)
+                                                                        setMakeRequest(true)
                                                                         if (ev.target.checked)
                                                                             setFilter((f: any) => Object.assign({}, f, {src_port: true}));
                                                                         else
                                                                             setFilter((f: any) => Object.assign({}, f, {src_port: false}));
                                                                     }} name="src_port"/>
                                                           <TextField disabled={!enabled}
-                                                                     onChange={(s) => setSrcPortForm(s.target.value)}
+                                                                     onChange={(s) => {
+                                                                         setPageState(1)
+                                                                         setMakeRequest(true);
+                                                                         setSrcPortForm(s.target.value)
+                                                                     }}
                                                                      id="src_port" label="SOURCE PORT"
                                                                      variant="standard"/>
                                                       </>
@@ -345,13 +405,19 @@ const Filters: FC<FiltersProps> = ({
                                                       <>
                                                           <Checkbox disabled={!enabled} checked={filter.dst_port}
                                                                     onChange={(ev) => {
+                                                                        setPageState(1)
+                                                                        setMakeRequest(true)
                                                                         if (ev.target.checked)
                                                                             setFilter((f: any) => Object.assign({}, f, {dst_port: true}));
                                                                         else
                                                                             setFilter((f: any) => Object.assign({}, f, {dst_port: false}));
                                                                     }} name="dst_port"/>
                                                           <TextField disabled={!enabled}
-                                                                     onChange={(s) => setDstPortForm(s.target.value)}
+                                                                     onChange={(s) => {
+                                                                         setPageState(1)
+                                                                         setMakeRequest(true);
+                                                                         setDstPortForm(s.target.value)
+                                                                     }}
                                                                      id="dst_port" label="DESTINATION PORT"
                                                                      variant="standard"/>
                                                       </>

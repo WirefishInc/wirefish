@@ -1,7 +1,5 @@
 use std::{collections::BTreeMap, sync::Arc};
-
 use sniffer_parser::serializable_packet::{ParsedPacket, SerializablePacket};
-
 use crate::{SniffingError, SniffingState};
 
 #[allow(non_snake_case)]
@@ -119,8 +117,30 @@ fn get_packets_internal<'a>(
     if !filters_type.is_empty() || !filters_value.is_empty() {
         let mut filtered_packets: Vec<Arc<ParsedPacket>> = vec![];
 
+        // TODO
+        /*
+        filters_type.into_iter().for_each(|(name, value)| {
+            match name {
+                FilterNamesValues::UNKNOWN => if value { filtered_packets.extend_from_slice(&*packets_collection.unknown_packets) },
+                FilterNamesValues::MALFORMED => if value { filtered_packets.extend_from_slice(&*packets_collection.malformed_packets) },
+                FilterNamesValues::ETHERNET => if value { filtered_packets.extend_from_slice(&*packets_collection.ethernet_packets) },
+                FilterNamesValues::IPV4 => if value { filtered_packets.extend_from_slice(&*packets_collection.ipv4_packets) },
+                FilterNamesValues::IPV6 => if value { filtered_packets.extend_from_slice(&*packets_collection.ipv6_packets) },
+                FilterNamesValues::ARP => if value { filtered_packets.extend_from_slice(&*packets_collection.arp_packets) },
+                FilterNamesValues::TCP => if value { filtered_packets.extend_from_slice(&*packets_collection.tcp_packets) },
+                FilterNamesValues::UDP => if value { filtered_packets.extend_from_slice(&*packets_collection.udp_packets) },
+                FilterNamesValues::ICMP => if value { filtered_packets.extend_from_slice(&*packets_collection.icmp_packets) },
+                FilterNamesValues::ICMPV6 => if value { filtered_packets.extend_from_slice(&*packets_collection.icmpv6_packets) },
+                FilterNamesValues::HTTP => if value { filtered_packets.extend_from_slice(&*packets_collection.http_packets) },
+                FilterNamesValues::TLS => if value { filtered_packets.extend_from_slice(&*packets_collection.tls_packets) },
+                FilterNamesValues::DNS => if value { filtered_packets.extend_from_slice(&*packets_collection.dns_packets) },
+                _ => ()
+            }
+        });*/
+
         for (name, (is_active, value)) in filters_value {
             if is_active {
+                //reduced = true;
                 apply_specific_filter(
                     name,
                     value,
@@ -131,6 +151,8 @@ fn get_packets_internal<'a>(
                 )?;
             }
         }
+
+        //if !reduced { filtered_packets = Vec::from(get_slice(&filtered_packets, start, end)) }
 
         return Ok(filtered_packets
             .iter()
