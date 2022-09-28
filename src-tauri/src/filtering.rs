@@ -1,10 +1,9 @@
 use std::{collections::BTreeMap, sync::Arc};
-
 use sniffer_parser::serializable_packet::{ParsedPacket, SerializablePacket};
-
 use crate::{SniffingError, SniffingState};
 
 use self::FilterNamesValues::Filter;
+
 #[allow(non_snake_case)]
 mod FilterNamesValues {
     use serde::{Deserialize, Serialize};
@@ -227,12 +226,35 @@ pub fn get_packets<'a>(
     state: tauri::State<SniffingState>,
 ) -> Result<Vec<ParsedPacket>, SniffingError> {
     let mut packets_collection = state.packets.lock().unwrap();
+    //let mut reduced = false;
 
     if !filters_type.is_empty() && !filters_value.is_empty() {
         let mut filtered_packets: Vec<Arc<ParsedPacket>> = vec![];
 
+        // TODO
+        /*
+        filters_type.into_iter().for_each(|(name, value)| {
+            match name {
+                FilterNamesValues::UNKNOWN => if value { filtered_packets.extend_from_slice(&*packets_collection.unknown_packets) },
+                FilterNamesValues::MALFORMED => if value { filtered_packets.extend_from_slice(&*packets_collection.malformed_packets) },
+                FilterNamesValues::ETHERNET => if value { filtered_packets.extend_from_slice(&*packets_collection.ethernet_packets) },
+                FilterNamesValues::IPV4 => if value { filtered_packets.extend_from_slice(&*packets_collection.ipv4_packets) },
+                FilterNamesValues::IPV6 => if value { filtered_packets.extend_from_slice(&*packets_collection.ipv6_packets) },
+                FilterNamesValues::ARP => if value { filtered_packets.extend_from_slice(&*packets_collection.arp_packets) },
+                FilterNamesValues::TCP => if value { filtered_packets.extend_from_slice(&*packets_collection.tcp_packets) },
+                FilterNamesValues::UDP => if value { filtered_packets.extend_from_slice(&*packets_collection.udp_packets) },
+                FilterNamesValues::ICMP => if value { filtered_packets.extend_from_slice(&*packets_collection.icmp_packets) },
+                FilterNamesValues::ICMPV6 => if value { filtered_packets.extend_from_slice(&*packets_collection.icmpv6_packets) },
+                FilterNamesValues::HTTP => if value { filtered_packets.extend_from_slice(&*packets_collection.http_packets) },
+                FilterNamesValues::TLS => if value { filtered_packets.extend_from_slice(&*packets_collection.tls_packets) },
+                FilterNamesValues::DNS => if value { filtered_packets.extend_from_slice(&*packets_collection.dns_packets) },
+                _ => ()
+            }
+        });*/
+
         filters_value.into_iter().for_each(|(name, (is_active, value))| {
             if is_active {
+                //reduced = true;
                 apply_specific_filter(
                     name,
                     value,
@@ -243,6 +265,8 @@ pub fn get_packets<'a>(
                 );
             }
         });
+
+        //if !reduced { filtered_packets = Vec::from(get_slice(&filtered_packets, start, end)) }
 
         return Ok(filtered_packets
             .iter()
@@ -291,7 +315,7 @@ pub fn apply_specific_filter<'a>(
         FilterNamesValues::DST_PORT => {
             filter_by_dst_port(start, end, &packets_collection.dest_port_index, value)
         } */
-        _ => (),
+        _ => ()
     }
 }
 

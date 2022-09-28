@@ -15,7 +15,7 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {Pause, PlayArrow, RestartAlt, Stop} from '@mui/icons-material';
-import {DataGrid, GridColDef} from '@mui/x-data-grid';
+import {DataGrid, GridColDef, GridFooter, GridFooterContainer} from '@mui/x-data-grid';
 import './index.css';
 import API from './API';
 import {SniffingStatus, GeneralPacket, FeedbackMessage} from "./types/sniffing";
@@ -129,7 +129,7 @@ function App() {
     let [dstMacForm, setDstMacForm] = useState<string>("");
     let [srcPortForm, setSrcPortForm] = useState<string>("");
     let [dstPortForm, setDstPortForm] = useState<string>("");
-    let [isPageFull, setIsPageFull] = useState<boolean>(false);
+    let [makeRequest, setMakeRequest] = useState<boolean>(true);
 
     let [filter, setFilter] = useState<{
         ethernet: boolean,
@@ -215,22 +215,19 @@ function App() {
                     filter_value.push(["src_port", [filter.src_port, srcPortForm]])
                     filter_value.push(["dst_port", [filter.dst_port, dstPortForm]])
                 }
-                console.log(filter_name)
-                console.log(filter_value)
 
-                if (capturedPackets.length == 100)
-                    setIsPageFull(true);
+                let response: any[] = await API.getPackets(
+                    (pageState - 1) * 100,
+                    (pageState - 1) * 100 + 100,
+                    filter_name,
+                    filter_value);
 
-                if (!isPageFull) { 
-                    let response: any[] = await API.getPackets(
-                        (pageState - 1) * 100,
-                        (pageState - 1) * 100 + 100,
-                        filter_name,
-                        filter_value);
-    
-                    let packets = response.map((p, index) => new GeneralPacket((pageState - 1) * 100 + index, p))
-                    setCapturedPackets(packets)
-                }
+                let packets = response.map((p, index) => new GeneralPacket((pageState - 1) * 100 + index, p))
+                setCapturedPackets(packets)
+
+                if (packets.length >= 100)
+                    setMakeRequest(false)
+
             } catch (e: any) {
                 setFeedbackMessage({
                     isError: true,
@@ -239,8 +236,11 @@ function App() {
                 });
             }
         }
-        fetchData()
-    }, [pageState, packetCount,
+
+        if (makeRequest)
+            fetchData()
+
+    }, [pageState, packetCount, makeRequest,
         filter.dns,
         filter.arp,
         filter.tls,
@@ -410,10 +410,10 @@ function App() {
     const startStopSniffing = async () => {
         if (sniffingStatus === SniffingStatus.Inactive) {
             setCapturedPackets([]);
-            setIsPageFull(false);
+            setPacketCount(0);
+            //setIsPageFull(false);
             await startSniffing();
-        }
-        else if (sniffingStatus === SniffingStatus.Active) await stopSniffing();
+        } else if (sniffingStatus === SniffingStatus.Active) await stopSniffing();
         setActionLoading("");
     }
 
@@ -497,31 +497,47 @@ function App() {
                          setSrcMacForm={setSrcMacForm} setDstMacForm={setDstMacForm}
                          setSrcPortForm={setSrcPortForm} setDstPortForm={setDstPortForm}
                          enabled={filterEnabled} setEnabled={setFilterEnabled}
-                         setIsPageFull={setIsPageFull}
+                         setMakeRequest={setMakeRequest} setPageState={setPageState}
                 />
 
                 {/* Sniffing Results */}
 
                 <Grid xs={12} item={true}>
-                    <DataGrid className={"grid"}
+                    <DataGrid className={"grid row"}
+                              hideFooterSelectedRowCount={true}
                               rows={capturedPackets}
                               rowHeight={40} columns={columns}
-                              onCellClick={(ev) => {
+                              onCellDoubleClick={(ev) => {
                                   setSelectedPacket(ev.row)
                                   handleOpen();
                               }}
-                              rowCount={packetCount / 2} // TODO: beacuase of STRICT MODE
+                              rowCount={packetCount / 2} // TODO: because of STRICT MODE
                               rowsPerPageOptions={[100]}
                               pageSize={100}
                               pagination
                               page={pageState - 1}
                               paginationMode="server"
                               onPageChange={(newPage) => {
-                                setIsPageFull(false);
-                                setPageState(newPage + 1)
+                                  setMakeRequest(true)
+                                  setPageState(newPage + 1)
                               }}
+                              components={{
+                                  Footer: () =>
+                                      <>
+                                          <GridFooterContainer>
+                                              <Grid className={"tip"}>
+                                                  Double click on a packet to view details
+                                              </Grid>
+                                              <GridFooter sx={{
+                                                  border: 'none', // To delete double border.
+                                              }}/>
+                                          </GridFooterContainer>
+                                      </>
+                              }
+                              }
                     />
                 </Grid>
+
 
                 {/* Report result feedback */}
 
