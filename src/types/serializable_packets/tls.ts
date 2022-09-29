@@ -235,8 +235,8 @@ export class ClientHelloMessage extends CustomHandshakeMessage {
         let packet_info = [];
 
         packet_info.push({"Version": this.version});
-        packet_info.push({"Rand Time": this.rand_time});
-        packet_info.push({"Rand Data": this.rand_data});
+        packet_info.push({"Rand Time": this.rand_time.toString()});
+        packet_info.push({"Rand Data": this.rand_data.toString()});
         packet_info.push({"Session Id": this.session_id});
         packet_info.push({"Ciphers": this.ciphers});
         packet_info.push({"Compression": this.compressions});
@@ -290,8 +290,8 @@ export class ServerHelloMessage extends CustomHandshakeMessage {
         let packet_info = [];
 
         packet_info.push({"Version": this.version});
-        packet_info.push({"Rand Time": this.rand_time});
-        packet_info.push({"Rand Data": this.rand_data});
+        packet_info.push({"Rand Time": this.rand_time.toString()});
+        packet_info.push({"Rand Data": this.rand_data.toString()});
         packet_info.push({"Session Id": this.session_id});
         packet_info.push({"Ciphers": this.ciphers});
         packet_info.push({"Compression": this.compressions});

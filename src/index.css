@@ -171,3 +171,8 @@ div.tip {
     font-style: italic;
     color: rgb(165, 165, 165);
 }
+
+div.head {
+    width: 100%;
+    margin-bottom: 2px;
+}

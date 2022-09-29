@@ -116,8 +116,31 @@ fn get_packets_internal<'a>(
 ) -> Result<Vec<ParsedPacket>, SniffingError> {
     if !filters_type.is_empty() || !filters_value.is_empty() {
         let mut filtered_packets: Vec<Arc<ParsedPacket>> = vec![];
+        let mut strong_filters = false;
 
-        // TODO
+        for (name, (is_active, value)) in filters_value {
+            if is_active {
+                strong_filters = true;
+                apply_specific_filter(
+                    name,
+                    value,
+                    start,
+                    end,
+                    &mut *packets_collection,
+                    &mut filtered_packets,
+                )?;
+            }
+        }
+
+        if strong_filters {
+            // iterative filtering
+
+
+        } else {
+            // merge filtering
+
+        }
+
         /*
         filters_type.into_iter().for_each(|(name, value)| {
             match name {
@@ -137,22 +160,6 @@ fn get_packets_internal<'a>(
                 _ => ()
             }
         });*/
-
-        for (name, (is_active, value)) in filters_value {
-            if is_active {
-                //reduced = true;
-                apply_specific_filter(
-                    name,
-                    value,
-                    start,
-                    end,
-                    &mut *packets_collection,
-                    &mut filtered_packets,
-                )?;
-            }
-        }
-
-        //if !reduced { filtered_packets = Vec::from(get_slice(&filtered_packets, start, end)) }
 
         return Ok(filtered_packets
             .iter()

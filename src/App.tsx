@@ -232,7 +232,7 @@ function App() {
                 setFeedbackMessage({
                     isError: true,
                     duration: 8000,
-                    text: e
+                    text: e.error
                 });
             }
         }
@@ -279,11 +279,11 @@ function App() {
                 duration: 5000,
                 text: "Report generated"
             });
-        } catch (exception) {
+        } catch (exception: any) {
             setFeedbackMessage({
                 isError: true,
                 duration: 8000,
-                text: "There was an error trying to generate the report: " + exception
+                text: exception.error
             });
         }
     }
