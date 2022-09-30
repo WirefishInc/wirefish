@@ -373,7 +373,7 @@ class Txt implements ResourceData {
         let result = [];
 
         result.push({"Type": this.type})
-        result.push({"Data": this.data})
+        result.push({"Data": this.data.toString()})
 
         return result
     }
@@ -392,7 +392,7 @@ class Unknown implements ResourceData {
         let result = [];
 
         result.push({"Type": this.type})
-        result.push({"Data": this.data})
+        result.push({"Data": this.data.toString()})
 
         return result
     }

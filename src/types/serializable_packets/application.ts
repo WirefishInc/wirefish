@@ -301,7 +301,16 @@ export class HttpResponsePacket implements SerializableApplicationLayerPacket {
         })
 
         if (this.payload.length > 0)
-            packet_info.push({"HTTPResp": {"type": this.payload_type, "content": this.payload, "src": this.src}})
+            if (Array.isArray(this.payload))
+                packet_info.push({
+                    "HTTPResp": {
+                        "type": this.payload_type,
+                        "content": this.payload.toString(),
+                        "src": this.src
+                    }
+                })
+            else
+                packet_info.push({"HTTPResp": {"type": this.payload_type, "content": this.payload, "src": this.src}})
 
         return packet_info;
     }
@@ -365,8 +374,12 @@ export class HttpRequestPacket implements SerializableApplicationLayerPacket {
             packet_info.push(obj);
         })
 
-        if (this.payload.length > 0)
-            packet_info.push({"HTTPReq": {"type": this.payload_type, "content": this.payload}})
+        if (this.payload.length > 0) {
+            if (Array.isArray(this.payload))
+                packet_info.push({"HTTPResp": {"type": this.payload_type, "content": this.payload.toString()}})
+            else
+                packet_info.push({"HTTPReq": {"type": this.payload_type, "content": this.payload}})
+        }
 
         return packet_info;
     }

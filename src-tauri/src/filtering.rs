@@ -1,5 +1,4 @@
 use crate::{SniffingError, SniffingState};
-use log::warn;
 use sniffer_parser::serializable_packet::util::{
     contains_arp, contains_dns, contains_ethernet, contains_http, contains_icmp, contains_icmp6,
     contains_ipv4, contains_ipv6, contains_malformed, contains_tcp, contains_tls, contains_udp,
@@ -8,15 +7,11 @@ use sniffer_parser::serializable_packet::util::{
 use sniffer_parser::serializable_packet::util::{
     get_dest_ip, get_dest_mac, get_dest_port, get_source_ip, get_source_mac, get_source_port,
 };
-use sniffer_parser::serializable_packet::{ParsedPacket, SerializablePacket};
-use std::collections::HashSet;
-use std::hash::Hash;
+use sniffer_parser::serializable_packet::{ParsedPacket};
 use std::{collections::BTreeMap, sync::Arc};
 
 #[allow(non_snake_case)]
 mod FilterNamesValues {
-    use serde::{Deserialize, Serialize};
-
     pub const ETHERNET: &str = "ethernet";
     pub const MALFORMED: &str = "malformed";
     pub const UNKNOWN: &str = "unknown";
@@ -165,8 +160,6 @@ fn get_packets_internal<'a>(
                     &mut filtered_packets,
                 )?;
 
-                println!("Done");
-
                 if is_index_used {
                     is_index_used = false;
                 }
@@ -174,13 +167,27 @@ fn get_packets_internal<'a>(
         }
 
         if strong_filters {
-            // TODO
+            if !filters_type.is_empty() {
+                filtered_packets.retain(|packet| {
+                    let mut contain = false;
+
+                    for filter in &filters_type {
+                        contain = apply_layer_type_filter(filter, &packet).unwrap();
+
+                        if contain {
+                            break;
+                        }
+                    }
+
+                    contain
+                });
+            }
+
             return Ok(get_slice(&filtered_packets, start, end)
                 .iter()
                 .map(|x| ParsedPacket::clone(&*x))
                 .collect());
         } else {
-            warn!("{:?}", filters_type);
             if filters_type.is_empty() || filters_type.len() == 1 {
                 // ONE FILTER
                 let single_filter = match filters_type.get(0) {
@@ -291,27 +298,22 @@ fn get_packets_internal<'a>(
                 loop {
                     let mut has_value = false;
                     let mut min: (Vec<usize>, Option<Arc<ParsedPacket>>) = (vec![], None);
-                    warn!("Initial: {:?}", min.0);
 
                     for (i, (_, value)) in filters_array.iter().enumerate() {
                         if let Some(value) = *value {
                             has_value = true;
 
-                            println!("Curr value: {}", value.get_id());
                             if min.0.is_empty() || min.1.as_ref().unwrap().get_id() > value.get_id()
                             {
                                 min.0.clear();
                                 min.0.push(i);
                                 min.1 = Some(value.clone());
-                                warn!("Empty or min: {:?}", min.0);
                             } else if min.1.as_ref().unwrap().get_id() == value.get_id() {
                                 min.0.push(i);
-                                warn!("Equal: {:?}", min.0);
                             }
                         }
                     }
 
-                    // panic!();
                     if !has_value {
                         break;
                     }
@@ -323,7 +325,6 @@ fn get_packets_internal<'a>(
                     result.push(min.1.unwrap());
                 }
 
-                println!("Done");
                 return Ok(get_slice(&result, start, end)
                     .iter()
                     .map(|x| ParsedPacket::clone(&*x))
@@ -338,7 +339,7 @@ fn get_packets_internal<'a>(
     }
 }
 
-/*
+
 pub fn apply_layer_type_filter(name: &str, packet: &Arc<ParsedPacket>) -> Result<bool, SniffingError> {
     return match name {
         FilterNamesValues::UNKNOWN => Ok(contains_unknokn(packet)),
@@ -368,7 +369,7 @@ pub fn apply_layer_type_filter(name: &str, packet: &Arc<ParsedPacket>) -> Result
         ))),
     };
 }
-*/
+
 
 pub fn apply_specific_filter<'a>(
     name: &'a str,

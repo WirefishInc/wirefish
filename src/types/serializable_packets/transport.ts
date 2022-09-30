@@ -308,7 +308,7 @@ export class EchoRequest implements SerializableTransportLayerPacket {
         packet_info.push({"ICMP Code": this.icmp_code});
         packet_info.push({"Checksum": this.checksum});
         packet_info.push({"Identifier": this.identifier});
-        packet_info.push({"Sequence Number": this.sequence_number});
+        packet_info.push({"Sequence Number": this.sequence_number.toString()});
 
         return packet_info;
     }

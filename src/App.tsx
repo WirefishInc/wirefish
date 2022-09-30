@@ -208,11 +208,15 @@ function App() {
                 if (filterEnabled) {
                     for (let key in filter) {
                         // @ts-ignore
-                        if (filter[key])
+                        if (filter[key] &&
+                            key !== "src_ip" &&
+                            key !== "src_port" &&
+                            key !== "src_mac" &&
+                            key !== "dst_ip" &&
+                            key !== "dst_port" &&
+                            key !== "dst_mac")
                             filter_name.push(key)
                     }
-
-                    //filter_name = Object.entries(filter);
 
                     filter_value.push(["src_ip", [filter.src_ip, srcIpForm]])
                     filter_value.push(["dst_ip", [filter.dst_ip, dstIpForm]])

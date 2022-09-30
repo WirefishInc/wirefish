@@ -204,6 +204,7 @@ fn start_sniffing(
             loop {
                 match interface_channel.next() {
                     Ok(packet) if receive_stop.try_recv().is_err() => {
+
                         let ethernet_packet = EthernetPacket::new(packet).unwrap();
                         let new_packet = parse_ethernet_frame(&ethernet_packet, counter_id);
                         counter_id += 1;
