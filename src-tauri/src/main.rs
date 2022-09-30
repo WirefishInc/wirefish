@@ -1,6 +1,7 @@
 extern crate pnet;
 extern crate sniffer_parser;
 extern crate sudo;
+extern crate core;
 
 mod filtering;
 mod report;
@@ -195,11 +196,14 @@ fn start_sniffing(
         let packets = Arc::clone(&state.packets);
 
         std::thread::spawn(move || {
+            let mut counter_id = 0;
+
             loop {
                 match interface_channel.next() {
                     Ok(packet) if receive_stop.try_recv().is_err() => {
                         let ethernet_packet = EthernetPacket::new(packet).unwrap();
-                        let new_packet = parse_ethernet_frame(&ethernet_packet);
+                        let new_packet = parse_ethernet_frame(&ethernet_packet, counter_id);
+                        counter_id += 1;
 
                         /* Save packet in HashMap */
                         let now = Local::now();

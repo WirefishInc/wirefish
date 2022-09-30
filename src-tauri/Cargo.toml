@@ -29,6 +29,7 @@ dotenv = "0.15.0"
 sudo = "0.6.0"
 human_bytes = "0.3.1"
 
+
 [features]
 # by default Tauri runs in production mode
 # when `tauri dev` runs it is executed with `cargo run --no-default-features` if `devPath` is an URL
