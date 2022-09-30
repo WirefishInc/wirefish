@@ -70,7 +70,7 @@ mod tests {
         let mut ethernet_buffer = [0u8; 42];
         let ethernet_packet = build_test_ethernet_packet(ethernet_buffer.as_mut_slice());
 
-        let parsed_packet = parse_ethernet_frame(&ethernet_packet);
+        let parsed_packet = parse_ethernet_frame(&ethernet_packet, 0);
         match parsed_packet.get_link_layer_packet().unwrap() {
             SerializablePacket::EthernetPacket(new_ethernet_packet) => {
                 assert_eq!(
@@ -96,7 +96,7 @@ mod tests {
         let mut ethernet_buffer = [0u8; 42];
         let ethernet_packet = build_test_unknown_ethernet_packet(ethernet_buffer.as_mut_slice());
 
-        let parsed_packet = parse_ethernet_frame(&ethernet_packet);
+        let parsed_packet = parse_ethernet_frame(&ethernet_packet, 0);
         match parsed_packet.get_link_layer_packet().unwrap() {
             SerializablePacket::UnknownPacket(unknown_packet) => {
                 assert_eq!(

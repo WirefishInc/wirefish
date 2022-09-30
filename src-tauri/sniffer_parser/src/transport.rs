@@ -244,7 +244,7 @@ mod tests {
         let mut udp_buffer = [0u8; 42];
 
         let udp_packet = build_test_udp_packet(udp_buffer.as_mut_slice());
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_udp_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),
@@ -266,7 +266,7 @@ mod tests {
 
     #[test]
     fn malformed_udp_packet() {
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_udp_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),
@@ -285,7 +285,7 @@ mod tests {
         let mut tcp_buffer = [0u8; 42];
 
         let tcp_packet = build_test_tcp_packet(tcp_buffer.as_mut_slice());
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_tcp_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),
@@ -317,7 +317,7 @@ mod tests {
 
     #[test]
     fn malformed_tcp_packet() {
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_tcp_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),
@@ -336,7 +336,7 @@ mod tests {
         let mut icmp_buffer = [0u8; 42];
 
         let echo_reply_packet = echo_reply::EchoReplyPacket::new(&mut icmp_buffer).unwrap();
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_icmp_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),
@@ -383,7 +383,7 @@ mod tests {
 
         echo_request_packet.set_icmp_type(IcmpTypes::EchoRequest);
 
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_icmp_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),
@@ -429,7 +429,7 @@ mod tests {
         let mut icmp_packet = MutableIcmpPacket::new(&mut icmp_buffer).unwrap();
         icmp_packet.set_icmp_type(IcmpType(99));
 
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_icmp_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),
@@ -453,7 +453,7 @@ mod tests {
 
     #[test]
     fn malformed_icmp_packet() {
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_icmp_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),
@@ -472,7 +472,7 @@ mod tests {
         let mut icmpv6_buffer = [0u8; 42];
 
         let icmpv6_packet = build_test_icmpv6_packet(&mut icmpv6_buffer);
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_icmpv6_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),
@@ -499,7 +499,7 @@ mod tests {
 
     #[test]
     fn malformed_icmpv6_packet() {
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_icmpv6_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             IpAddr::V4(Ipv4Addr::new(11, 11, 11, 11)),

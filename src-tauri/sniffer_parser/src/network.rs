@@ -102,7 +102,7 @@ pub mod tests {
         let mut ethernet_buffer = [0u8; 42];
         let ethernet_packet = build_test_arp_packet(ethernet_buffer.as_mut_slice());
 
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_arp_packet(
             ethernet_packet.payload(),
             ethernet_packet.get_source(),
@@ -157,7 +157,7 @@ pub mod tests {
 
     #[test]
     fn malformed_arp_packet() {
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_arp_packet(
             &[],
             MacAddr(10, 10, 10, 10, 10, 10),
@@ -176,7 +176,7 @@ pub mod tests {
         let mut ethernet_buffer = [0u8; 42];
         let ethernet_packet = build_test_ip_packet(ethernet_buffer.as_mut_slice());
 
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_ipv4_packet(ethernet_packet.payload(), &mut parsed_packet);
 
         let ip_packet = Ipv4Packet::new(ethernet_packet.payload()).unwrap();
@@ -216,7 +216,7 @@ pub mod tests {
 
     #[test]
     fn malformed_ip_packet() {
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_ipv4_packet(&[], &mut parsed_packet);
 
         match parsed_packet.get_network_layer_packet().unwrap() {
@@ -230,7 +230,7 @@ pub mod tests {
         let mut ethernet_buffer = [0u8; 256];
         let ethernet_packet = build_test_ipv6_packet(ethernet_buffer.as_mut_slice());
 
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_ipv6_packet(ethernet_packet.payload(), &mut parsed_packet);
 
         let ipv6_packet = Ipv6Packet::new(ethernet_packet.payload()).unwrap();
@@ -265,7 +265,7 @@ pub mod tests {
 
     #[test]
     fn malformed_ipv6_packet() {
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_ipv6_packet(&[], &mut parsed_packet);
 
         match parsed_packet.get_network_layer_packet().unwrap() {
