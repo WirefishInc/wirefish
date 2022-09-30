@@ -12,7 +12,8 @@ use serde::Serialize;
 use sniffer_parser::serializable_packet::util::{
     contains_arp, contains_dns, contains_ethernet, contains_http, contains_icmp, contains_icmp6,
     contains_ipv4, contains_ipv6, contains_malformed, contains_tcp, contains_tls, contains_udp,
-    contains_unknokn, get_dest_mac, get_source_mac,
+    contains_unknokn, get_dest_ip, get_dest_mac, get_dest_port, get_source_ip, get_source_mac,
+    get_source_port,
 };
 use std::io::Write;
 
@@ -155,6 +156,7 @@ fn start_sniffing(
 ) -> Result<(), SniffingError> {
     let sniffing_state = state.info.lock().unwrap();
     let mut sniffers = state.sniffers.lock().unwrap();
+    let mut packet_collection = state.packets.lock().unwrap();
 
     let interface_name = sniffing_state.interface_name.as_ref().ok_or(
         SniffingError::StartSniffingWithoutInterfaceSelection(
@@ -168,6 +170,7 @@ fn start_sniffing(
         ),
     )?;
 
+    packet_collection.clear();
     info!("[{}] Sniffing started", interface_name);
 
     let sniffer = sniffers.get_mut(interface_name);
@@ -217,46 +220,58 @@ fn start_sniffing(
                         let parsed_packet = Arc::new(new_packet);
 
                         // Index by Source IP
-                        packets_collection
-                            .source_ip_index
-                            .entry(sender_receiver.0.ip_source.clone())
-                            .and_modify(|packets| packets.push(Arc::clone(&parsed_packet)))
-                            .or_insert(vec![Arc::clone(&parsed_packet)]);
+                        if let Some(ip_address) = get_source_ip(&parsed_packet) {
+                            packets_collection
+                                .source_ip_index
+                                .entry(ip_address)
+                                .and_modify(|packets| packets.push(Arc::clone(&parsed_packet)))
+                                .or_insert(vec![Arc::clone(&parsed_packet)]);
+                        }
 
                         // Index by Dest IP
-                        packets_collection
-                            .dest_ip_index
-                            .entry(sender_receiver.0.ip_destination.clone())
-                            .and_modify(|packets| packets.push(Arc::clone(&parsed_packet)))
-                            .or_insert(vec![Arc::clone(&parsed_packet)]);
+                        if let Some(ip_address) = get_dest_ip(&parsed_packet) {
+                            packets_collection
+                                .dest_ip_index
+                                .entry(ip_address)
+                                .and_modify(|packets| packets.push(Arc::clone(&parsed_packet)))
+                                .or_insert(vec![Arc::clone(&parsed_packet)]);
+                        }
 
                         // Index by Source MAC
-                        packets_collection
-                            .source_mac_index
-                            .entry(get_source_mac(&parsed_packet).unwrap_or("".to_owned()))
-                            .and_modify(|packets| packets.push(Arc::clone(&parsed_packet)))
-                            .or_insert(vec![Arc::clone(&parsed_packet)]);
+                        if let Some(mac_address) = get_source_mac(&parsed_packet) {
+                            packets_collection
+                                .source_mac_index
+                                .entry(mac_address)
+                                .and_modify(|packets| packets.push(Arc::clone(&parsed_packet)))
+                                .or_insert(vec![Arc::clone(&parsed_packet)]);
+                        }
 
                         // Index by Dest MAC
-                        packets_collection
-                            .dest_mac_index
-                            .entry(get_dest_mac(&parsed_packet).unwrap_or("".to_owned()))
-                            .and_modify(|packets| packets.push(Arc::clone(&parsed_packet)))
-                            .or_insert(vec![Arc::clone(&parsed_packet)]);
+                        if let Some(mac_address) = get_dest_mac(&parsed_packet) {
+                            packets_collection
+                                .dest_mac_index
+                                .entry(mac_address)
+                                .and_modify(|packets| packets.push(Arc::clone(&parsed_packet)))
+                                .or_insert(vec![Arc::clone(&parsed_packet)]);
+                        }
 
                         // Index by Source Port
-                        packets_collection
-                            .source_port_index
-                            .entry(sender_receiver.0.port_source.clone())
-                            .and_modify(|packets| packets.push(Arc::clone(&parsed_packet)))
-                            .or_insert(vec![Arc::clone(&parsed_packet)]);
+                        if let Some(port) = get_source_port(&parsed_packet) {
+                            packets_collection
+                                .source_port_index
+                                .entry(port)
+                                .and_modify(|packets| packets.push(Arc::clone(&parsed_packet)))
+                                .or_insert(vec![Arc::clone(&parsed_packet)]);
+                        }
 
                         // Index by Dest Port
-                        packets_collection
-                            .dest_port_index
-                            .entry(sender_receiver.0.port_destination.clone())
-                            .and_modify(|packets| packets.push(Arc::clone(&parsed_packet)))
-                            .or_insert(vec![Arc::clone(&parsed_packet)]);
+                        if let Some(port) = get_dest_port(&parsed_packet) {
+                            packets_collection
+                                .dest_port_index
+                                .entry(port)
+                                .and_modify(|packets| packets.push(Arc::clone(&parsed_packet)))
+                                .or_insert(vec![Arc::clone(&parsed_packet)]);
+                        }
 
                         if contains_ethernet(&parsed_packet) {
                             packets_collection

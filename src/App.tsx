@@ -411,7 +411,7 @@ function App() {
         if (sniffingStatus === SniffingStatus.Inactive) {
             setCapturedPackets([]);
             setPacketCount(0);
-            //setIsPageFull(false);
+            setMakeRequest(true);
             await startSniffing();
         } else if (sniffingStatus === SniffingStatus.Active) await stopSniffing();
         setActionLoading("");

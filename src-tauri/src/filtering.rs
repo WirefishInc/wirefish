@@ -1,11 +1,14 @@
-use std::{collections::BTreeMap, sync::Arc};
-use sniffer_parser::serializable_packet::{ParsedPacket, SerializablePacket};
 use crate::{SniffingError, SniffingState};
+use sniffer_parser::serializable_packet::{
+    util::{
+        get_dest_ip, get_dest_mac, get_dest_port, get_source_ip, get_source_mac, get_source_port,
+    },
+    ParsedPacket,
+};
+use std::{collections::BTreeMap, sync::Arc};
 
 #[allow(non_snake_case)]
 mod FilterNamesValues {
-    use serde::{Deserialize, Serialize};
-
     /* pub const ETHERNET: &str = "ethernet";
     pub const MALFORMED: &str = "malformed";
     pub const UNKNOWN: &str = "unknown";
@@ -31,6 +34,7 @@ mod FilterNamesValues {
 pub struct PacketsCollection {
     pub packets: Vec<Arc<ParsedPacket>>,
 
+    /// Indexes as Binary Trees for fast selective searching
     pub source_ip_index: BTreeMap<String, Vec<Arc<ParsedPacket>>>,
     pub dest_ip_index: BTreeMap<String, Vec<Arc<ParsedPacket>>>,
     pub source_port_index: BTreeMap<String, Vec<Arc<ParsedPacket>>>,
@@ -80,6 +84,28 @@ impl PacketsCollection {
             arp_packets: vec![],
         }
     }
+
+    pub fn clear(&mut self) {
+        self.source_ip_index.clear();
+        self.dest_ip_index.clear();
+        self.source_port_index.clear();
+        self.dest_port_index.clear();
+        self.source_mac_index.clear();
+        self.dest_mac_index.clear();
+        self.ethernet_packets.clear();
+        self.malformed_packets.clear();
+        self.unknown_packets.clear();
+        self.tcp_packets.clear();
+        self.udp_packets.clear();
+        self.icmp_packets.clear();
+        self.icmpv6_packets.clear();
+        self.http_packets.clear();
+        self.tls_packets.clear();
+        self.ipv4_packets.clear();
+        self.ipv6_packets.clear();
+        self.dns_packets.clear();
+        self.arp_packets.clear();
+    }
 }
 
 fn get_slice(packets: &Vec<Arc<ParsedPacket>>, start: usize, end: usize) -> &[Arc<ParsedPacket>] {
@@ -116,6 +142,7 @@ fn get_packets_internal<'a>(
 ) -> Result<Vec<ParsedPacket>, SniffingError> {
     if !filters_type.is_empty() || !filters_value.is_empty() {
         let mut filtered_packets: Vec<Arc<ParsedPacket>> = vec![];
+        let mut is_index_used = true;
 
         // TODO
         /*
@@ -144,17 +171,23 @@ fn get_packets_internal<'a>(
                 apply_specific_filter(
                     name,
                     value,
-                    start,
                     end,
+                    is_index_used,
                     &mut *packets_collection,
                     &mut filtered_packets,
                 )?;
+
+                println!("Done");
+
+                if is_index_used {
+                    is_index_used = false;
+                }
             }
         }
 
         //if !reduced { filtered_packets = Vec::from(get_slice(&filtered_packets, start, end)) }
 
-        return Ok(filtered_packets
+        return Ok(get_slice(&filtered_packets, start, end)
             .iter()
             .map(|x| ParsedPacket::clone(&*x))
             .collect());
@@ -169,68 +202,68 @@ fn get_packets_internal<'a>(
 pub fn apply_specific_filter<'a>(
     name: &'a str,
     value: &'a str,
-    start: usize,
     end: usize,
+    is_index_used: bool,
     packets_collection: &mut PacketsCollection,
     filtered_packets: &mut Vec<Arc<ParsedPacket>>,
 ) -> Result<(), SniffingError> {
     return match name {
         FilterNamesValues::SRC_IP => {
             filter_by_src_ip(
-                start,
-                end,
                 &packets_collection.source_ip_index,
+                end,
                 value,
+                is_index_used,
                 filtered_packets,
             );
             Ok(())
         }
         FilterNamesValues::DST_IP => {
             filter_by_dst_ip(
-                start,
-                end,
                 &packets_collection.dest_ip_index,
+                end,
                 value,
+                is_index_used,
                 filtered_packets,
             );
             Ok(())
         }
         FilterNamesValues::SRC_MAC => {
             filter_by_src_mac(
-                start,
-                end,
                 &packets_collection.source_mac_index,
+                end,
                 value,
+                is_index_used,
                 filtered_packets,
             );
             Ok(())
         }
         FilterNamesValues::DST_MAC => {
             filter_by_dst_mac(
-                start,
-                end,
                 &packets_collection.dest_mac_index,
+                end,
                 value,
+                is_index_used,
                 filtered_packets,
             );
             Ok(())
         }
         FilterNamesValues::SRC_PORT => {
             filter_by_src_port(
-                start,
-                end,
                 &packets_collection.source_port_index,
+                end,
                 value,
+                is_index_used,
                 filtered_packets,
             );
             Ok(())
         }
         FilterNamesValues::DST_PORT => {
             filter_by_dst_port(
-                start,
-                end,
                 &packets_collection.dest_port_index,
+                end,
                 value,
+                is_index_used,
                 filtered_packets,
             );
             Ok(())
@@ -243,170 +276,216 @@ pub fn apply_specific_filter<'a>(
 }
 
 pub fn filter_by_src_ip<'a>(
-    start: usize,
-    end: usize,
     index: &'a BTreeMap<String, Vec<Arc<ParsedPacket>>>,
+    end: usize,
     ip_address: &'a str,
+    is_index_used: bool,
     filtered_packets: &mut Vec<Arc<ParsedPacket>>,
 ) {
-    if !filtered_packets.is_empty() {
-        filtered_packets.retain(|p| {
-            if let Some(SerializablePacket::Ipv4Packet(ip_packet)) = p.get_network_layer_packet() {
-                if ip_packet.source.to_string() != ip_address {
-                    return false;
-                }
-            }
+    if filtered_packets.is_empty() && !is_index_used {
+        return;
+    }
 
-            return true;
-        });
+    if !is_index_used {
+        let mut counter = 0;
+        *filtered_packets = filtered_packets
+            .iter()
+            .filter_map(|p| {
+                let source_ip = get_source_ip(p);
+                if source_ip.is_some() && source_ip.unwrap() == ip_address {
+                    return Some(Arc::clone(p));
+                }
+
+                return None;
+            })
+            .take_while(|_| {
+                counter += 1;
+                counter <= end
+            })
+            .collect();
     } else {
         match index.get(&ip_address.to_owned()) {
-            Some(values) => filtered_packets.extend_from_slice(get_slice(values, start, end)),
+            Some(values) => filtered_packets.extend_from_slice(values),
             _ => (),
         }
     }
 }
 
 pub fn filter_by_dst_ip<'a>(
-    start: usize,
-    end: usize,
     index: &'a BTreeMap<String, Vec<Arc<ParsedPacket>>>,
+    end: usize,
     ip_address: &'a str,
+    is_index_used: bool,
     filtered_packets: &mut Vec<Arc<ParsedPacket>>,
 ) {
-    if !filtered_packets.is_empty() {
-        filtered_packets.retain(|p| {
-            if let Some(SerializablePacket::Ipv4Packet(ip_packet)) = p.get_network_layer_packet() {
-                if ip_packet.destination.to_string() != ip_address {
-                    return false;
-                }
-            }
+    if filtered_packets.is_empty() && !is_index_used {
+        return;
+    }
 
-            return true;
-        });
+    if !is_index_used {
+        let mut counter = 0;
+        *filtered_packets = filtered_packets
+            .iter()
+            .filter_map(|p| {
+                let dest_ip = get_dest_ip(p);
+                if dest_ip.is_some() && dest_ip.unwrap() == ip_address {
+                    return Some(Arc::clone(p));
+                }
+
+                return None;
+            })
+            .take_while(|_| {
+                counter += 1;
+                counter <= end
+            })
+            .collect();
     } else {
         match index.get(&ip_address.to_owned()) {
-            Some(values) => filtered_packets.extend_from_slice(get_slice(values, start, end)),
+            Some(values) => filtered_packets.extend_from_slice(values),
             _ => (),
         }
     }
 }
 
 pub fn filter_by_src_mac<'a>(
-    start: usize,
-    end: usize,
     index: &'a BTreeMap<String, Vec<Arc<ParsedPacket>>>,
+    end: usize,
     mac_address: &'a str,
+    is_index_used: bool,
     filtered_packets: &mut Vec<Arc<ParsedPacket>>,
 ) {
-    if !filtered_packets.is_empty() {
-        filtered_packets.retain(|p| {
-            if let Some(SerializablePacket::EthernetPacket(ethernet_packet)) =
-                p.get_link_layer_packet()
-            {
-                if ethernet_packet.source.to_string() != mac_address {
-                    return false;
-                }
-            }
+    if filtered_packets.is_empty() && !is_index_used {
+        return;
+    }
 
-            return true;
-        });
+    if !is_index_used {
+        let mut counter = 0;
+        *filtered_packets = filtered_packets
+            .iter()
+            .filter_map(|p| {
+                let source_mac = get_source_mac(p);
+                if source_mac.is_some() && source_mac.unwrap() == mac_address {
+                    return Some(Arc::clone(p));
+                }
+
+                return None;
+            })
+            .take_while(|_| {
+                counter += 1;
+                counter <= end
+            })
+            .collect();
     } else {
         match index.get(&mac_address.to_owned()) {
-            Some(values) => filtered_packets.extend_from_slice(get_slice(values, start, end)),
+            Some(values) => filtered_packets.extend_from_slice(values),
             _ => (),
         }
     }
 }
 
 pub fn filter_by_dst_mac<'a>(
-    start: usize,
-    end: usize,
     index: &'a BTreeMap<String, Vec<Arc<ParsedPacket>>>,
+    end: usize,
     mac_address: &'a str,
+    is_index_used: bool,
     filtered_packets: &mut Vec<Arc<ParsedPacket>>,
 ) {
-    if !filtered_packets.is_empty() {
-        filtered_packets.retain(|p| {
-            if let Some(SerializablePacket::EthernetPacket(ethernet_packet)) =
-                p.get_link_layer_packet()
-            {
-                if ethernet_packet.destination.to_string() != mac_address {
-                    return false;
-                }
-            }
+    if filtered_packets.is_empty() && !is_index_used {
+        return;
+    }
 
-            return true;
-        });
+    if !is_index_used {
+        let mut counter = 0;
+        *filtered_packets = filtered_packets
+            .iter()
+            .filter_map(|p| {
+                let dest_mac = get_dest_mac(p);
+                if dest_mac.is_some() && dest_mac.unwrap() == mac_address {
+                    return Some(Arc::clone(p));
+                }
+
+                return None;
+            })
+            .take_while(|_| {
+                counter += 1;
+                counter <= end
+            })
+            .collect();
     } else {
         match index.get(&mac_address.to_owned()) {
-            Some(values) => filtered_packets.extend_from_slice(get_slice(values, start, end)),
+            Some(values) => filtered_packets.extend_from_slice(values),
             _ => (),
         }
     }
 }
 
 pub fn filter_by_src_port<'a>(
-    start: usize,
-    end: usize,
     index: &'a BTreeMap<String, Vec<Arc<ParsedPacket>>>,
+    end: usize,
     src_port: &'a str,
+    is_index_used: bool,
     filtered_packets: &mut Vec<Arc<ParsedPacket>>,
 ) {
-    if !filtered_packets.is_empty() {
-        filtered_packets.retain(|p| {
-            if let Some(SerializablePacket::TcpPacket(tcp_packet)) = p.get_transport_layer_packet()
-            {
-                if tcp_packet.source.to_string() != src_port {
-                    return false;
-                }
-            }
+    if filtered_packets.is_empty() && !is_index_used {
+        return;
+    }
 
-            if let Some(SerializablePacket::UdpPacket(udp_packet)) = p.get_transport_layer_packet()
-            {
-                if udp_packet.source.to_string() != src_port {
-                    return false;
+    if !is_index_used {
+        let mut counter = 0;
+        *filtered_packets = filtered_packets
+            .iter()
+            .filter_map(|p| {
+                let source_port = get_source_port(p);
+                if source_port.is_some() && source_port.unwrap() == src_port {
+                    return Some(Arc::clone(p));
                 }
-            }
 
-            return true;
-        });
+                return None;
+            })
+            .take_while(|_| {
+                counter += 1;
+                counter <= end
+            })
+            .collect();
     } else {
         match index.get(&src_port.to_owned()) {
-            Some(values) => filtered_packets.extend_from_slice(get_slice(values, start, end)),
+            Some(values) => filtered_packets.extend_from_slice(values),
             _ => (),
         }
     }
 }
 
 pub fn filter_by_dst_port<'a>(
-    start: usize,
-    end: usize,
     index: &'a BTreeMap<String, Vec<Arc<ParsedPacket>>>,
+    end: usize,
     dst_port: &'a str,
+    is_index_used: bool,
     filtered_packets: &mut Vec<Arc<ParsedPacket>>,
 ) {
-    if !filtered_packets.is_empty() {
-        filtered_packets.retain(|p| {
-            if let Some(SerializablePacket::TcpPacket(tcp_packet)) = p.get_transport_layer_packet()
-            {
-                if tcp_packet.destination.to_string() != dst_port {
-                    return false;
-                }
-            }
+    if filtered_packets.is_empty() && !is_index_used {
+        return;
+    }
 
-            if let Some(SerializablePacket::UdpPacket(udp_packet)) = p.get_transport_layer_packet()
-            {
-                if udp_packet.destination.to_string() != dst_port {
-                    return false;
+    if !is_index_used {
+        let mut counter = 0;
+        *filtered_packets = filtered_packets
+            .iter()
+            .filter_map(|p| {
+                let dest_port = get_dest_port(p);
+                if dest_port.is_some() && dest_port.unwrap() == dst_port {
+                    return Some(Arc::clone(p));
                 }
-            }
 
-            return true;
-        });
+                return None;
+            })
+            .take_while(|_| {
+                counter += 1;
+                counter <= end
+            })
+            .collect();
     } else {
         match index.get(&dst_port.to_owned()) {
-            Some(values) => filtered_packets.extend_from_slice(get_slice(values, start, end)),
+            Some(values) => filtered_packets.extend_from_slice(values),
             _ => (),
         }
     }
@@ -417,29 +496,24 @@ pub mod tests {
     use std::{net::Ipv4Addr, sync::Arc};
 
     use pnet::util::MacAddr;
-    use sniffer_parser::{
-        parse_ethernet_frame,
-        serializable_packet::{
-            network::SerializableIpv4Packet,
-            transport::SerializableTcpPacket,
-            util::{
-                get_dest_ip, get_dest_mac, get_dest_port, get_source_ip, get_source_mac,
-                get_source_port,
-            },
-            ParsedPacket, SerializableEthernetPacket, SerializablePacket,
+    use sniffer_parser::serializable_packet::{
+        network::SerializableIpv4Packet,
+        transport::SerializableTcpPacket,
+        util::{
+            get_dest_ip, get_dest_mac, get_dest_port, get_source_ip, get_source_mac,
+            get_source_port,
         },
+        ParsedPacket, SerializableEthernetPacket, SerializablePacket,
     };
 
     use crate::SniffingError;
 
-    use super::{get_packets, get_packets_internal, FilterNamesValues, PacketsCollection};
+    use super::{get_packets_internal, FilterNamesValues, PacketsCollection};
 
-    const SOURCE_IP : &str = "10.10.10.10";
-    const DEST_IP : &str = "11.11.11.11";
-    const SOURCE_MAC : &str = "10.10.10.10.10.10";
-    const DEST_MAC : &str = "11.11.11.11.11.11";
-    const SOURCE_PORT : u16 = 4444;
-    const DEST_PORT : u16 = 443;
+    const SOURCE_IP: &str = "10.10.10.10";
+    const DEST_IP: &str = "11.11.11.11";
+    const SOURCE_PORT: u16 = 4444;
+    const DEST_PORT: u16 = 443;
 
     #[test]
     fn unknown_selective_filter() {
@@ -466,14 +540,14 @@ pub mod tests {
     #[test]
     fn first_selective_filter_no_results() {
         let filters_type = Vec::new();
-        let filters_value = vec![(FilterNamesValues::SRC_IP, (true, SOURCE_IP))];
+        let filters_value = vec![(FilterNamesValues::SRC_IP, (true, "192.168.1.1"))];
         let parsed_packets = vec![build_test_parsed_packet(
             MacAddr::new(10, 10, 10, 10, 10, 10),
             MacAddr::new(11, 11, 11, 11, 11, 11),
             Ipv4Addr::new(10, 10, 10, 10),
             Ipv4Addr::new(11, 11, 11, 11),
-            4444,
-            443,
+            SOURCE_PORT,
+            DEST_PORT,
         )];
 
         match get_packets_internal(
@@ -484,7 +558,7 @@ pub mod tests {
             &mut build_test_packets_collection(parsed_packets),
         ) {
             Ok(empty) => assert!(empty.is_empty()),
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -497,8 +571,8 @@ pub mod tests {
             MacAddr::new(11, 11, 11, 11, 11, 11),
             Ipv4Addr::new(10, 10, 10, 10),
             Ipv4Addr::new(11, 11, 11, 11),
-            4444,
-            443,
+            SOURCE_PORT,
+            DEST_PORT,
         )];
 
         match get_packets_internal(
@@ -511,8 +585,8 @@ pub mod tests {
             Ok(single) => {
                 assert_eq!(single.len(), 1);
                 assert_eq!(get_source_ip(single.get(0).unwrap()).unwrap(), SOURCE_IP);
-            },
-            _ => unreachable!()
+            }
+            _ => unreachable!(),
         }
     }
 
@@ -528,8 +602,8 @@ pub mod tests {
             MacAddr::new(11, 11, 11, 11, 11, 11),
             Ipv4Addr::new(10, 10, 10, 10),
             Ipv4Addr::new(11, 11, 11, 11),
-            4444,
-            443,
+            SOURCE_PORT,
+            DEST_PORT,
         )];
 
         match get_packets_internal(
@@ -543,8 +617,8 @@ pub mod tests {
                 assert_eq!(single.len(), 1);
                 assert_eq!(get_source_ip(single.get(0).unwrap()).unwrap(), SOURCE_IP);
                 assert_eq!(get_dest_ip(single.get(0).unwrap()).unwrap(), DEST_IP);
-            },
-            _ => unreachable!()
+            }
+            _ => unreachable!(),
         }
     }
 
