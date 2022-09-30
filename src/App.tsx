@@ -206,7 +206,13 @@ function App() {
                 let filter_value: any[] = [];
 
                 if (filterEnabled) {
-                    filter_name = Object.entries(filter);
+                    for (let key in filter) {
+                        // @ts-ignore
+                        if (filter[key])
+                            filter_name.push(key)
+                    }
+
+                    //filter_name = Object.entries(filter);
 
                     filter_value.push(["src_ip", [filter.src_ip, srcIpForm]])
                     filter_value.push(["dst_ip", [filter.dst_ip, dstIpForm]])
@@ -222,7 +228,7 @@ function App() {
                     filter_name,
                     filter_value);
 
-                let packets = response.map((p, index) => new GeneralPacket((pageState - 1) * 100 + index, p))
+                let packets = response.map((p, index) => new GeneralPacket(p.id, p))
                 setCapturedPackets(packets)
 
                 if (packets.length >= 100)
@@ -232,7 +238,7 @@ function App() {
                 setFeedbackMessage({
                     isError: true,
                     duration: 8000,
-                    text: e
+                    text: e.error
                 });
             }
         }
@@ -279,11 +285,11 @@ function App() {
                 duration: 5000,
                 text: "Report generated"
             });
-        } catch (exception) {
+        } catch (exception: any) {
             setFeedbackMessage({
                 isError: true,
                 duration: 8000,
-                text: "There was an error trying to generate the report: " + exception
+                text: exception.error
             });
         }
     }

@@ -22,8 +22,8 @@ pub fn cleanup_sniffing_state() {
     ACTIVE_TLS_PARSERS.with(|parsers| parsers.borrow_mut().clear());
 }
 
-pub fn parse_ethernet_frame(ethernet: &EthernetPacket) -> ParsedPacket {
-    let mut parsed_packet = ParsedPacket::new();
+pub fn parse_ethernet_frame(ethernet: &EthernetPacket, id: usize) -> ParsedPacket {
+    let mut parsed_packet = ParsedPacket::new(id);
 
     parsed_packet.set_link_layer_packet(Some(SerializablePacket::EthernetPacket(
         SerializableEthernetPacket::from(ethernet),

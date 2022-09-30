@@ -1,5 +1,5 @@
 {
-  "name": "tauri-app",
+  "name": "wirefish",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -31,7 +31,8 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "tauricon": "tauricon"
   },
   "eslintConfig": {
     "extends": [
@@ -53,6 +54,7 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^1.0.4",
+    "@tauri-apps/tauricon": "github:tauri-apps/tauricon",
     "cross-env": "^7.0.3"
   }
 }

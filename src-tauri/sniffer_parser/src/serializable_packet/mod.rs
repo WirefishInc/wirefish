@@ -21,6 +21,7 @@ use self::transport::{
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ParsedPacket {
+    id: usize,
     link_layer_packet: Option<SerializablePacket>,
     network_layer_packet: Option<SerializablePacket>,
     transport_layer_packet: Option<SerializablePacket>,
@@ -28,13 +29,18 @@ pub struct ParsedPacket {
 }
 
 impl ParsedPacket {
-    pub fn new() -> Self {
+    pub fn new(id: usize) -> Self {
         ParsedPacket {
+            id,
             link_layer_packet: None,
             network_layer_packet: None,
             transport_layer_packet: None,
             application_layer_packet: None,
         }
+    }
+
+    pub fn get_id(&self) -> usize {
+        self.id
     }
 
     pub fn get_link_layer_packet(&self) -> Option<&SerializablePacket> {
@@ -99,7 +105,6 @@ pub enum SerializablePacket {
 }
 
 /// Ethernet Packet Representation
-
 #[derive(Serialize, Debug, Clone)]
 pub struct SerializableEthernetPacket {
     pub destination: MacAddr,
@@ -120,7 +125,6 @@ impl<'a> From<&EthernetPacket<'a>> for SerializableEthernetPacket {
 }
 
 /// Unknown Packet Representation
-
 #[derive(Serialize, Debug, Clone)]
 pub struct SerializableUnknownPacket {
     pub destination: MacAddr,
