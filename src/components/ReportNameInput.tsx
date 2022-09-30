@@ -22,7 +22,7 @@ const ReportNameInput = ({
                 onChange={(e) => setReportFileName(e.target.value)}
                 InputProps={{
                     inputProps: {className: "filename-input"},
-                    endAdornment: <InputAdornment position="end">.txt</InputAdornment>,
+                    endAdornment: <InputAdornment position="end">.csv</InputAdornment>,
                 }}
             />
             {
