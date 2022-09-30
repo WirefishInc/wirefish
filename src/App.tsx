@@ -199,7 +199,7 @@ function App() {
     const generateReport = async () => {
         try {
             timerStartTime.current = Date.now();
-            await API.generateReport(`${reportFolder}${reportFileName}.txt`, firstReportGeneration.current);
+            await API.generateReport(`${reportFolder}${reportFileName}.csv`, firstReportGeneration.current);
             if (firstReportGeneration.current)
                 firstReportGeneration.current = false;
             setFeedbackMessage({
