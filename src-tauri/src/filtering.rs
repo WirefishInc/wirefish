@@ -34,6 +34,7 @@ mod FilterNamesValues {
     pub const DST_PORT: &str = "dst_port";
 }
 
+#[derive(Debug)]
 pub struct PacketsCollection {
     pub packets: Vec<Arc<ParsedPacket>>,
 
@@ -666,6 +667,8 @@ pub fn filter_by_dst_port<'a>(
 #[cfg(test)]
 pub mod tests {
     use std::{net::Ipv4Addr, sync::Arc};
+    use std::net::Ipv6Addr;
+    use log::warn;
 
     use pnet::util::MacAddr;
     use sniffer_parser::serializable_packet::{
@@ -677,6 +680,8 @@ pub mod tests {
         },
         ParsedPacket, SerializableEthernetPacket, SerializablePacket,
     };
+    use sniffer_parser::serializable_packet::network::SerializableIpv6Packet;
+    use sniffer_parser::serializable_packet::transport::SerializableUdpPacket;
 
     use crate::SniffingError;
 
@@ -794,6 +799,178 @@ pub mod tests {
         }
     }
 
+    //
+
+    #[test]
+    fn type_filters_no_results_with_active_selective_filter() {
+        let filters_type = vec![FilterNamesValues::ARP];
+        let filters_value = vec![
+            (FilterNamesValues::SRC_IP, (true, SOURCE_IP)),
+            (FilterNamesValues::DST_IP, (true, DEST_IP)),
+        ];
+        let parsed_packets = vec![build_test_parsed_packet(
+            MacAddr::new(10, 10, 10, 10, 10, 10),
+            MacAddr::new(11, 11, 11, 11, 11, 11),
+            Ipv4Addr::new(10, 10, 10, 10),
+            Ipv4Addr::new(11, 11, 11, 11),
+            SOURCE_PORT,
+            DEST_PORT,
+        )];
+
+        match get_packets_internal(
+            0,
+            100,
+            filters_type,
+            filters_value,
+            &mut build_test_packets_collection(parsed_packets),
+        ) {
+            Ok(empty) => {
+                assert!(empty.is_empty());
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn single_type_filters_results_with_active_selective_filter() {
+        let filters_type = vec![FilterNamesValues::TCP];
+        let filters_value = vec![
+            (FilterNamesValues::SRC_IP, (true, SOURCE_IP)),
+            (FilterNamesValues::DST_IP, (true, DEST_IP)),
+        ];
+        let parsed_packets = vec![build_test_parsed_packet(
+            MacAddr::new(10, 10, 10, 10, 10, 10),
+            MacAddr::new(11, 11, 11, 11, 11, 11),
+            Ipv4Addr::new(10, 10, 10, 10),
+            Ipv4Addr::new(11, 11, 11, 11),
+            SOURCE_PORT,
+            DEST_PORT,
+        )];
+
+        match get_packets_internal(
+            0,
+            100,
+            filters_type,
+            filters_value,
+            &mut build_test_packets_collection(parsed_packets),
+        ) {
+            Ok(single) => {
+                assert_eq!(single.len(), 1);
+                assert_eq!(get_source_ip(single.get(0).unwrap()).unwrap(), SOURCE_IP);
+                assert_eq!(get_dest_ip(single.get(0).unwrap()).unwrap(), DEST_IP);
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn single_type_filters_no_results_no_selective_filter() {
+        let filters_type = vec![FilterNamesValues::ARP];
+        let filters_value = vec![];
+
+        let parsed_packets = vec![build_test_parsed_packet(
+            MacAddr::new(10, 10, 10, 10, 10, 10),
+            MacAddr::new(11, 11, 11, 11, 11, 11),
+            Ipv4Addr::new(10, 10, 10, 10),
+            Ipv4Addr::new(11, 11, 11, 11),
+            SOURCE_PORT,
+            DEST_PORT,
+        )];
+
+        match get_packets_internal(
+            0,
+            100,
+            filters_type,
+            filters_value,
+            &mut build_test_packets_collection(parsed_packets),
+        ) {
+            Ok(empty) => {
+                assert!(empty.is_empty())
+            }
+            _ => unreachable!(),
+        }
+    }
+
+
+    #[test]
+    fn more_type_filters_merge_results_no_selective_filter() {
+        let filters_type = vec![FilterNamesValues::TCP, FilterNamesValues::IPV4, FilterNamesValues::ARP];
+        let filters_value = Vec::new();
+
+        let parsed_packets = vec![
+            build_test_parsed_packet(
+                MacAddr::new(10, 10, 10, 10, 10, 10),
+                MacAddr::new(11, 11, 11, 11, 11, 11),
+                Ipv4Addr::new(10, 10, 10, 10),
+                Ipv4Addr::new(11, 11, 11, 11),
+                SOURCE_PORT,
+                DEST_PORT,
+            ),
+            build_second_test_parsed_packet(
+                MacAddr::new(10, 10, 10, 10, 10, 10),
+                MacAddr::new(11, 11, 11, 11, 11, 11),
+                Ipv6Addr::new(10, 10, 10, 10, 0, 0, 0, 0),
+                Ipv6Addr::new(11, 11, 11, 11, 0, 0, 0, 0),
+                SOURCE_PORT,
+                DEST_PORT,
+            ),
+        ];
+
+        match get_packets_internal(
+            0,
+            100,
+            filters_type,
+            filters_value,
+            &mut build_test_packets_collection(parsed_packets),
+        ) {
+            Ok(single) => {
+                assert_eq!(single.len(), 1);
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn more_type_filters_unite_results_no_selective_filter() {
+        let filters_type = vec![FilterNamesValues::TCP, FilterNamesValues::UDP, FilterNamesValues::ARP];
+        let filters_value = Vec::new();
+
+        let parsed_packets = vec![
+            build_test_parsed_packet(
+                MacAddr::new(10, 10, 10, 10, 10, 10),
+                MacAddr::new(11, 11, 11, 11, 11, 11),
+                Ipv4Addr::new(10, 10, 10, 10),
+                Ipv4Addr::new(11, 11, 11, 11),
+                SOURCE_PORT,
+                DEST_PORT,
+            ),
+            build_second_test_parsed_packet(
+                MacAddr::new(10, 10, 10, 10, 10, 10),
+                MacAddr::new(11, 11, 11, 11, 11, 11),
+                Ipv6Addr::new(10, 10, 10, 10, 0, 0, 0, 0),
+                Ipv6Addr::new(11, 11, 11, 11, 0, 0, 0, 0),
+                SOURCE_PORT,
+                DEST_PORT,
+            ),
+        ];
+
+        //println!("{:#?}", build_test_packets_collection(parsed_packets.clone()));
+
+        match get_packets_internal(
+            0,
+            100,
+            filters_type,
+            filters_value,
+            &mut build_test_packets_collection(parsed_packets),
+        ) {
+            Ok(double) => {
+                println!("{:?}", double);
+                assert_eq!(double.len(), 2);
+            }
+            _ => unreachable!(),
+        }
+    }
+
     // Utils
 
     fn build_test_packets_collection(parsed_packets: Vec<ParsedPacket>) -> PacketsCollection {
@@ -826,6 +1003,24 @@ pub mod tests {
                 get_dest_mac(&parsed_packet).unwrap(),
                 vec![parsed_packet.clone()],
             );
+
+            if let Some(SerializablePacket::Ipv4Packet(_)) = parsed_packet.get_network_layer_packet() {
+                packet_collection.ipv4_packets.push(parsed_packet.clone());
+            }
+
+            if let Some(SerializablePacket::Ipv6Packet(_)) = parsed_packet.get_network_layer_packet() {
+                packet_collection.ipv6_packets.push(parsed_packet.clone());
+            }
+
+            if let Some(SerializablePacket::TcpPacket(_)) = parsed_packet.get_transport_layer_packet() {
+                packet_collection.tcp_packets.push(parsed_packet.clone());
+            }
+
+            if let Some(SerializablePacket::UdpPacket(_)) = parsed_packet.get_transport_layer_packet() {
+                packet_collection.udp_packets.push(parsed_packet.clone());
+            }
+
+            packet_collection.packets.push(parsed_packet);
         }
 
         packet_collection
@@ -882,6 +1077,51 @@ pub mod tests {
                 checksum: 1,
                 urgent_ptr: 1,
                 options: Vec::new(),
+                length: 1,
+            },
+        )));
+
+        parsed_packet
+    }
+
+    fn build_second_test_parsed_packet(
+        source_mac: MacAddr,
+        dest_mac: MacAddr,
+        source_ip: Ipv6Addr,
+        dest_ip: Ipv6Addr,
+        source_port: u16,
+        dest_port: u16,
+    ) -> ParsedPacket {
+        let mut parsed_packet = ParsedPacket::new(1);
+
+        parsed_packet.set_link_layer_packet(Some(SerializablePacket::EthernetPacket(
+            SerializableEthernetPacket {
+                destination: dest_mac,
+                source: source_mac,
+                ethertype: "Ipv4".to_owned(),
+                payload: Vec::new(),
+            },
+        )));
+
+        parsed_packet.set_network_layer_packet(Some(SerializablePacket::Ipv6Packet(
+            SerializableIpv6Packet {
+                version: 1,
+                traffic_class: 0,
+                flow_label: 0,
+                payload_length: 0,
+                next_header: "".to_string(),
+                hop_limit: 0,
+                source: source_ip,
+                destination: dest_ip,
+                length: 1,
+            },
+        )));
+
+        parsed_packet.set_transport_layer_packet(Some(SerializablePacket::UdpPacket(
+            SerializableUdpPacket {
+                source: source_port,
+                destination: dest_port,
+                checksum: 1,
                 length: 1,
             },
         )));
