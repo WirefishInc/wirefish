@@ -144,13 +144,7 @@ function App() {
         ipv4: boolean,
         ipv6: boolean,
         arp: boolean,
-        dns: boolean,
-        src_ip: boolean,
-        dst_ip: boolean,
-        src_mac: boolean,
-        dst_mac: boolean,
-        src_port: boolean,
-        dst_port: boolean
+        dns: boolean
     }>({
         ethernet: false,
         malformed: false,
@@ -164,13 +158,7 @@ function App() {
         tcp: false,
         udp: false,
         arp: false,
-        dns: false,
-        src_ip: false,
-        dst_ip: false,
-        src_mac: false,
-        dst_mac: false,
-        src_port: false,
-        dst_port: false
+        dns: false
     });
 
     useEffect(() => {
@@ -208,22 +196,22 @@ function App() {
                 if (filterEnabled) {
                     for (let key in filter) {
                         // @ts-ignore
-                        if (filter[key] &&
-                            key !== "src_ip" &&
-                            key !== "src_port" &&
-                            key !== "src_mac" &&
-                            key !== "dst_ip" &&
-                            key !== "dst_port" &&
-                            key !== "dst_mac")
+                        if (filter[key])
                             filter_name.push(key)
                     }
 
-                    filter_value.push(["src_ip", [filter.src_ip, srcIpForm]])
-                    filter_value.push(["dst_ip", [filter.dst_ip, dstIpForm]])
-                    filter_value.push(["src_mac", [filter.src_mac, srcMacForm]])
-                    filter_value.push(["dst_mac", [filter.dst_mac, dstMacForm]])
-                    filter_value.push(["src_port", [filter.src_port, srcPortForm]])
-                    filter_value.push(["dst_port", [filter.dst_port, dstPortForm]])
+                    if (srcIpForm !== "")
+                        filter_value.push(["src_ip", srcIpForm])
+                    if (dstIpForm !== "")
+                        filter_value.push(["dst_ip", dstIpForm])
+                    if (srcMacForm !== "")
+                        filter_value.push(["src_mac", srcMacForm])
+                    if (dstMacForm !== "")
+                        filter_value.push(["dst_mac", dstMacForm])
+                    if (srcPortForm !== "")
+                        filter_value.push(["src_port", srcPortForm])
+                    if (dstPortForm !== "")
+                        filter_value.push(["dst_port", dstPortForm])
                 }
 
                 let response: any[] = await API.getPackets(
@@ -262,12 +250,6 @@ function App() {
         filter.http,
         filter.ipv4,
         filter.ipv6,
-        filter.src_port,
-        filter.src_mac,
-        filter.src_ip,
-        filter.dst_mac,
-        filter.dst_ip,
-        filter.dst_port,
         filter.icmp,
         filter.icmpv6,
         srcIpForm,
