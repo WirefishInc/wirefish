@@ -124,17 +124,19 @@ pub fn get_packets<'a>(
     start: usize,
     end: usize,
     filters_type: Vec<&'a str>,
-    filters_value: Vec<(&'a str, (bool, &'a str))>,
+    filters_value: Vec<(&'a str, &'a str)>,
     state: tauri::State<SniffingState>,
 ) -> Result<Vec<ParsedPacket>, SniffingError> {
-    let mut packets_collection = state.packets.lock().unwrap();
+    println!("{:?}", filters_value);
+    /*let mut packets_collection = state.packets.lock().unwrap();
     get_packets_internal(
         start,
         end,
         filters_type,
         filters_value,
         &mut *packets_collection,
-    )
+    )*/
+    Ok(Vec::new())
 }
 
 fn get_packets_internal<'a>(
@@ -356,13 +358,6 @@ pub fn apply_layer_type_filter(name: &str, packet: &Arc<ParsedPacket>) -> Result
         FilterNamesValues::HTTP => Ok(contains_http(packet)),
         FilterNamesValues::TLS => Ok(contains_tls(packet)),
         FilterNamesValues::DNS => Ok(contains_dns(packet)),
-
-        FilterNamesValues::SRC_IP => Ok(false),
-        FilterNamesValues::DST_IP => Ok(false),
-        FilterNamesValues::SRC_MAC => Ok(false),
-        FilterNamesValues::DST_MAC => Ok(false),
-        FilterNamesValues::SRC_PORT => Ok(false),
-        FilterNamesValues::DST_PORT => Ok(false),
 
         _ => Err(SniffingError::UnknownFilterType(format!(
             "Unknown filter type: {}",

@@ -1,4 +1,4 @@
-import React, {FC} from "react";
+import React, {FC, useState} from "react";
 import {
     Accordion,
     AccordionDetails,
@@ -11,6 +11,22 @@ import {
 import Box from "@mui/material/Box";
 import {FilterList} from "@mui/icons-material";
 
+const IPValidator = require('ip-validator');
+const MacValidator = require('is-mac-address')
+
+function ValidateIPaddress(ipaddress: string) {
+    return IPValidator.ipv4(ipaddress) || IPValidator.ipv6(ipaddress);
+}
+
+function ValidateMacAddress(macaddress: string) {
+    return MacValidator.isMACAddress(macaddress)
+}
+
+function ValidatePortAddress(portaddress: string) {
+    const portRegex = /^([0-9]*)$/;
+
+    return portRegex.test(portaddress);
+}
 
 interface FiltersProps {
     enabled: boolean,
@@ -41,6 +57,13 @@ const Filters: FC<FiltersProps> = ({
                                        setMakeRequest,
                                        setPageState
                                    }) => {
+
+    const [ipSrcInputError, setIpSrcInputError] = useState<boolean>(false);
+    const [ipDstInputError, setIpDstInputError] = useState<boolean>(false);
+    const [macSrcInputError, setMacSrcInputError] = useState<boolean>(false);
+    const [macDstInputError, setMacDstInputError] = useState<boolean>(false);
+    const [portSrcInputError, setPortSrcInputError] = useState<boolean>(false);
+    const [portDstInputError, setPortDstInputError] = useState<boolean>(false);
 
     return (
         <Grid xs={12} item={true} className={"container-center"}>
@@ -280,20 +303,21 @@ const Filters: FC<FiltersProps> = ({
                                 <FormControlLabel className={"text-field"}
                                                   control={
                                                       <>
-                                                          <Checkbox disabled={!enabled} checked={filter.src_ip}
-                                                                    onChange={(ev) => {
-                                                                        setPageState(1)
-                                                                        setMakeRequest(true)
-                                                                        if (ev.target.checked)
-                                                                            setFilter((f: any) => Object.assign({}, f, {src_ip: true}));
-                                                                        else
-                                                                            setFilter((f: any) => Object.assign({}, f, {src_ip: false}));
-                                                                    }} name="src_ip"/>
                                                           <TextField disabled={!enabled}
+                                                                     error={ipSrcInputError}
                                                                      onChange={(s) => {
-                                                                         setPageState(1)
-                                                                         setMakeRequest(true);
-                                                                         setSrcIpForm(s.target.value)
+                                                                         if (s.target.value === "") {
+                                                                             setIpSrcInputError(false);
+                                                                         } else {
+                                                                             if (ValidateIPaddress(s.target.value)) {
+                                                                                 setIpSrcInputError(false);
+                                                                                 setPageState(1);
+                                                                                 setMakeRequest(true);
+                                                                                 setSrcIpForm(s.target.value)
+                                                                             } else {
+                                                                                 setIpSrcInputError(true);
+                                                                             }
+                                                                         }
                                                                      }}
                                                                      id="src_ip" label="SOURCE IP" variant="standard"/>
                                                       </>
@@ -303,20 +327,22 @@ const Filters: FC<FiltersProps> = ({
                                 <FormControlLabel className={"text-field"}
                                                   control={
                                                       <>
-                                                          <Checkbox disabled={!enabled} checked={filter.dst_ip}
-                                                                    onChange={(ev) => {
-                                                                        setPageState(1)
-                                                                        setMakeRequest(true)
-                                                                        if (ev.target.checked)
-                                                                            setFilter((f: any) => Object.assign({}, f, {dst_ip: true}));
-                                                                        else
-                                                                            setFilter((f: any) => Object.assign({}, f, {dst_ip: false}));
-                                                                    }} name="dst_ip"/>
                                                           <TextField disabled={!enabled}
+                                                                     error={ipDstInputError}
                                                                      onChange={(s) => {
-                                                                         setPageState(1)
-                                                                         setMakeRequest(true);
-                                                                         setDstIpForm(s.target.value)
+                                                                         if (s.target.value === "") {
+                                                                             setIpDstInputError(false);
+                                                                         } else {
+                                                                             if (ValidateIPaddress(s.target.value)) {
+                                                                                 setIpDstInputError(false);
+                                                                                 setPageState(1);
+                                                                                 setMakeRequest(true);
+                                                                                 setDstIpForm(s.target.value)
+                                                                             } else {
+                                                                                 setIpDstInputError(true);
+                                                                             }
+                                                                         }
+
                                                                      }}
                                                                      id="dst_ip" label="DESTINATION IP"
                                                                      variant="standard"/>
@@ -327,20 +353,22 @@ const Filters: FC<FiltersProps> = ({
                                 <FormControlLabel className={"text-field"}
                                                   control={
                                                       <>
-                                                          <Checkbox disabled={!enabled} checked={filter.src_mac}
-                                                                    onChange={(ev) => {
-                                                                        setPageState(1)
-                                                                        setMakeRequest(true)
-                                                                        if (ev.target.checked)
-                                                                            setFilter((f: any) => Object.assign({}, f, {src_mac: true}));
-                                                                        else
-                                                                            setFilter((f: any) => Object.assign({}, f, {src_mac: false}));
-                                                                    }} name="src_mac"/>
                                                           <TextField disabled={!enabled}
+                                                                     error={macSrcInputError}
                                                                      onChange={(s) => {
-                                                                         setPageState(1)
-                                                                         setMakeRequest(true);
-                                                                         setSrcMacForm(s.target.value)
+                                                                         if (s.target.value === "") {
+                                                                             setMacSrcInputError(false);
+                                                                         } else {
+                                                                             if (ValidateMacAddress(s.target.value)) {
+                                                                                 setMacSrcInputError(false);
+                                                                                 setPageState(1);
+                                                                                 setMakeRequest(true);
+                                                                                 setSrcMacForm(s.target.value)
+                                                                             } else {
+                                                                                 setMacSrcInputError(true);
+                                                                             }
+                                                                         }
+
                                                                      }}
                                                                      id="src_mac" label="SOURCE MAC"
                                                                      variant="standard"/>
@@ -351,20 +379,21 @@ const Filters: FC<FiltersProps> = ({
                                 <FormControlLabel className={"text-field"}
                                                   control={
                                                       <>
-                                                          <Checkbox disabled={!enabled} checked={filter.dst_mac}
-                                                                    onChange={(ev) => {
-                                                                        setPageState(1)
-                                                                        setMakeRequest(true)
-                                                                        if (ev.target.checked)
-                                                                            setFilter((f: any) => Object.assign({}, f, {dst_mac: true}));
-                                                                        else
-                                                                            setFilter((f: any) => Object.assign({}, f, {dst_mac: false}));
-                                                                    }} name="dst_mac"/>
                                                           <TextField disabled={!enabled}
+                                                                     error={macDstInputError}
                                                                      onChange={(s) => {
-                                                                         setPageState(1)
-                                                                         setMakeRequest(true);
-                                                                         setDstMacForm(s.target.value)
+                                                                         if (s.target.value === "") {
+                                                                             setMacDstInputError(false);
+                                                                         } else {
+                                                                             if (ValidateMacAddress(s.target.value)) {
+                                                                                 setMacDstInputError(false);
+                                                                                 setPageState(1);
+                                                                                 setMakeRequest(true);
+                                                                                 setDstMacForm(s.target.value)
+                                                                             } else {
+                                                                                 setMacDstInputError(true);
+                                                                             }
+                                                                         }
                                                                      }}
                                                                      id="dst_mac" label="DESTINATION MAC"
                                                                      variant="standard"/>
@@ -379,20 +408,22 @@ const Filters: FC<FiltersProps> = ({
                                 <FormControlLabel className={"text-field"}
                                                   control={
                                                       <>
-                                                          <Checkbox disabled={!enabled} checked={filter.src_port}
-                                                                    onChange={(ev) => {
-                                                                        setPageState(1)
-                                                                        setMakeRequest(true)
-                                                                        if (ev.target.checked)
-                                                                            setFilter((f: any) => Object.assign({}, f, {src_port: true}));
-                                                                        else
-                                                                            setFilter((f: any) => Object.assign({}, f, {src_port: false}));
-                                                                    }} name="src_port"/>
                                                           <TextField disabled={!enabled}
+                                                                     error={portSrcInputError}
                                                                      onChange={(s) => {
-                                                                         setPageState(1)
-                                                                         setMakeRequest(true);
-                                                                         setSrcPortForm(s.target.value)
+                                                                         if (s.target.value === "") {
+                                                                             setPortSrcInputError(false);
+                                                                         } else {
+                                                                             if (ValidatePortAddress(s.target.value)) {
+                                                                                 setPortSrcInputError(false);
+                                                                                 setPageState(1);
+                                                                                 setMakeRequest(true);
+                                                                                 setSrcPortForm(s.target.value)
+                                                                             } else {
+                                                                                 setPortSrcInputError(true);
+                                                                             }
+                                                                         }
+
                                                                      }}
                                                                      id="src_port" label="SOURCE PORT"
                                                                      variant="standard"/>
@@ -403,20 +434,21 @@ const Filters: FC<FiltersProps> = ({
                                 <FormControlLabel className={"text-field"}
                                                   control={
                                                       <>
-                                                          <Checkbox disabled={!enabled} checked={filter.dst_port}
-                                                                    onChange={(ev) => {
-                                                                        setPageState(1)
-                                                                        setMakeRequest(true)
-                                                                        if (ev.target.checked)
-                                                                            setFilter((f: any) => Object.assign({}, f, {dst_port: true}));
-                                                                        else
-                                                                            setFilter((f: any) => Object.assign({}, f, {dst_port: false}));
-                                                                    }} name="dst_port"/>
                                                           <TextField disabled={!enabled}
+                                                                     error={portDstInputError}
                                                                      onChange={(s) => {
-                                                                         setPageState(1)
-                                                                         setMakeRequest(true);
-                                                                         setDstPortForm(s.target.value)
+                                                                         if (s.target.value === "") {
+                                                                             setPortDstInputError(false);
+                                                                         } else {
+                                                                             if (ValidatePortAddress(s.target.value)) {
+                                                                                 setPortDstInputError(false);
+                                                                                 setPageState(1);
+                                                                                 setMakeRequest(true);
+                                                                                 setDstPortForm(s.target.value)
+                                                                             } else {
+                                                                                 setPortDstInputError(true);
+                                                                             }
+                                                                         }
                                                                      }}
                                                                      id="dst_port" label="DESTINATION PORT"
                                                                      variant="standard"/>
