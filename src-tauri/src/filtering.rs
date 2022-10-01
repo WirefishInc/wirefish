@@ -7,7 +7,8 @@ use sniffer_parser::serializable_packet::util::{
 use sniffer_parser::serializable_packet::util::{
     get_dest_ip, get_dest_mac, get_dest_port, get_source_ip, get_source_mac, get_source_port,
 };
-use sniffer_parser::serializable_packet::{ParsedPacket};
+use sniffer_parser::serializable_packet::ParsedPacket;
+use std::slice::Iter;
 use std::{collections::BTreeMap, sync::Arc};
 
 #[allow(non_snake_case)]
@@ -144,30 +145,15 @@ fn get_packets_internal<'a>(
     packets_collection: &mut PacketsCollection,
 ) -> Result<Vec<ParsedPacket>, SniffingError> {
     if !filters_type.is_empty() || !filters_value.is_empty() {
-        let mut filtered_packets: Vec<Arc<ParsedPacket>> = vec![];
-        let mut strong_filters = false;
-        let mut is_index_used = true;
+        // Apply all Strong Filters
+        let (strong_filters_used, mut filtered_packets) =
+            apply_all_strong_filters(end, filters_value, packets_collection)?;
 
-        for (name, (is_active, value)) in filters_value {
-            if is_active {
-                strong_filters = true;
-                apply_specific_filter(
-                    name,
-                    value,
-                    end,
-                    is_index_used,
-                    &mut *packets_collection,
-                    &mut filtered_packets,
-                )?;
-
-                if is_index_used {
-                    is_index_used = false;
-                }
-            }
-        }
-
-        if strong_filters {
+        // If Strong filters are enabled
+        if strong_filters_used {
+            // If Type filters are enabled
             if !filters_type.is_empty() {
+                // Merge filter results just iterating
                 filtered_packets.retain(|packet| {
                     let mut contain = false;
 
@@ -183,164 +169,161 @@ fn get_packets_internal<'a>(
                 });
             }
 
-            return Ok(get_slice(&filtered_packets, start, end)
-                .iter()
-                .map(|x| ParsedPacket::clone(&*x))
-                .collect());
+            return Ok(bound_and_map(start, end, &filtered_packets));
         } else {
-            if filters_type.is_empty() || filters_type.len() == 1 {
-                // ONE FILTER
-                let single_filter = match filters_type.get(0) {
-                    Some(&FilterNamesValues::UNKNOWN) => {
-                        get_slice(&packets_collection.unknown_packets, start, end)
-                    }
-                    Some(&FilterNamesValues::MALFORMED) => {
-                        get_slice(&packets_collection.malformed_packets, start, end)
-                    }
-                    Some(&FilterNamesValues::ETHERNET) => {
-                        get_slice(&packets_collection.ethernet_packets, start, end)
-                    }
-                    Some(&FilterNamesValues::IPV4) => {
-                        get_slice(&packets_collection.ipv4_packets, start, end)
-                    }
-                    Some(&FilterNamesValues::IPV6) => {
-                        get_slice(&packets_collection.ipv6_packets, start, end)
-                    }
-                    Some(&FilterNamesValues::ARP) => {
-                        get_slice(&packets_collection.arp_packets, start, end)
-                    }
-                    Some(&FilterNamesValues::TCP) => {
-                        get_slice(&packets_collection.tcp_packets, start, end)
-                    }
-                    Some(&FilterNamesValues::UDP) => {
-                        get_slice(&packets_collection.udp_packets, start, end)
-                    }
-                    Some(&FilterNamesValues::ICMP) => {
-                        get_slice(&packets_collection.icmp_packets, start, end)
-                    }
-                    Some(&FilterNamesValues::ICMPV6) => {
-                        get_slice(&packets_collection.icmpv6_packets, start, end)
-                    }
-                    Some(&FilterNamesValues::HTTP) => {
-                        get_slice(&packets_collection.http_packets, start, end)
-                    }
-                    Some(&FilterNamesValues::TLS) => {
-                        get_slice(&packets_collection.tls_packets, start, end)
-                    }
-                    Some(&FilterNamesValues::DNS) => {
-                        get_slice(&packets_collection.dns_packets, start, end)
-                    }
-                    _ => &[],
-                };
+            // If Type filters are disabled
+            if filters_type.is_empty() {
+                return Ok(Vec::new());
+            }
 
-                return Ok(single_filter
-                    .iter()
-                    .map(|x| ParsedPacket::clone(&*x))
-                    .collect());
+            // If just 1 Type filter is enabled
+            if filters_type.len() == 1 {
+                let single_filter = get_bounded_type_filter_index_iter(
+                    start,
+                    end,
+                    filters_type[0],
+                    &packets_collection,
+                )?;
+
+                return Ok(single_filter.map(|x| ParsedPacket::clone(&*x)).collect());
             } else {
-                // MORE FILTERS
-
+                // If more than 1 Type filters are enabled
                 let mut filters_array = vec![];
 
                 for f in filters_type {
-                    let mut iter = match f {
-                        FilterNamesValues::UNKNOWN => {
-                            Ok(get_slice(&packets_collection.unknown_packets, 0, end).iter())
-                        }
-                        FilterNamesValues::MALFORMED => {
-                            Ok(get_slice(&packets_collection.malformed_packets, 0, end).iter())
-                        }
-                        FilterNamesValues::ETHERNET => {
-                            Ok(get_slice(&packets_collection.ethernet_packets, 0, end).iter())
-                        }
-                        FilterNamesValues::IPV4 => {
-                            Ok(get_slice(&packets_collection.ipv4_packets, 0, end).iter())
-                        }
-                        FilterNamesValues::IPV6 => {
-                            Ok(get_slice(&packets_collection.ipv6_packets, 0, end).iter())
-                        }
-                        FilterNamesValues::ARP => {
-                            Ok(get_slice(&packets_collection.arp_packets, 0, end).iter())
-                        }
-                        FilterNamesValues::TCP => {
-                            Ok(get_slice(&packets_collection.tcp_packets, 0, end).iter())
-                        }
-                        FilterNamesValues::UDP => {
-                            Ok(get_slice(&packets_collection.udp_packets, 0, end).iter())
-                        }
-                        FilterNamesValues::ICMP => {
-                            Ok(get_slice(&packets_collection.icmp_packets, 0, end).iter())
-                        }
-                        FilterNamesValues::ICMPV6 => {
-                            Ok(get_slice(&packets_collection.icmpv6_packets, 0, end).iter())
-                        }
-                        FilterNamesValues::HTTP => {
-                            Ok(get_slice(&packets_collection.http_packets, 0, end).iter())
-                        }
-                        FilterNamesValues::TLS => {
-                            Ok(get_slice(&packets_collection.tls_packets, 0, end).iter())
-                        }
-                        FilterNamesValues::DNS => {
-                            Ok(get_slice(&packets_collection.dns_packets, 0, end).iter())
-                        }
-                        _ => Err(SniffingError::UnknownFilterType(format!(
-                            "Unknown filter type: {}",
-                            f
-                        ))),
-                    }?;
+                    let mut iter =
+                        get_bounded_type_filter_index_iter(0, end, f, &packets_collection)?;
 
                     let value = iter.next();
                     filters_array.push((iter, value));
                 }
 
-                let mut result = vec![];
-
-                loop {
-                    let mut has_value = false;
-                    let mut min: (Vec<usize>, Option<Arc<ParsedPacket>>) = (vec![], None);
-
-                    for (i, (_, value)) in filters_array.iter().enumerate() {
-                        if let Some(value) = *value {
-                            has_value = true;
-
-                            if min.0.is_empty() || min.1.as_ref().unwrap().get_id() > value.get_id()
-                            {
-                                min.0.clear();
-                                min.0.push(i);
-                                min.1 = Some(value.clone());
-                            } else if min.1.as_ref().unwrap().get_id() == value.get_id() {
-                                min.0.push(i);
-                            }
-                        }
-                    }
-
-                    if !has_value {
-                        break;
-                    }
-
-                    for id in &min.0 {
-                        filters_array[*id].1 = filters_array[*id].0.next();
-                    }
-
-                    result.push(min.1.unwrap());
-                }
-
-                return Ok(get_slice(&result, start, end)
-                    .iter()
-                    .map(|x| ParsedPacket::clone(&*x))
-                    .collect());
+                let merged = merge_filter_type_arrays(&mut filters_array);
+                return Ok(bound_and_map(start, end, &merged));
             }
         }
     } else {
-        return Ok(get_slice(&packets_collection.packets, start, end)
-            .iter()
-            .map(|x| ParsedPacket::clone(&*x))
-            .collect());
+        return Ok(bound_and_map(start, end, &packets_collection.packets));
     }
 }
 
+fn bound_and_map(start: usize, end: usize, packets: &Vec<Arc<ParsedPacket>>) -> Vec<ParsedPacket> {
+    get_slice(packets, start, end)
+        .iter()
+        .map(|x| ParsedPacket::clone(&*x))
+        .collect()
+}
 
-pub fn apply_layer_type_filter(name: &str, packet: &Arc<ParsedPacket>) -> Result<bool, SniffingError> {
+fn get_bounded_type_filter_index_iter<'a>(
+    start: usize,
+    end: usize,
+    index_name: &str,
+    packets_collection: &'a PacketsCollection,
+) -> Result<Iter<'a, Arc<ParsedPacket>>, SniffingError> {
+    match index_name {
+        FilterNamesValues::UNKNOWN => {
+            Ok(get_slice(&packets_collection.unknown_packets, start, end).iter())
+        }
+        FilterNamesValues::MALFORMED => {
+            Ok(get_slice(&packets_collection.malformed_packets, start, end).iter())
+        }
+        FilterNamesValues::ETHERNET => {
+            Ok(get_slice(&packets_collection.ethernet_packets, start, end).iter())
+        }
+        FilterNamesValues::IPV4 => {
+            Ok(get_slice(&packets_collection.ipv4_packets, start, end).iter())
+        }
+        FilterNamesValues::IPV6 => {
+            Ok(get_slice(&packets_collection.ipv6_packets, start, end).iter())
+        }
+        FilterNamesValues::ARP => Ok(get_slice(&packets_collection.arp_packets, start, end).iter()),
+        FilterNamesValues::TCP => Ok(get_slice(&packets_collection.tcp_packets, start, end).iter()),
+        FilterNamesValues::UDP => Ok(get_slice(&packets_collection.udp_packets, start, end).iter()),
+        FilterNamesValues::ICMP => {
+            Ok(get_slice(&packets_collection.icmp_packets, start, end).iter())
+        }
+        FilterNamesValues::ICMPV6 => {
+            Ok(get_slice(&packets_collection.icmpv6_packets, start, end).iter())
+        }
+        FilterNamesValues::HTTP => {
+            Ok(get_slice(&packets_collection.http_packets, start, end).iter())
+        }
+        FilterNamesValues::TLS => Ok(get_slice(&packets_collection.tls_packets, start, end).iter()),
+        FilterNamesValues::DNS => Ok(get_slice(&packets_collection.dns_packets, start, end).iter()),
+        _ => Err(SniffingError::UnknownFilterType(format!(
+            "Unknown filter type: {}",
+            index_name
+        ))),
+    }
+}
+
+fn apply_all_strong_filters<'a>(
+    end: usize,
+    filters_value: Vec<(&'a str, (bool, &'a str))>,
+    packets_collection: &mut PacketsCollection,
+) -> Result<(bool, Vec<Arc<ParsedPacket>>), SniffingError> {
+    let mut strong_filters_used = false;
+    let mut filtered_packets = vec![];
+
+    for (name, (is_active, value)) in filters_value {
+        if is_active {
+            apply_specific_filter(
+                name,
+                value,
+                end,
+                !strong_filters_used,
+                packets_collection,
+                &mut filtered_packets,
+            )?;
+
+            strong_filters_used = true;
+        }
+    }
+
+    Ok((strong_filters_used, filtered_packets))
+}
+
+fn merge_filter_type_arrays<'a>(
+    filters_array: &mut Vec<(Iter<'a, Arc<ParsedPacket>>, Option<&'a Arc<ParsedPacket>>)>,
+) -> Vec<Arc<ParsedPacket>> {
+    let mut result = vec![];
+
+    loop {
+        let mut has_value = false;
+        let mut min: (Vec<usize>, Option<Arc<ParsedPacket>>) = (vec![], None);
+
+        for (i, (_, value)) in filters_array.iter().enumerate() {
+            if let Some(value) = *value {
+                has_value = true;
+
+                if min.0.is_empty() || min.1.as_ref().unwrap().get_id() > value.get_id() {
+                    min.0.clear();
+                    min.0.push(i);
+                    min.1 = Some(value.clone());
+                } else if min.1.as_ref().unwrap().get_id() == value.get_id() {
+                    min.0.push(i);
+                }
+            }
+        }
+
+        if !has_value {
+            break;
+        }
+
+        for id in &min.0 {
+            filters_array[*id].1 = filters_array[*id].0.next();
+        }
+
+        result.push(min.1.unwrap());
+    }
+
+    result
+}
+
+pub fn apply_layer_type_filter(
+    name: &str,
+    packet: &Arc<ParsedPacket>,
+) -> Result<bool, SniffingError> {
     return match name {
         FilterNamesValues::UNKNOWN => Ok(contains_unknokn(packet)),
         FilterNamesValues::MALFORMED => Ok(contains_malformed(packet)),
@@ -369,7 +352,6 @@ pub fn apply_layer_type_filter(name: &str, packet: &Arc<ParsedPacket>) -> Result
         ))),
     };
 }
-
 
 pub fn apply_specific_filter<'a>(
     name: &'a str,
