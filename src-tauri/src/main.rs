@@ -1,13 +1,21 @@
 extern crate pnet;
 extern crate sniffer_parser;
 extern crate sudo;
+extern crate core;
 
+mod filtering;
 mod report;
 
 use dotenv;
 use env_logger::Builder;
 use log::{error, info};
 use serde::Serialize;
+use sniffer_parser::serializable_packet::util::{
+    contains_arp, contains_dns, contains_ethernet, contains_http, contains_icmp, contains_icmp6,
+    contains_ipv4, contains_ipv6, contains_malformed, contains_tcp, contains_tls, contains_udp,
+    contains_unknokn, get_dest_ip, get_dest_mac, get_dest_port, get_source_ip, get_source_mac,
+    get_source_port,
+};
 use std::io::Write;
 
 use pnet::datalink::Channel::Ethernet;
@@ -15,16 +23,16 @@ use pnet::datalink::{self, ChannelType, Config, NetworkInterface};
 use pnet::packet::ethernet::EthernetPacket;
 
 use chrono::Local;
+use filtering::{get_packets, PacketsCollection};
 use report::{
     data::{PacketExchange, SourceDestination},
     write_report,
 };
 use std::collections::HashMap;
-use tauri::{Manager, Window, Wry};
+use tauri::{Window, Wry};
 
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
-use tauri_awesome_rpc::{AwesomeEmit, AwesomeRpc};
 
 use sniffer_parser::{
     cleanup_sniffing_state, parse_ethernet_frame,
@@ -44,20 +52,23 @@ const CONFIG: Config = Config {
 
 #[derive(Serialize, Debug)]
 #[serde(tag = "type", content = "description")]
-enum SniffingError {
+pub enum SniffingError {
     InterfaceNotFound(String),
     StartSniffingWithoutInterfaceSelection(String),
+    GetPacketsIndexNotValid(String),
     UnhandledChannelType(String),
     FailedChannelCreation(String),
     StopSniffingWithoutPriorStart(String),
     ReportGenerationFailed(String),
     ReadingChannelFailed(String),
+    UnknownFilterType(String),
 }
 
-struct SniffingState {
+pub struct SniffingState {
     sniffers: Arc<Mutex<HashMap<String, (Sender<()>, Receiver<SniffingError>)>>>,
     exchanged_packets: Arc<Mutex<HashMap<SourceDestination, PacketExchange>>>,
     info: Arc<Mutex<SniffingInfo>>,
+    packets: Arc<Mutex<PacketsCollection>>,
 }
 
 impl SniffingState {
@@ -66,6 +77,7 @@ impl SniffingState {
             sniffers: Arc::new(Mutex::new(HashMap::new())),
             exchanged_packets: Arc::new(Mutex::new(HashMap::new())),
             info: Arc::new(Mutex::new(SniffingInfo::new())),
+            packets: Arc::new(Mutex::new(PacketsCollection::new())),
         }
     }
 }
@@ -139,12 +151,15 @@ fn select_interface(
 }
 
 #[tauri::command]
+/// is_resume: true => resume sniffing process, false: start new sniffing process
 fn start_sniffing(
+    is_resume: bool,
     state: tauri::State<SniffingState>,
     window: Window<Wry>,
 ) -> Result<(), SniffingError> {
     let sniffing_state = state.info.lock().unwrap();
     let mut sniffers = state.sniffers.lock().unwrap();
+    let mut packet_collection = state.packets.lock().unwrap();
 
     let interface_name = sniffing_state.interface_name.as_ref().ok_or(
         SniffingError::StartSniffingWithoutInterfaceSelection(
@@ -154,10 +169,13 @@ fn start_sniffing(
 
     let interface = sniffing_state.interface.as_ref().ok_or(
         SniffingError::StartSniffingWithoutInterfaceSelection(
-            "Start sniffing without prior selection of the inteface".to_owned(),
+            "Start sniffing without prior selection of the interface".to_owned(),
         ),
     )?;
 
+    if !is_resume {
+        packet_collection.clear();
+    } 
     info!("[{}] Sniffing started", interface_name);
 
     let sniffer = sniffers.get_mut(interface_name);
@@ -182,12 +200,18 @@ fn start_sniffing(
         sniffers.insert(interface_name.to_string(), (send_stop, receive_error));
 
         let exchanged_packets = Arc::clone(&state.exchanged_packets);
+        let packets = Arc::clone(&state.packets);
+
         std::thread::spawn(move || {
+            let mut counter_id = 0;
+
             loop {
                 match interface_channel.next() {
                     Ok(packet) if receive_stop.try_recv().is_err() => {
+
                         let ethernet_packet = EthernetPacket::new(packet).unwrap();
-                        let new_packet = parse_ethernet_frame(&ethernet_packet);
+                        let new_packet = parse_ethernet_frame(&ethernet_packet, counter_id);
+                        counter_id += 1;
 
                         /* Save packet in HashMap */
                         let now = Local::now();
@@ -201,6 +225,126 @@ fn start_sniffing(
                             protocols.push(link_packet.ethertype.clone());
                         }
 
+                        let mut packets_collection = packets.lock().unwrap();
+                        let parsed_packet = Arc::new(new_packet);
+
+                        // Index by Source IP
+                        if let Some(ip_address) = get_source_ip(&parsed_packet) {
+                            packets_collection
+                                .source_ip_index
+                                .entry(ip_address)
+                                .and_modify(|packets| packets.push(Arc::clone(&parsed_packet)))
+                                .or_insert(vec![Arc::clone(&parsed_packet)]);
+                        }
+
+                        // Index by Dest IP
+                        if let Some(ip_address) = get_dest_ip(&parsed_packet) {
+                            packets_collection
+                                .dest_ip_index
+                                .entry(ip_address)
+                                .and_modify(|packets| packets.push(Arc::clone(&parsed_packet)))
+                                .or_insert(vec![Arc::clone(&parsed_packet)]);
+                        }
+
+                        // Index by Source MAC
+                        if let Some(mac_address) = get_source_mac(&parsed_packet) {
+                            packets_collection
+                                .source_mac_index
+                                .entry(mac_address)
+                                .and_modify(|packets| packets.push(Arc::clone(&parsed_packet)))
+                                .or_insert(vec![Arc::clone(&parsed_packet)]);
+                        }
+
+                        // Index by Dest MAC
+                        if let Some(mac_address) = get_dest_mac(&parsed_packet) {
+                            packets_collection
+                                .dest_mac_index
+                                .entry(mac_address)
+                                .and_modify(|packets| packets.push(Arc::clone(&parsed_packet)))
+                                .or_insert(vec![Arc::clone(&parsed_packet)]);
+                        }
+
+                        // Index by Source Port
+                        if let Some(port) = get_source_port(&parsed_packet) {
+                            packets_collection
+                                .source_port_index
+                                .entry(port)
+                                .and_modify(|packets| packets.push(Arc::clone(&parsed_packet)))
+                                .or_insert(vec![Arc::clone(&parsed_packet)]);
+                        }
+
+                        // Index by Dest Port
+                        if let Some(port) = get_dest_port(&parsed_packet) {
+                            packets_collection
+                                .dest_port_index
+                                .entry(port)
+                                .and_modify(|packets| packets.push(Arc::clone(&parsed_packet)))
+                                .or_insert(vec![Arc::clone(&parsed_packet)]);
+                        }
+
+                        if contains_ethernet(&parsed_packet) {
+                            packets_collection
+                                .ethernet_packets
+                                .push(parsed_packet.clone());
+                        }
+
+                        if contains_malformed(&parsed_packet) {
+                            packets_collection
+                                .malformed_packets
+                                .push(parsed_packet.clone());
+                        }
+
+                        if contains_unknokn(&parsed_packet) {
+                            packets_collection
+                                .unknown_packets
+                                .push(parsed_packet.clone());
+                        }
+
+                        if contains_tcp(&parsed_packet) {
+                            packets_collection.tcp_packets.push(parsed_packet.clone());
+                        }
+
+                        if contains_udp(&parsed_packet) {
+                            packets_collection.udp_packets.push(parsed_packet.clone());
+                        }
+
+                        if contains_icmp(&parsed_packet) {
+                            packets_collection.icmp_packets.push(parsed_packet.clone());
+                        }
+
+                        if contains_icmp6(&parsed_packet) {
+                            packets_collection
+                                .icmpv6_packets
+                                .push(parsed_packet.clone());
+                        }
+
+                        if contains_http(&parsed_packet) {
+                            packets_collection.http_packets.push(parsed_packet.clone());
+                        }
+
+                        if contains_tls(&parsed_packet) {
+                            packets_collection.tls_packets.push(parsed_packet.clone());
+                        }
+
+                        if contains_ipv4(&parsed_packet) {
+                            packets_collection.ipv4_packets.push(parsed_packet.clone());
+                        }
+
+                        if contains_ipv6(&parsed_packet) {
+                            packets_collection.ipv6_packets.push(parsed_packet.clone());
+                        }
+
+                        if contains_arp(&parsed_packet) {
+                            packets_collection.arp_packets.push(parsed_packet.clone());
+                        }
+
+                        if contains_dns(&parsed_packet) {
+                            packets_collection.dns_packets.push(parsed_packet.clone());
+                        }
+
+                        // Insert packet
+                        packets_collection.packets.push(parsed_packet);
+
                         let mut exchanged_packets = exchanged_packets.lock().unwrap();
                         exchanged_packets
                             .entry(sender_receiver.0)
@@ -209,9 +353,7 @@ fn start_sniffing(
                             })
                             .or_insert(PacketExchange::new(protocols, transmitted_bytes, now));
 
-                        window
-                            .state::<AwesomeEmit>()
-                            .emit("main", "packet_received", new_packet);
+                        let _result = window.emit("packet_received", ());
                     }
                     Ok(_) => {
                         // Clean the channel
@@ -361,21 +503,15 @@ fn main() {
         })
         .init();
 
-    let awesome_rpc = AwesomeRpc::new(vec!["tauri://localhost", "http://localhost:*"]);
-
     tauri::Builder::default()
-        .invoke_system(awesome_rpc.initialization_script(), AwesomeRpc::responder())
-        .setup(move |app| {
-            awesome_rpc.start(app.handle());
-            Ok(())
-        })
         .manage(SniffingState::new())
         .invoke_handler(tauri::generate_handler![
             start_sniffing,
             stop_sniffing,
             get_interfaces_list,
             generate_report,
-            select_interface
+            select_interface,
+            get_packets,
         ])
         .run(tauri::generate_context!())
         .expect("Error while running tauri application");

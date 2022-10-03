@@ -10,7 +10,7 @@ export class ArpPacket implements SerializableNetworkLayerPacket {
     sender_proto_addr: string;
     target_hw_addr: string;
     target_proto_addr: string;
-    payload: [];
+    length: number;
     type: string;
 
     constructor(
@@ -23,7 +23,7 @@ export class ArpPacket implements SerializableNetworkLayerPacket {
         sender_proto_addr: string,
         target_hw_addr: string,
         target_proto_addr: string,
-        payload: []
+        length: number
     ) {
         this.hardware_type = hardware_type;
         this.protocol_type = protocol_type;
@@ -34,7 +34,7 @@ export class ArpPacket implements SerializableNetworkLayerPacket {
         this.sender_proto_addr = sender_proto_addr;
         this.target_hw_addr = target_hw_addr;
         this.target_proto_addr = target_proto_addr;
-        this.payload = payload;
+        this.length = length;
         this.type = "Address Resolution Protocol (request/gratuitous ARP)"
     }
     public toDisplay() {
@@ -83,7 +83,6 @@ export class Ipv6Packet implements SerializableNetworkLayerPacket{
     hop_limit: number;
     source: string;
     destination: string;
-    payload: [];
     type: string;
 
     constructor(
@@ -95,7 +94,6 @@ export class Ipv6Packet implements SerializableNetworkLayerPacket{
         hop_limit: number,
         source: string,
         destination: string,
-        payload: []
     ) {
         this.version = version;
         this.traffic_class = traffic_class;
@@ -105,7 +103,6 @@ export class Ipv6Packet implements SerializableNetworkLayerPacket{
         this.hop_limit = hop_limit;
         this.source = source;
         this.destination = destination;
-        this.payload = payload;
         this.type = "Internet Protocol Version 6"
     }
 
@@ -160,7 +157,7 @@ export class Ipv4Packet implements SerializableNetworkLayerPacket {
     checksum: number;
     source: string;
     destination: string;
-    payload: [];
+    length: number;
     type: string;
 
     constructor(
@@ -177,7 +174,7 @@ export class Ipv4Packet implements SerializableNetworkLayerPacket {
         checksum: number,
         source: string,
         destination: string,
-        payload: [],
+        length: number,
     ) {
         this.version = version;
         this.header_length = header_length;
@@ -192,7 +189,7 @@ export class Ipv4Packet implements SerializableNetworkLayerPacket {
         this.checksum = checksum;
         this.source = source;
         this.destination = destination;
-        this.payload = payload;
+        this.length = length;
         this.type = "Internet Protocol Version 4"
     }
 

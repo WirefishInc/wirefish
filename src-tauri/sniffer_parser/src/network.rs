@@ -102,7 +102,7 @@ pub mod tests {
         let mut ethernet_buffer = [0u8; 42];
         let ethernet_packet = build_test_arp_packet(ethernet_buffer.as_mut_slice());
 
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_arp_packet(
             ethernet_packet.payload(),
             ethernet_packet.get_source(),
@@ -146,7 +146,10 @@ pub mod tests {
                     new_arp_packet.target_proto_addr,
                     arp_packet.get_target_proto_addr()
                 );
-                assert_eq!(new_arp_packet.payload, arp_packet.payload().to_vec());
+                assert_eq!(
+                    new_arp_packet.length,
+                    arp_packet.payload().len()
+                );
             }
             _ => unreachable!(),
         }
@@ -154,7 +157,7 @@ pub mod tests {
 
     #[test]
     fn malformed_arp_packet() {
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_arp_packet(
             &[],
             MacAddr(10, 10, 10, 10, 10, 10),
@@ -173,7 +176,7 @@ pub mod tests {
         let mut ethernet_buffer = [0u8; 42];
         let ethernet_packet = build_test_ip_packet(ethernet_buffer.as_mut_slice());
 
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_ipv4_packet(ethernet_packet.payload(), &mut parsed_packet);
 
         let ip_packet = Ipv4Packet::new(ethernet_packet.payload()).unwrap();
@@ -202,7 +205,10 @@ pub mod tests {
                 assert_eq!(new_ip_packet.checksum, ip_packet.get_checksum());
                 assert_eq!(new_ip_packet.source, ip_packet.get_source());
                 assert_eq!(new_ip_packet.destination, ip_packet.get_destination());
-                assert_eq!(new_ip_packet.payload, ip_packet.payload());
+                assert_eq!(
+                    new_ip_packet.length,
+                    ip_packet.payload().len()
+                );
             }
             _ => unreachable!(),
         }
@@ -210,7 +216,7 @@ pub mod tests {
 
     #[test]
     fn malformed_ip_packet() {
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_ipv4_packet(&[], &mut parsed_packet);
 
         match parsed_packet.get_network_layer_packet().unwrap() {
@@ -224,7 +230,7 @@ pub mod tests {
         let mut ethernet_buffer = [0u8; 256];
         let ethernet_packet = build_test_ipv6_packet(ethernet_buffer.as_mut_slice());
 
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_ipv6_packet(ethernet_packet.payload(), &mut parsed_packet);
 
         let ipv6_packet = Ipv6Packet::new(ethernet_packet.payload()).unwrap();
@@ -251,7 +257,7 @@ pub mod tests {
                 assert_eq!(new_ipv6_packet.hop_limit, ipv6_packet.get_hop_limit());
                 assert_eq!(new_ipv6_packet.source, ipv6_packet.get_source());
                 assert_eq!(new_ipv6_packet.destination, ipv6_packet.get_destination());
-                assert_eq!(new_ipv6_packet.payload, ipv6_packet.payload());
+                assert_eq!(new_ipv6_packet.length, ipv6_packet.payload().len());
             }
             _ => unreachable!(),
         }
@@ -259,7 +265,7 @@ pub mod tests {
 
     #[test]
     fn malformed_ipv6_packet() {
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_ipv6_packet(&[], &mut parsed_packet);
 
         match parsed_packet.get_network_layer_packet().unwrap() {

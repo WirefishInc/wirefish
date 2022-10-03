@@ -156,5 +156,23 @@ div.grid {
     height: 370px;
 }
 
+/*
 img.image {
+    todo
+}
+*/
+
+div.row {
+    cursor: pointer;
+}
+
+div.tip {
+    margin-left: 5px;
+    font-style: italic;
+    color: rgb(165, 165, 165);
+}
+
+div.head {
+    width: 100%;
+    margin-bottom: 2px;
 }

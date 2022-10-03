@@ -1,7 +1,21 @@
 import {FC} from "react";
-import {Accordion, AccordionDetails, AccordionSummary, Divider, List, ListItem, Paper} from "@mui/material";
+import {Accordion, AccordionDetails, AccordionSummary, Divider, Grid, List, ListItem, Paper} from "@mui/material";
 import {ArrowDropDown} from "@mui/icons-material";
 import '../index.css';
+
+interface ArrayProps {
+    array: any[];
+}
+
+const ArrayFields: FC<ArrayProps> = ({array}) => {
+    return (
+        <>
+            <table>
+                {array.map((el) => <tr>- {el}</tr>)}
+            </table>
+        </>
+    )
+}
 
 interface FieldProps {
     packetInfo: any[];
@@ -27,16 +41,31 @@ const Fields: FC<FieldProps> = ({packetInfo}) => {
                                                 Object.values(el)[0].src === "" ? Object.values(el)[0].content :
                                                     <img className={"image"}
                                                         // @ts-ignore
-                                                        src={Object.values(el)[0].src}
+                                                         src={Object.values(el)[0].src}
                                                         // @ts-ignore
-                                                        alt={Object.values(el)[0].content}/>
+                                                         alt={Object.values(el)[0].content}/>
                                             }
                                         </AccordionDetails>
                                     </Accordion>
                                 </ListItem>
                                 :
-                                <ListItem className={"break"}
-                                          key={i}><> {Object.keys(el)[0]} : {Object.values(el)[0]} </>
+                                <ListItem className={"break"} key={i}>
+                                    {
+                                        Array.isArray(Object.values(el)[0]) ?
+                                            <>
+                                                <Grid>
+                                                    <Grid item xs={12}>
+                                                        <div className={"head"}>{Object.keys(el)[0]} :</div>
+                                                    </Grid>
+                                                    <Grid item xs={12}>
+                                                        {/* @ts-ignore */}
+                                                        <ArrayFields array={Object.values(el)[0]}/>
+                                                    </Grid>
+                                                </Grid>
+                                            </>
+                                            :
+                                            <>{Object.keys(el)[0]} : {Object.values(el)[0]}</>
+                                    }
                                 </ListItem>
                         }
                         <Divider/>
@@ -270,5 +299,6 @@ const DnsFields: FC<DnsFieldProps> = ({packetInfo}) => {
         <>{fields}</>
     );
 };
+
 
 export {Fields, TlsFields, DnsFields};

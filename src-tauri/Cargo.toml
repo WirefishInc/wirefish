@@ -22,11 +22,12 @@ pcap = "0.9.2"
 tauri-awesome-rpc = { git = "https://github.com/ahkohd/tauri-awesome-rpc", branch = "dev" }
 pnet = { version = "0.31.0", features = ["serde", "std"] }
 chrono = "0.4"
-sniffer_parser = { path = "sniffer_parser/"}
+sniffer_parser = { path = "sniffer_parser/", features = ["utils"] }
 log = "0.4.0"
 env_logger = "0.8.4"
 dotenv = "0.15.0"
 sudo = "0.6.0"
+
 
 [features]
 # by default Tauri runs in production mode

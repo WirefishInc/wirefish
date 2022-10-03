@@ -59,7 +59,7 @@ mod tests {
     #[test]
     fn empty_dns_query() {
         let dns_packet = NewDnsPacket::new_query(ID, false);
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
 
         handle_dns_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
@@ -149,7 +149,7 @@ mod tests {
         dns_packet.header.questions_count = 1;
 
         let dns_packet_bytes = dns_packet.build_bytes_vec().unwrap();
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_dns_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             4444,
@@ -200,7 +200,7 @@ mod tests {
         dns_packet.header.answers_count = 1;
 
         let dns_packet_bytes = dns_packet.build_bytes_vec().unwrap();
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_dns_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             4444,
@@ -251,7 +251,7 @@ mod tests {
         dns_packet.header.additional_records_count = 1;
 
         let dns_packet_bytes = dns_packet.build_bytes_vec().unwrap();
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_dns_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             4444,
@@ -308,7 +308,7 @@ mod tests {
         dns_packet.header.name_servers_count = 1;
 
         let dns_packet_bytes = dns_packet.build_bytes_vec().unwrap();
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_dns_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             4444,
@@ -357,7 +357,7 @@ mod tests {
     #[test]
     fn malformed_dns_packet() {
         let malformed_dns_packet = [0, 1, 2, 3, 0, 1, 2, 3];
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_dns_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             4444,

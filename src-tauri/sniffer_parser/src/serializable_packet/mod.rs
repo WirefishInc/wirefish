@@ -1,6 +1,8 @@
 pub mod application;
 pub mod network;
 pub mod transport;
+#[cfg(feature = "utils")]
+pub mod util;
 
 use pnet::packet::Packet;
 use pnet::{packet::ethernet::EthernetPacket, util::MacAddr};
@@ -16,9 +18,10 @@ use self::transport::{
     SerializableIcmpv6Packet, SerializableTcpPacket, SerializableUdpPacket,
 };
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ParsedPacket {
+    id: usize,
     link_layer_packet: Option<SerializablePacket>,
     network_layer_packet: Option<SerializablePacket>,
     transport_layer_packet: Option<SerializablePacket>,
@@ -26,13 +29,18 @@ pub struct ParsedPacket {
 }
 
 impl ParsedPacket {
-    pub fn new() -> Self {
+    pub fn new(id: usize) -> Self {
         ParsedPacket {
+            id,
             link_layer_packet: None,
             network_layer_packet: None,
             transport_layer_packet: None,
             application_layer_packet: None,
         }
+    }
+
+    pub fn get_id(&self) -> usize {
+        self.id
     }
 
     pub fn get_link_layer_packet(&self) -> Option<&SerializablePacket> {
@@ -74,7 +82,7 @@ impl ParsedPacket {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 #[serde(tag = "type", content = "packet")]
 pub enum SerializablePacket {
     EthernetPacket(SerializableEthernetPacket),
@@ -97,8 +105,7 @@ pub enum SerializablePacket {
 }
 
 /// Ethernet Packet Representation
-
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct SerializableEthernetPacket {
     pub destination: MacAddr,
     pub source: MacAddr,
@@ -118,8 +125,7 @@ impl<'a> From<&EthernetPacket<'a>> for SerializableEthernetPacket {
 }
 
 /// Unknown Packet Representation
-
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct SerializableUnknownPacket {
     pub destination: MacAddr,
     pub source: MacAddr,

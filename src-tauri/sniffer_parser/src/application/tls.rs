@@ -361,7 +361,7 @@ mod tests {
     use crate::serializable_packet::{
         application::{
             ClientParameters, CustomEcContent, CustomHandshakeMessage, CustomTlsMessage,
-            ServerParameters, TlsMalformedError,
+            ServerParameters, TlsMalformedError, parse_custom_tls_extensions,
         },
         ParsedPacket, SerializablePacket,
     };
@@ -508,7 +508,7 @@ mod tests {
 
     #[test]
     fn valid_server_hello_tls_packet() {
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_tls_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             4444,
@@ -546,14 +546,13 @@ mod tests {
                                 format!("{:?}", message.compression)
                             );
 
-                            assert_eq!(
-                                new_message.extensions,
-                                match parse_tls_extensions(message.ext.unwrap_or(b"")) {
-                                    Ok((_, exts)) =>
-                                        exts.iter().map(|x| format!("{:?}", x)).collect(),
-                                    Err(_) => vec!["Error parsing".to_owned()],
-                                }
-                            );
+                            match parse_tls_extensions(message.ext.unwrap_or(b"")) {
+                                Ok((_, exts)) => assert_eq!(
+                                    new_message.extensions,
+                                    parse_custom_tls_extensions(exts)
+                                ),
+                                _ => unreachable!(),
+                            }
                         }
                         _ => unreachable!(),
                     },
@@ -566,7 +565,7 @@ mod tests {
 
     #[test]
     fn valid_server_done_tls_packet() {
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_tls_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             4444,
@@ -604,7 +603,7 @@ mod tests {
 
     #[test]
     fn valid_server_key_exchange_tls_packet() {
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_tls_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             4444,
@@ -672,7 +671,7 @@ mod tests {
 
     #[test]
     fn valid_change_cipher_spec_tls_packet() {
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_tls_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             4444,
@@ -706,7 +705,7 @@ mod tests {
 
     #[test]
     fn valid_client_hello_tls_packet() {
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_tls_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             4444,
@@ -758,9 +757,7 @@ mod tests {
                             match parse_tls_extensions(message.ext.unwrap_or(b"")) {
                                 Ok((_, exts)) => assert_eq!(
                                     new_message.extensions,
-                                    exts.iter()
-                                        .map(|x| format!("{:?}", x))
-                                        .collect::<Vec<String>>()
+                                    parse_custom_tls_extensions(exts)
                                 ),
                                 _ => unreachable!(),
                             }
@@ -776,7 +773,7 @@ mod tests {
 
     #[test]
     fn valid_client_key_exchange_tls_packet() {
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_tls_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             4444,
@@ -822,7 +819,7 @@ mod tests {
 
     #[test]
     fn valid_certificate_status_tls_packet() {
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_tls_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             4444,
@@ -861,7 +858,7 @@ mod tests {
 
     #[test]
     fn valid_alert_tls_packet() {
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_tls_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             4444,
@@ -898,7 +895,7 @@ mod tests {
 
     #[test]
     fn unknown_tls_record() {
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_tls_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             4444,
@@ -937,7 +934,7 @@ mod tests {
 
     #[test]
     fn too_large_tls_record() {
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_tls_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             4444,

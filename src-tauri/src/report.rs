@@ -70,10 +70,10 @@ pub mod data {
 
     #[derive(PartialEq, Eq, Hash, Debug)]
     pub struct SourceDestination {
-        ip_source: String,
-        ip_destination: String,
-        port_source: String,
-        port_destination: String,
+        pub ip_source: String,
+        pub ip_destination: String,
+        pub port_source: String,
+        pub port_destination: String,
     }
 
     #[derive(Debug)]

@@ -15,7 +15,7 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {Pause, PlayArrow, RestartAlt, Stop} from '@mui/icons-material';
-import {DataGrid, GridColDef} from '@mui/x-data-grid';
+import {DataGrid, GridColDef, GridFooter, GridFooterContainer} from '@mui/x-data-grid';
 import './index.css';
 import API from './API';
 import {SniffingStatus, GeneralPacket, FeedbackMessage} from "./types/sniffing";
@@ -27,6 +27,7 @@ import ToggleButton from "./components/ToggleButton";
 import {DnsFields, Fields, TlsFields} from "./components/Fields";
 import HewViewer from "./components/HexViewer";
 import Filters from "./components/Filters";
+import {appWindow} from '@tauri-apps/api/window'
 
 const darkTheme = createTheme({
     palette: {
@@ -101,6 +102,8 @@ function App() {
     let [currentInterface, setCurrentInterface] = useState<string>("");
     let [sniffingStatus, setSniffingStatus] = useState<SniffingStatus>(SniffingStatus.Inactive);
     let [capturedPackets, setCapturedPackets] = useState<GeneralPacket[]>([]);
+    let [packetCount, setPacketCount] = useState<number>(0);
+    const [pageState, setPageState] = useState<number>(1);
     let [reportUpdateTime, setReportUpdateTime] = useState<number>(REPORT_GENERATION_SECONDS);
     let [reportFileName, setReportFileName] = useState<string>(INITIAL_REPORT_NAME);
     let [reportFolder, setReportFolder] = useState<string>("");
@@ -123,6 +126,7 @@ function App() {
     let [dstMacForm, setDstMacForm] = useState<string>("");
     let [srcPortForm, setSrcPortForm] = useState<string>("");
     let [dstPortForm, setDstPortForm] = useState<string>("");
+    let [makeRequest, setMakeRequest] = useState<boolean>(true);
     let [infoForm, setInfoForm] = useState<string>("");
     let [inputValidated, setInputValidated] = useState<boolean>(false);
 
@@ -139,14 +143,7 @@ function App() {
         ipv4: boolean,
         ipv6: boolean,
         arp: boolean,
-        dns: boolean,
-        src_ip: boolean,
-        dst_ip: boolean,
-        src_mac: boolean,
-        dst_mac: boolean,
-        src_port: boolean,
-        dst_port: boolean,
-        info: boolean
+        dns: boolean
     }>({
         ethernet: false,
         malformed: false,
@@ -160,14 +157,7 @@ function App() {
         tcp: false,
         udp: false,
         arp: false,
-        dns: false,
-        src_ip: false,
-        dst_ip: false,
-        src_mac: false,
-        dst_mac: false,
-        src_port: false,
-        dst_port: false,
-        info: false
+        dns: false
     });
 
     useEffect(() => {
@@ -185,16 +175,89 @@ function App() {
                 });
             }
 
-            /* Packet reception event */
-            window.AwesomeEvent.listen("packet_received", (packet: any) => {
-                setCapturedPackets(packets => {
-                    return [...packets, new GeneralPacket(packets.length, packet)];
-                });
+            const unlisten = await appWindow.listen('packet_received', (packet: any) => {
+                setPacketCount((old) => old + 1)
             });
+
+            return () => unlisten();
         };
 
         setup();
     }, []);
+
+    useEffect(() => {
+        const fetchData = async () => {
+
+            try {
+                let filter_name: any[] = [];
+                let filter_value: any[] = [];
+
+                if (filterEnabled) {
+                    for (let key in filter) {
+                        // @ts-ignore
+                        if (filter[key])
+                            filter_name.push(key)
+                    }
+
+                    if (srcIpForm !== "")
+                        filter_value.push(["src_ip", srcIpForm])
+                    if (dstIpForm !== "")
+                        filter_value.push(["dst_ip", dstIpForm])
+                    if (srcMacForm !== "")
+                        filter_value.push(["src_mac", srcMacForm])
+                    if (dstMacForm !== "")
+                        filter_value.push(["dst_mac", dstMacForm])
+                    if (srcPortForm !== "")
+                        filter_value.push(["src_port", srcPortForm])
+                    if (dstPortForm !== "")
+                        filter_value.push(["dst_port", dstPortForm])
+                }
+
+                let response: any[] = await API.getPackets(
+                    (pageState - 1) * 100,
+                    (pageState - 1) * 100 + 100,
+                    filter_name,
+                    filter_value);
+
+                let packets = response.map((p, index) => new GeneralPacket(p.id, p))
+                setCapturedPackets(packets)
+
+                if (packets.length >= 100)
+                    setMakeRequest(false)
+
+            } catch (e: any) {
+                setFeedbackMessage({
+                    isError: true,
+                    duration: 8000,
+                    text: e.error
+                });
+            }
+        }
+
+        if (makeRequest)
+            fetchData()
+
+    }, [pageState, packetCount, makeRequest,
+        filter.dns,
+        filter.arp,
+        filter.tls,
+        filter.udp,
+        filter.tcp,
+        filter.malformed,
+        filter.ethernet,
+        filter.unknown,
+        filter.http,
+        filter.ipv4,
+        filter.ipv6,
+        filter.icmp,
+        filter.icmpv6,
+        srcIpForm,
+        dstIpForm,
+        srcMacForm,
+        dstMacForm,
+        srcPortForm,
+        dstPortForm,
+        filterEnabled])
 
     const generateReport = async () => {
         try {
@@ -207,11 +270,11 @@ function App() {
                 duration: 5000,
                 text: "Report generated"
             });
-        } catch (exception) {
+        } catch (exception: any) {
             setFeedbackMessage({
                 isError: true,
                 duration: 8000,
-                text: "There was an error trying to generate the report: " + exception
+                text: exception.error
             });
         }
     }
@@ -273,7 +336,7 @@ function App() {
         if (currentInterface === "" || !reportFolder || sniffingStatus !== SniffingStatus.Inactive) return;
 
         try {
-            await API.startSniffing();
+            await API.startSniffing(false);
 
             setActionLoading("start");
             timerStartTime.current = Date.now();
@@ -285,7 +348,7 @@ function App() {
             setFeedbackMessage({
                 isError: true,
                 duration: 8000,
-                text: e.error
+                text: e
             });
         }
 
@@ -318,7 +381,7 @@ function App() {
         if (currentInterface === "" || !reportFolder || sniffingStatus !== SniffingStatus.Paused) return;
 
         try {
-            await API.startSniffing();
+            await API.startSniffing(true);
 
             setActionLoading("resume");
             timerStartTime.current = Date.now() - (reportUpdateTime * 1000 - timerRemainingTime);
@@ -330,14 +393,18 @@ function App() {
             setFeedbackMessage({
                 isError: true,
                 duration: 8000,
-                text: e.error
+                text: e
             });
         }
     }
 
     const startStopSniffing = async () => {
-        if (sniffingStatus === SniffingStatus.Inactive) await startSniffing();
-        else if (sniffingStatus === SniffingStatus.Active) await stopSniffing();
+        if (sniffingStatus === SniffingStatus.Inactive) {
+            setCapturedPackets([]);
+            setPacketCount(0);
+            setMakeRequest(true);
+            await startSniffing();
+        } else if (sniffingStatus === SniffingStatus.Active) await stopSniffing();
         setActionLoading("");
     }
 
@@ -345,57 +412,6 @@ function App() {
         if (sniffingStatus === SniffingStatus.Paused) await resumeSniffing();
         else if (sniffingStatus === SniffingStatus.Active) await pauseSniffing();
         setActionLoading("");
-    }
-
-    const packetFilter = (packet: GeneralPacket) => {
-        let condition = !filterEnabled;
-
-        if (filterEnabled) {
-            if (filter.unknown)
-                condition = condition || packet.layers.includes("Unknown");
-            if (filter.malformed)
-                condition = condition || packet.layers.includes("Malformed");
-            if (filter.ethernet)
-                condition = condition || packet.layers.includes("Ethernet");
-            if (filter.tcp)
-                condition = condition || packet.layers.includes("TCP");
-            if (filter.udp)
-                condition = condition || packet.layers.includes("UDP");
-            if (filter.icmp)
-                condition = condition || packet.layers.includes("ICMP")
-                    || packet.layers.includes("Echo Reply") || packet.layers.includes("Echo Request");
-            if (filter.icmpv6)
-                condition = condition || packet.layers.includes("ICMPv6")
-                    || packet.layers.includes("Echo Reply") || packet.layers.includes("Echo Request");
-            if (filter.http)
-                condition = condition || packet.layers.includes("HTTP");
-            if (filter.tls)
-                condition = condition || packet.layers.includes("TLS");
-            if (filter.ipv4)
-                condition = condition || packet.layers.includes("IPv4");
-            if (filter.ipv6)
-                condition = condition || packet.layers.includes("IPv6");
-            if (filter.dns)
-                condition = condition || packet.layers.includes("DNS");
-            if (filter.arp)
-                condition = condition || packet.layers.includes("ARP");
-            if (filter.src_ip)
-                condition = condition || packet.sourceIP === srcIpForm
-            if (filter.dst_ip)
-                condition = condition || packet.destinationIP === dstIpForm
-            if (filter.src_mac)
-                condition = condition || packet.sourceMAC === srcMacForm
-            if (filter.dst_mac)
-                condition = condition || packet.destinationMAC === dstMacForm
-            if (filter.src_port)
-                condition = condition || (packet.sourcePort !== null && packet.sourcePort.toString() === srcPortForm)
-            if (filter.dst_port)
-                condition = condition || (packet.destinationPort !== null && packet.destinationPort.toString() === dstPortForm)
-            if (filter.info)
-                condition = condition || packet.info.toLowerCase().includes(infoForm.toLowerCase())
-        }
-
-        return condition;
     }
 
     return (
@@ -471,19 +487,52 @@ function App() {
                          setSrcIpForm={setSrcIpForm} setDstIpForm={setDstIpForm}
                          setSrcMacForm={setSrcMacForm} setDstMacForm={setDstMacForm}
                          setSrcPortForm={setSrcPortForm} setDstPortForm={setDstPortForm}
-                         setInfoForm={setInfoForm} enabled={filterEnabled} setEnabled={setFilterEnabled}/>
+                         enabled={filterEnabled} setEnabled={setFilterEnabled}
+                         setMakeRequest={setMakeRequest} setPageState={setPageState}
+                />
 
                 {/* Sniffing Results */}
 
                 <Grid xs={12} item={true}>
-                    <DataGrid className={"grid"}
-                              rows={capturedPackets.filter(packetFilter)} rowHeight={40} columns={columns}
-                              onCellClick={(ev) => {
+                    <DataGrid className={"grid row"}
+                              hideFooterSelectedRowCount={true}
+                              rows={capturedPackets}
+                              rowHeight={40} columns={columns}
+                              onCellDoubleClick={(ev) => {
                                   setSelectedPacket(ev.row)
                                   handleOpen();
                               }}
+                              rowCount={capturedPackets.length + (pageState * 100)} // TODO: because of STRICT MODE
+                              rowsPerPageOptions={[100]}
+                              pageSize={100}
+                              pagination
+                              page={pageState - 1}
+                              paginationMode="server"
+                              onPageChange={(newPage) => {
+                                  setMakeRequest(true)
+                                  setPageState(newPage + 1)
+                              }}
+                              components={{
+                                  Footer: () =>
+                                      <>
+                                          <GridFooterContainer >
+                                                <Grid style={{marginLeft: "10px"}} item>
+                                                  <span style={{fontWeight: "bold"}}>Total number of packets: </span> {packetCount / 2}
+                                                </Grid>
+                                                
+                                                <Grid item className='tip'>
+                                                  Double click on a packet to view details
+                                                </Grid>
+                                              <GridFooter sx={{
+                                                  border: 'none', // To delete double border.
+                                              }}/>
+                                          </GridFooterContainer>
+                                      </>
+                              }
+                              }
                     />
                 </Grid>
+
 
                 {/* Report result feedback */}
 

@@ -22,8 +22,8 @@ pub fn cleanup_sniffing_state() {
     ACTIVE_TLS_PARSERS.with(|parsers| parsers.borrow_mut().clear());
 }
 
-pub fn parse_ethernet_frame(ethernet: &EthernetPacket) -> ParsedPacket {
-    let mut parsed_packet = ParsedPacket::new();
+pub fn parse_ethernet_frame(ethernet: &EthernetPacket, id: usize) -> ParsedPacket {
+    let mut parsed_packet = ParsedPacket::new(id);
 
     parsed_packet.set_link_layer_packet(Some(SerializablePacket::EthernetPacket(
         SerializableEthernetPacket::from(ethernet),
@@ -70,7 +70,7 @@ mod tests {
         let mut ethernet_buffer = [0u8; 42];
         let ethernet_packet = build_test_ethernet_packet(ethernet_buffer.as_mut_slice());
 
-        let parsed_packet = parse_ethernet_frame(&ethernet_packet);
+        let parsed_packet = parse_ethernet_frame(&ethernet_packet, 0);
         match parsed_packet.get_link_layer_packet().unwrap() {
             SerializablePacket::EthernetPacket(new_ethernet_packet) => {
                 assert_eq!(
@@ -96,7 +96,7 @@ mod tests {
         let mut ethernet_buffer = [0u8; 42];
         let ethernet_packet = build_test_unknown_ethernet_packet(ethernet_buffer.as_mut_slice());
 
-        let parsed_packet = parse_ethernet_frame(&ethernet_packet);
+        let parsed_packet = parse_ethernet_frame(&ethernet_packet, 0);
         match parsed_packet.get_link_layer_packet().unwrap() {
             SerializablePacket::UnknownPacket(unknown_packet) => {
                 assert_eq!(

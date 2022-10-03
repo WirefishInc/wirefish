@@ -56,7 +56,7 @@ export class CustomHeartbeatMessage implements CustomTlsMessages {
         let packet_info = [];
 
         packet_info.push({"Heartbeat type": this.heartbeat_type});
-        packet_info.push({"Payload": this.payload});
+        packet_info.push({"Payload": this.payload.toString()});
         packet_info.push({"Payload Len": this.payload_len});
 
         return packet_info;
@@ -102,7 +102,7 @@ export class CustomApplicationDataMessage implements CustomTlsMessages {
     }
 
     toDisplay(): any {
-        return [{"Data": this.data}]
+        return [{"Data": this.data.toString()}]
     }
 
     toString(): string {
@@ -128,7 +128,7 @@ export class CustomEncryptedMessage implements CustomTlsMessages {
     }
 
     toDisplay(): any {
-        return [{"Version": this.version}, {"Message Type": this.message_type}, {"Data": this.data}];
+        return [{"Version": this.version}, {"Message Type": this.message_type}, {"Data": this.data.toString()}];
     }
 
     toString(): string {
@@ -188,7 +188,7 @@ export class CustomMalformedMessage implements CustomTlsMessages {
         packet_info.push({"Message Type": this.message_type});
         packet_info.push({"Error Type": this.error_type});
         packet_info.push({"Error": this.error});
-        packet_info.push({"Data": this.data});
+        packet_info.push({"Data": this.data.toString()});
 
         return packet_info;
     }
@@ -236,8 +236,8 @@ export class ClientHelloMessage extends CustomHandshakeMessage {
 
         packet_info.push({"Version": this.version});
         packet_info.push({"Rand Time": this.rand_time});
-        packet_info.push({"Rand Data": this.rand_data});
-        packet_info.push({"Session Id": this.session_id});
+        packet_info.push({"Rand Data": this.rand_data.toString()});
+        packet_info.push({"Session Id": this.session_id.toString()});
         packet_info.push({"Ciphers": this.ciphers});
         packet_info.push({"Compression": this.compressions});
         packet_info.push({"Extension": this.extensions});
@@ -291,8 +291,8 @@ export class ServerHelloMessage extends CustomHandshakeMessage {
 
         packet_info.push({"Version": this.version});
         packet_info.push({"Rand Time": this.rand_time});
-        packet_info.push({"Rand Data": this.rand_data});
-        packet_info.push({"Session Id": this.session_id});
+        packet_info.push({"Rand Data": this.rand_data.toString()});
+        packet_info.push({"Session Id": this.session_id.toString()});
         packet_info.push({"Ciphers": this.ciphers});
         packet_info.push({"Compression": this.compressions});
         packet_info.push({"Extension": this.extensions});
@@ -347,7 +347,7 @@ class Certificate {
         let packet_info = [];
 
         packet_info.push({"Signature Algorithm": this.signature_algorithm});
-        packet_info.push({"Signature Value": this.signature_value});
+        packet_info.push({"Signature Value": this.signature_value.toString()});
         packet_info.push({"Serial": this.serial});
         packet_info.push({"Issuer Id": this.issuer_uid});
         packet_info.push({"Subject": this.subject});
@@ -416,7 +416,7 @@ export class CertificateRequestMessage extends CustomHandshakeMessage {
     toDisplay(): any {
         let packet_info = [];
 
-        packet_info.push({"Signature Hash Alogs": this.sig_hash_algos});
+        packet_info.push({"Signature Hash Alogs": this.sig_hash_algos.toString()});
 
         return packet_info;
     }
@@ -448,7 +448,7 @@ export class CertificateStatusMessage extends CustomHandshakeMessage {
         let packet_info = [];
 
         packet_info.push({"Status Type": this.status_type});
-        packet_info.push({"Data": this.data});
+        packet_info.push({"Data": this.data.toString()});
 
         return packet_info;
     }
@@ -477,7 +477,7 @@ export class CertificateVerifyMessage extends CustomHandshakeMessage {
     toDisplay(): any {
         let packet_info = [];
 
-        packet_info.push({"Data": this.data});
+        packet_info.push({"Data": this.data.toString()});
 
         return packet_info;
     }
@@ -506,7 +506,7 @@ export class FinishedMessage extends CustomHandshakeMessage {
     toDisplay(): any {
         let packet_info = [];
 
-        packet_info.push({"Data": this.data});
+        packet_info.push({"Data": this.data.toString()});
 
         return packet_info;
     }
@@ -574,7 +574,7 @@ export class NewSessionTicketMessage extends CustomHandshakeMessage {
     toDisplay(): any {
         let packet_info = [];
 
-        packet_info.push({"Ticket": this.ticket});
+        packet_info.push({"Ticket": this.ticket.toString()});
         packet_info.push({"Ticket Life Time Hint": this.ticket_lifetime_hint});
 
         return packet_info;
@@ -606,8 +606,8 @@ export class NextProtocolMessage extends CustomHandshakeMessage {
     toDisplay(): any {
         let packet_info = [];
 
-        packet_info.push({"Selected Protocol": this.selected_protocol});
-        packet_info.push({"Padding": this.padding});
+        packet_info.push({"Selected Protocol": this.selected_protocol.toString()});
+        packet_info.push({"Padding": this.padding.toString()});
 
         return packet_info;
     }
@@ -636,7 +636,7 @@ export class ServerDoneMessage extends CustomHandshakeMessage {
     toDisplay(): any {
         let packet_info = [];
 
-        packet_info.push({"Data": this.data});
+        packet_info.push({"Data": this.data.toString()});
 
         return packet_info;
     }
@@ -677,7 +677,7 @@ export class ServerHelloV13Draft18Message extends CustomHandshakeMessage {
         let packet_info = [];
 
         packet_info.push({"Version": this.version});
-        packet_info.push({"Random": this.random});
+        packet_info.push({"Random": this.random.toString()});
         packet_info.push({"Cipher": this.cipher});
         packet_info.push({"Extensions": this.extensions});
 
@@ -819,7 +819,7 @@ export class ClientKeyExchangeMessage extends CustomHandshakeMessage {
         let result: any[] = [];
 
         if (Array.isArray(this.parameters))
-            result.push({"Parameters": this.parameters})
+            result.push({"Parameters": this.parameters.toString()})
         else
             result = separateObject(this.parameters.toDisplay())
 
@@ -878,7 +878,7 @@ export class ServerKeyExchangeMessage extends CustomHandshakeMessage {
         let result: any[] = [];
 
         if (Array.isArray(this.parameters))
-            result.push({"Parameters": this.parameters})
+            result.push({"Parameters": this.parameters.toString()})
         else
             result = separateObject(this.parameters.toDisplay())
 
@@ -926,9 +926,9 @@ class ServerDhParameters implements ClientParameters, ServerParameters {
         let result: any;
 
         result = {
-            "Prime Modulus": this.prime_modulus,
-            "Generator": this.generator,
-            "Public Value": this.public_value
+            "Prime Modulus": this.prime_modulus.toString(),
+            "Generator": this.generator.toString(),
+            "Public Value": this.public_value.toString()
         }
 
         return result;
@@ -1004,7 +1004,7 @@ class ServerEcdhParameters implements ServerParameters {
     toDisplay(): any {
         let result: any;
 
-        result = {"Public Point": this.public_point, ...this.curve.toDisplay()}
+        result = {"Public Point": this.public_point.toString(), ...this.curve.toDisplay()}
 
         return result;
     }
@@ -1040,11 +1040,11 @@ class CustomExplicitPrime implements CustomEcContent {
         let result: any;
 
         result = {
-            "Prime": this.prime_p,
-            "Curve": this.curve,
-            "Base Point": this.base_point,
-            "Order": this.order,
-            "Cofactor": this.cofactor
+            "Prime": this.prime_p.toString(),
+            "Curve": this.curve.toString(),
+            "Base Point": this.base_point.toString(),
+            "Order": this.order.toString(),
+            "Cofactor": this.cofactor.toString()
         }
 
         return result;

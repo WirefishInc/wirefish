@@ -3,17 +3,6 @@ import {EthernetPacket, UnknownLinkPacket} from "./serializable_packets/link";
 import {ArpPacket, Ipv4Packet, Ipv6Packet} from "./serializable_packets/network";
 import {DnsPacket, HttpRequestPacket, HttpResponsePacket, TlsPacket} from "./serializable_packets/application";
 
-/* TODO
-* -------- Add type and version fields in Encrypted
-* -------- Add Malformed in case switch and unknown (new) in default
-* -------- Add TLS MALFORMED PACKET
-* -------- Cipher and Compression missing server hello
-* -------- Frontend error handling
-* Filters management (&&/||)
-* -------- Http Response Image Converting
-* Improve performance (display only few packets)
-*/
-
 export enum SniffingStatus {
     Inactive,
     Paused,
@@ -189,8 +178,8 @@ const make_transport_level_packet = (transport: any) => {
                 transport.packet.window,
                 transport.packet.checksum,
                 transport.packet.urgent_ptr,
+                transport.packet.length,
                 transport.packet.options,
-                transport.packet.payload
             )
             break;
 
@@ -200,7 +189,6 @@ const make_transport_level_packet = (transport: any) => {
                 transport.packet.destination,
                 transport.packet.length,
                 transport.packet.checksum,
-                transport.packet.payload
             )
             break;
 
@@ -209,7 +197,7 @@ const make_transport_level_packet = (transport: any) => {
                 transport.packet.icmpv6_type,
                 transport.packet.icmpv6_code,
                 transport.packet.checksum,
-                transport.packet.payload
+                transport.packet.length
             )
             break;
 
@@ -218,7 +206,7 @@ const make_transport_level_packet = (transport: any) => {
                 transport.packet.icmp_type,
                 transport.packet.icmp_code,
                 transport.packet.checksum,
-                transport.packet.payload
+                transport.packet.length
             )
             break;
 
@@ -229,7 +217,7 @@ const make_transport_level_packet = (transport: any) => {
                 transport.packet.checksum,
                 transport.packet.identifier,
                 transport.packet.sequence_number,
-                transport.packet.payload
+                transport.packet.length
             )
             break;
 
@@ -240,7 +228,7 @@ const make_transport_level_packet = (transport: any) => {
                 transport.packet.checksum,
                 transport.packet.identifier,
                 transport.packet.sequence_number,
-                transport.packet.payload
+                transport.packet.length
             )
             break;
 
@@ -304,7 +292,7 @@ const make_network_level_packet = (network: any) => {
                 network.packet.sender_proto_addr,
                 network.packet.target_hw_addr,
                 network.packet.target_proto_addr,
-                network.packet.payload
+                network.packet.length
             )
             break;
 
@@ -323,7 +311,7 @@ const make_network_level_packet = (network: any) => {
                 network.packet.checksum,
                 network.packet.source,
                 network.packet.destination,
-                network.packet.payload
+                network.packet.length
             )
             break;
 
@@ -337,7 +325,6 @@ const make_network_level_packet = (network: any) => {
                 network.packet.hop_limit,
                 network.packet.source,
                 network.packet.destination,
-                network.packet.payload
             )
             break;
 

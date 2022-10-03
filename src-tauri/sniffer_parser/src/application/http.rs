@@ -485,7 +485,7 @@ mod tests {
 
     #[test]
     fn incomplete_header_http_packet() {
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_http_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             4444,
@@ -502,7 +502,7 @@ mod tests {
 
     #[test]
     fn complete_header_http_packet() {
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_http_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             4444,
@@ -516,7 +516,7 @@ mod tests {
 
         assert!(parsed_packet.get_application_layer_packet().is_none());
 
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_http_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             4444,
@@ -563,7 +563,7 @@ mod tests {
 
     #[test]
     fn valid_http_request_with_no_length_indication() {
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_http_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             4444,
@@ -610,7 +610,7 @@ mod tests {
 
     #[test]
     fn valid_http_response_with_no_length_indication_and_no_fin_set() {
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_http_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             WellKnownPorts::HTTP_PORT,
@@ -627,7 +627,7 @@ mod tests {
 
     #[test]
     fn valid_http_response_with_no_length_indication_and_fin_set() {
-        let mut parsed_packet = ParsedPacket::new();
+        let mut parsed_packet = ParsedPacket::new(0);
         handle_http_packet(
             IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10)),
             WellKnownPorts::HTTP_PORT,
