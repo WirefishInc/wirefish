@@ -1,4 +1,5 @@
 use crate::{SniffingError, SniffingState};
+use log::{info, warn};
 use sniffer_parser::serializable_packet::util::{
     contains_arp, contains_dns, contains_ethernet, contains_http, contains_icmp, contains_icmp6,
     contains_ipv4, contains_ipv6, contains_malformed, contains_tcp, contains_tls, contains_udp,
@@ -128,39 +129,49 @@ pub fn get_packets<'a>(
     filters_value: Vec<(&'a str, &'a str)>,
     state: tauri::State<SniffingState>,
 ) -> Result<Vec<ParsedPacket>, SniffingError> {
-    println!("{:?}", filters_value);
-    /*let mut packets_collection = state.packets.lock().unwrap();
-    get_packets_internal(
+    let mut packets_collection = state.packets.lock().unwrap();
+    let result = get_packets_internal(
         start,
         end,
-        filters_type,
-        filters_value,
+        &filters_type,
+        &filters_value,
         &mut *packets_collection,
-    )*/
-    Ok(Vec::new())
+    );
+
+    match &result {
+        Ok(packets) => {
+            info!(
+                "Received getPackets request ({}-{}); Len: {}, Type Filters: {:?} Strong Filters: {:?}",
+                start, end, packets.len(), filters_type, filters_value
+            );
+        },
+        _ => ()
+    }
+
+    result
 }
 
 fn get_packets_internal<'a>(
     start: usize,
     end: usize,
-    filters_type: Vec<&'a str>,
-    filters_value: Vec<(&'a str, (bool, &'a str))>,
+    filters_type: &Vec<&'a str>,
+    filters_value: &Vec<(&'a str, &'a str)>,
     packets_collection: &mut PacketsCollection,
 ) -> Result<Vec<ParsedPacket>, SniffingError> {
     if !filters_type.is_empty() || !filters_value.is_empty() {
         // Apply all Strong Filters
-        let (strong_filters_used, mut filtered_packets) =
-            apply_all_strong_filters(end, filters_value, packets_collection)?;
+        let mut filtered_packets =
+            apply_all_strong_filters(end, &filters_value, packets_collection)?;
 
         // If Strong filters are enabled
-        if strong_filters_used {
+        if !filters_value.is_empty() {
             // If Type filters are enabled
             if !filters_type.is_empty() {
                 // Merge filter results just iterating
                 filtered_packets.retain(|packet| {
                     let mut contain = false;
 
-                    for filter in &filters_type {
+                    for filter in filters_type {
                         contain = apply_layer_type_filter(filter, &packet).unwrap();
 
                         if contain {
@@ -253,37 +264,39 @@ fn get_bounded_type_filter_index_iter<'a>(
         }
         FilterNamesValues::TLS => Ok(get_slice(&packets_collection.tls_packets, start, end).iter()),
         FilterNamesValues::DNS => Ok(get_slice(&packets_collection.dns_packets, start, end).iter()),
-        _ => Err(SniffingError::UnknownFilterType(format!(
-            "Unknown filter type: {}",
-            index_name
-        ))),
+        _ => {
+            warn!("Unknown filter type: {}", index_name);
+            Err(SniffingError::UnknownFilterType(format!(
+                "Unknown filter type: {}",
+                index_name
+            )))
+        },
     }
 }
 
 fn apply_all_strong_filters<'a>(
     end: usize,
-    filters_value: Vec<(&'a str, (bool, &'a str))>,
+    filters_value: &Vec<(&'a str, &'a str)>,
     packets_collection: &mut PacketsCollection,
-) -> Result<(bool, Vec<Arc<ParsedPacket>>), SniffingError> {
-    let mut strong_filters_used = false;
+) -> Result<Vec<Arc<ParsedPacket>>, SniffingError> {
+    let mut use_index = true;
+
     let mut filtered_packets = vec![];
 
-    for (name, (is_active, value)) in filters_value {
-        if is_active {
-            apply_specific_filter(
-                name,
-                value,
-                end,
-                !strong_filters_used,
-                packets_collection,
-                &mut filtered_packets,
-            )?;
+    for (name, value) in filters_value {
+        apply_specific_filter(
+            name,
+            value,
+            end,
+            use_index,
+            packets_collection,
+            &mut filtered_packets,
+        )?;
 
-            strong_filters_used = true;
-        }
+        use_index = false;
     }
 
-    Ok((strong_filters_used, filtered_packets))
+    Ok(filtered_packets)
 }
 
 fn merge_filter_type_arrays<'a>(
@@ -342,10 +355,13 @@ pub fn apply_layer_type_filter(
         FilterNamesValues::TLS => Ok(contains_tls(packet)),
         FilterNamesValues::DNS => Ok(contains_dns(packet)),
 
-        _ => Err(SniffingError::UnknownFilterType(format!(
-            "Unknown filter type: {}",
+        _ => {
+            warn!("Unknown filter type: {}", name);
+            Err(SniffingError::UnknownFilterType(format!(
+                "Unknown filter type: {}",
             name
-        ))),
+            )))
+        },
     };
 }
 
@@ -418,10 +434,13 @@ pub fn apply_specific_filter<'a>(
             );
             Ok(())
         }
-        _ => Err(SniffingError::UnknownFilterType(format!(
-            "Unknown filter type: {}",
-            name
-        ))),
+        _ => {
+            warn!("Unknown filter type: {}", name);
+            Err(SniffingError::UnknownFilterType(format!(
+                "Unknown filter type: {}",
+                name
+            )))
+        },
     };
 }
 
@@ -643,11 +662,12 @@ pub fn filter_by_dst_port<'a>(
 
 #[cfg(test)]
 pub mod tests {
-    use std::{net::Ipv4Addr, sync::Arc};
     use std::net::Ipv6Addr;
-    use log::warn;
+    use std::{net::Ipv4Addr, sync::Arc};
 
     use pnet::util::MacAddr;
+    use sniffer_parser::serializable_packet::network::SerializableIpv6Packet;
+    use sniffer_parser::serializable_packet::transport::SerializableUdpPacket;
     use sniffer_parser::serializable_packet::{
         network::SerializableIpv4Packet,
         transport::SerializableTcpPacket,
@@ -657,8 +677,6 @@ pub mod tests {
         },
         ParsedPacket, SerializableEthernetPacket, SerializablePacket,
     };
-    use sniffer_parser::serializable_packet::network::SerializableIpv6Packet;
-    use sniffer_parser::serializable_packet::transport::SerializableUdpPacket;
 
     use crate::SniffingError;
 
@@ -673,15 +691,15 @@ pub mod tests {
     fn unknown_selective_filter() {
         let filters_type = Vec::new();
         let filters_value = vec![
-            (FilterNamesValues::SRC_IP, (true, SOURCE_IP)),
-            ("RandomUnknownFilterType", (true, "random")),
+            (FilterNamesValues::SRC_IP, SOURCE_IP),
+            ("RandomUnknownFilterType", "random"),
         ];
 
         match get_packets_internal(
             0,
             100,
-            filters_type,
-            filters_value,
+            &filters_type,
+            &filters_value,
             &mut PacketsCollection::new(),
         ) {
             Err(SniffingError::UnknownFilterType(str)) => {
@@ -694,7 +712,7 @@ pub mod tests {
     #[test]
     fn first_selective_filter_no_results() {
         let filters_type = Vec::new();
-        let filters_value = vec![(FilterNamesValues::SRC_IP, (true, "192.168.1.1"))];
+        let filters_value = vec![(FilterNamesValues::SRC_IP, "192.168.1.1")];
         let parsed_packets = vec![build_test_parsed_packet(
             MacAddr::new(10, 10, 10, 10, 10, 10),
             MacAddr::new(11, 11, 11, 11, 11, 11),
@@ -707,8 +725,8 @@ pub mod tests {
         match get_packets_internal(
             0,
             100,
-            filters_type,
-            filters_value,
+            &filters_type,
+            &filters_value,
             &mut build_test_packets_collection(parsed_packets),
         ) {
             Ok(empty) => assert!(empty.is_empty()),
@@ -719,7 +737,7 @@ pub mod tests {
     #[test]
     fn first_selective_filter_with_results() {
         let filters_type = Vec::new();
-        let filters_value = vec![(FilterNamesValues::SRC_IP, (true, SOURCE_IP))];
+        let filters_value = vec![(FilterNamesValues::SRC_IP, SOURCE_IP)];
         let parsed_packets = vec![build_test_parsed_packet(
             MacAddr::new(10, 10, 10, 10, 10, 10),
             MacAddr::new(11, 11, 11, 11, 11, 11),
@@ -732,8 +750,8 @@ pub mod tests {
         match get_packets_internal(
             0,
             100,
-            filters_type,
-            filters_value,
+            &filters_type,
+            &filters_value,
             &mut build_test_packets_collection(parsed_packets),
         ) {
             Ok(single) => {
@@ -748,8 +766,8 @@ pub mod tests {
     fn multiple_selective_filter_with_results() {
         let filters_type = Vec::new();
         let filters_value = vec![
-            (FilterNamesValues::SRC_IP, (true, SOURCE_IP)),
-            (FilterNamesValues::DST_IP, (true, DEST_IP)),
+            (FilterNamesValues::SRC_IP, SOURCE_IP),
+            (FilterNamesValues::DST_IP, DEST_IP),
         ];
         let parsed_packets = vec![build_test_parsed_packet(
             MacAddr::new(10, 10, 10, 10, 10, 10),
@@ -763,8 +781,8 @@ pub mod tests {
         match get_packets_internal(
             0,
             100,
-            filters_type,
-            filters_value,
+            &filters_type,
+            &filters_value,
             &mut build_test_packets_collection(parsed_packets),
         ) {
             Ok(single) => {
@@ -782,8 +800,8 @@ pub mod tests {
     fn type_filters_no_results_with_active_selective_filter() {
         let filters_type = vec![FilterNamesValues::ARP];
         let filters_value = vec![
-            (FilterNamesValues::SRC_IP, (true, SOURCE_IP)),
-            (FilterNamesValues::DST_IP, (true, DEST_IP)),
+            (FilterNamesValues::SRC_IP, SOURCE_IP),
+            (FilterNamesValues::DST_IP, DEST_IP),
         ];
         let parsed_packets = vec![build_test_parsed_packet(
             MacAddr::new(10, 10, 10, 10, 10, 10),
@@ -797,8 +815,8 @@ pub mod tests {
         match get_packets_internal(
             0,
             100,
-            filters_type,
-            filters_value,
+            &filters_type,
+            &filters_value,
             &mut build_test_packets_collection(parsed_packets),
         ) {
             Ok(empty) => {
@@ -812,8 +830,8 @@ pub mod tests {
     fn single_type_filters_results_with_active_selective_filter() {
         let filters_type = vec![FilterNamesValues::TCP];
         let filters_value = vec![
-            (FilterNamesValues::SRC_IP, (true, SOURCE_IP)),
-            (FilterNamesValues::DST_IP, (true, DEST_IP)),
+            (FilterNamesValues::SRC_IP, SOURCE_IP),
+            (FilterNamesValues::DST_IP, DEST_IP),
         ];
         let parsed_packets = vec![build_test_parsed_packet(
             MacAddr::new(10, 10, 10, 10, 10, 10),
@@ -827,8 +845,8 @@ pub mod tests {
         match get_packets_internal(
             0,
             100,
-            filters_type,
-            filters_value,
+            &filters_type,
+            &filters_value,
             &mut build_test_packets_collection(parsed_packets),
         ) {
             Ok(single) => {
@@ -857,8 +875,8 @@ pub mod tests {
         match get_packets_internal(
             0,
             100,
-            filters_type,
-            filters_value,
+            &filters_type,
+            &filters_value,
             &mut build_test_packets_collection(parsed_packets),
         ) {
             Ok(empty) => {
@@ -868,10 +886,13 @@ pub mod tests {
         }
     }
 
-
     #[test]
     fn more_type_filters_merge_results_no_selective_filter() {
-        let filters_type = vec![FilterNamesValues::TCP, FilterNamesValues::IPV4, FilterNamesValues::ARP];
+        let filters_type = vec![
+            FilterNamesValues::TCP,
+            FilterNamesValues::IPV4,
+            FilterNamesValues::ARP,
+        ];
         let filters_value = Vec::new();
 
         let parsed_packets = vec![
@@ -896,8 +917,8 @@ pub mod tests {
         match get_packets_internal(
             0,
             100,
-            filters_type,
-            filters_value,
+            &filters_type,
+            &filters_value,
             &mut build_test_packets_collection(parsed_packets),
         ) {
             Ok(single) => {
@@ -909,7 +930,11 @@ pub mod tests {
 
     #[test]
     fn more_type_filters_unite_results_no_selective_filter() {
-        let filters_type = vec![FilterNamesValues::TCP, FilterNamesValues::UDP, FilterNamesValues::ARP];
+        let filters_type = vec![
+            FilterNamesValues::TCP,
+            FilterNamesValues::UDP,
+            FilterNamesValues::ARP,
+        ];
         let filters_value = Vec::new();
 
         let parsed_packets = vec![
@@ -936,8 +961,8 @@ pub mod tests {
         match get_packets_internal(
             0,
             100,
-            filters_type,
-            filters_value,
+            &filters_type,
+            &filters_value,
             &mut build_test_packets_collection(parsed_packets),
         ) {
             Ok(double) => {
@@ -981,19 +1006,27 @@ pub mod tests {
                 vec![parsed_packet.clone()],
             );
 
-            if let Some(SerializablePacket::Ipv4Packet(_)) = parsed_packet.get_network_layer_packet() {
+            if let Some(SerializablePacket::Ipv4Packet(_)) =
+                parsed_packet.get_network_layer_packet()
+            {
                 packet_collection.ipv4_packets.push(parsed_packet.clone());
             }
 
-            if let Some(SerializablePacket::Ipv6Packet(_)) = parsed_packet.get_network_layer_packet() {
+            if let Some(SerializablePacket::Ipv6Packet(_)) =
+                parsed_packet.get_network_layer_packet()
+            {
                 packet_collection.ipv6_packets.push(parsed_packet.clone());
             }
 
-            if let Some(SerializablePacket::TcpPacket(_)) = parsed_packet.get_transport_layer_packet() {
+            if let Some(SerializablePacket::TcpPacket(_)) =
+                parsed_packet.get_transport_layer_packet()
+            {
                 packet_collection.tcp_packets.push(parsed_packet.clone());
             }
 
-            if let Some(SerializablePacket::UdpPacket(_)) = parsed_packet.get_transport_layer_packet() {
+            if let Some(SerializablePacket::UdpPacket(_)) =
+                parsed_packet.get_transport_layer_packet()
+            {
                 packet_collection.udp_packets.push(parsed_packet.clone());
             }
 

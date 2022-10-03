@@ -503,7 +503,7 @@ function App() {
                                   setSelectedPacket(ev.row)
                                   handleOpen();
                               }}
-                              rowCount={packetCount / 2} // TODO: because of STRICT MODE
+                              rowCount={capturedPackets.length + (pageState * 100)} // TODO: because of STRICT MODE
                               rowsPerPageOptions={[100]}
                               pageSize={100}
                               pagination
@@ -516,10 +516,14 @@ function App() {
                               components={{
                                   Footer: () =>
                                       <>
-                                          <GridFooterContainer>
-                                              <Grid className={"tip"}>
+                                          <GridFooterContainer >
+                                                <Grid style={{marginLeft: "10px"}} item>
+                                                  <span style={{fontWeight: "bold"}}>Total number of packets: </span> {packetCount / 2}
+                                                </Grid>
+                                                
+                                                <Grid item className='tip'>
                                                   Double click on a packet to view details
-                                              </Grid>
+                                                </Grid>
                                               <GridFooter sx={{
                                                   border: 'none', // To delete double border.
                                               }}/>
