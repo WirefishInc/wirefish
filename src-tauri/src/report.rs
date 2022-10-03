@@ -4,13 +4,6 @@ use std::fs::{self, OpenOptions};
 use std::collections::HashMap;
 use std::path::Path;
 use std::ffi::OsStr;
-use chrono::Local;
-use human_bytes::human_bytes;
-
-const MAX_IP_LEN: usize = 40;
-const MAX_PORT_LEN: usize = 20;
-const MAX_TIME_LEN: usize = 24;
-const MAX_BYTES_LEN: usize = 16;
 
 /// Appends data to a report file, creates the file if it doesn't exist
 pub fn write_report(output_path: &str, data: &mut HashMap<SourceDestination, PacketExchange>, first_generation: bool) -> Result<bool, io::Error> {
@@ -18,9 +11,9 @@ pub fn write_report(output_path: &str, data: &mut HashMap<SourceDestination, Pac
     let mut file_exists = path.is_file();
     let file_extension = path.extension();
 
-    // Check file extension is .txt
-    if file_extension.is_none() || file_extension.and_then(OsStr::to_str).unwrap() != "txt" {
-        return Err(io::Error::new(io::ErrorKind::InvalidInput, "Provide a .txt file"));
+    // Check file extension is .csv
+    if file_extension.is_none() || file_extension.and_then(OsStr::to_str).unwrap() != "csv" {
+        return Err(io::Error::new(io::ErrorKind::InvalidInput, "Provide a .csv file"));
     }
 
     if !file_exists {
@@ -42,40 +35,27 @@ pub fn write_report(output_path: &str, data: &mut HashMap<SourceDestination, Pac
         .open(path)?;
     let mut writer = BufWriter::new(file);
 
-    // Write report metadata
-    let transmitted_bytes = match data.values().map(|exchange| exchange.transmitted_bytes).reduce(|accum, item| accum + item) {
-        Some(bytes) => bytes,
-        None => 0
-    };
-    writer.write_all(("-".repeat(50) + "\n\n").as_bytes())?;
-    writer.write_all((">> Updated at: ".to_owned() + &Local::now().format("%Y-%m-%d %H:%M:%S").to_string() + "\n").as_bytes())?;
-    writer.write_all((">> Number of Source-Destination pairs: ".to_owned() + &data.len().to_string() + "\n").as_bytes())?;
-    writer.write_all((">> Total Bytes transmitted: ".to_owned() + &human_bytes(transmitted_bytes as f64) + "\n\n").as_bytes())?;
+    // Write report headers
+    if first_generation {
+        let headers = [
+            "Source IP",
+            "Destination IP",
+            "Source Port",
+            "Destination Port",
+            "First Data Exchange",
+            "Last Data Exchange",
+            "Bytes Exchanged",
+            "Protocols"
+        ];
+        writer.write_all((headers.join(",") + "\n").as_bytes())?;
+    }
 
     let mut data_pairs = data.drain().peekable();
 
     if data_pairs.peek().is_some() {
-
-        // Write headers
-        let headers = [
-            ("Source Ip", MAX_IP_LEN),
-            ("Destination Ip", MAX_IP_LEN),
-            ("Source Port", MAX_PORT_LEN),
-            ("Destination Port", MAX_PORT_LEN),
-            ("First Data Exchange", MAX_TIME_LEN),
-            ("Last Data Exchange", MAX_TIME_LEN),
-            ("Data Exchanged", MAX_BYTES_LEN),
-            ("Protocols", 9),
-        ];
-        for header in headers {
-            let len = header.0.len();
-            writer.write_all((header.0.to_owned() + "\t" + &tab_word(len, header.1)).as_bytes())?;
-        }
-        writer.write_all("\n".as_bytes())?;
-
         // Write packets exchange data
         for (source_destination, exchange) in data_pairs {
-            writer.write_all((source_destination.to_string() + "\t" + &exchange.to_string() + "\n").as_bytes())?
+            writer.write_all((source_destination.to_string() + "," + &exchange.to_string() + "\n").as_bytes())?
         }
         writer.write_all(b"\n")?;
     }
@@ -83,16 +63,10 @@ pub fn write_report(output_path: &str, data: &mut HashMap<SourceDestination, Pac
     Ok(true)
 }
 
-pub fn tab_word(word_length: usize, fill_length: usize) -> String {
-    "\t".repeat(((fill_length - word_length) as f64 / 4 as f64).ceil() as usize)
-}
-
 pub mod data {
     use std::collections::HashSet;
     use chrono::{DateTime, Local};
     use std::cmp;
-    use crate::report::{MAX_IP_LEN, MAX_PORT_LEN, MAX_BYTES_LEN, MAX_TIME_LEN, tab_word};
-    use human_bytes::human_bytes;
 
     #[derive(PartialEq, Eq, Hash, Debug)]
     pub struct SourceDestination {
@@ -124,11 +98,11 @@ pub mod data {
     impl ToString for SourceDestination {
         fn to_string(&self) -> String {
             [
-                self.ip_source.clone() + &tab_word(self.ip_source.len(), MAX_IP_LEN),
-                self.ip_destination.clone() + &tab_word(self.ip_destination.len(), MAX_IP_LEN),
-                self.port_source.clone() + &tab_word(self.port_source.len(), MAX_PORT_LEN),
-                self.port_destination.clone() + &tab_word(self.port_destination.len(), MAX_PORT_LEN)
-            ].join("\t")
+                self.ip_source.clone(),
+                self.ip_destination.clone(),
+                self.port_source.clone(),
+                self.port_destination.clone()
+            ].join(",")
         }
     }
 
@@ -156,23 +130,20 @@ pub mod data {
         fn to_string(&self) -> String {
             let first_exchange = self.first_exchange.format("%Y-%m-%d %H:%M:%S").to_string();
             let last_exchange = self.last_exchange.format("%Y-%m-%d %H:%M:%S").to_string();
-            let first_exchange_len = first_exchange.len();
-            let last_exchange_len = last_exchange.len();
-            let bytes = human_bytes(self.transmitted_bytes as f64);
             let mut protocols_set = self.protocols.clone().into_iter().collect::<Vec<String>>();
             let protocols = if protocols_set.len() == 0 {
                 "-".to_owned()
             } else {
                 protocols_set.sort();
-                "[".to_owned() + &protocols_set.join(", ") + "]"
+                protocols_set.join(";")
             };
 
             [
-                first_exchange + &tab_word(first_exchange_len, MAX_TIME_LEN),
-                last_exchange + &tab_word(last_exchange_len, MAX_TIME_LEN),
-                bytes.to_string() + &tab_word(bytes.to_string().len(), MAX_BYTES_LEN),
+                first_exchange,
+                last_exchange,
+                self.transmitted_bytes.to_string(),
                 protocols
-            ].join("\t")
+            ].join(",")
         }
     }
 

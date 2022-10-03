@@ -91,11 +91,8 @@ const columns: GridColDef[] = [
 
 function App() {
 
-    // @ts-ignore
-    const separator = window.__TAURI__.path.sep;
-    const REPORT_GENERATION_SECONDS = 300000;
+    const REPORT_GENERATION_SECONDS = 30;
     const INITIAL_REPORT_NAME = "report";
-    const INITIAL_REPORT_FOLDER = `.${separator}report${separator}`;
     const resetFeedback = {text: "", isError: false, duration: 0};
     const [open, setOpen] = React.useState(false);
     const handleOpen = () => setOpen(true);
@@ -109,7 +106,7 @@ function App() {
     const [pageState, setPageState] = useState<number>(1);
     let [reportUpdateTime, setReportUpdateTime] = useState<number>(REPORT_GENERATION_SECONDS);
     let [reportFileName, setReportFileName] = useState<string>(INITIAL_REPORT_NAME);
-    let [reportFolder, setReportFolder] = useState<string>(INITIAL_REPORT_FOLDER);
+    let [reportFolder, setReportFolder] = useState<string>("");
     let [selectedPacket, setSelectedPacket] = useState<GeneralPacket | null>(null);
     let [over, setOver] = useState<string | null>(null);
     let [reportGenerationTimer, setReportGenerationTimer] = useState<null | ReturnType<typeof setInterval>>(null);
@@ -130,6 +127,8 @@ function App() {
     let [srcPortForm, setSrcPortForm] = useState<string>("");
     let [dstPortForm, setDstPortForm] = useState<string>("");
     let [makeRequest, setMakeRequest] = useState<boolean>(true);
+    let [infoForm, setInfoForm] = useState<string>("");
+    let [inputValidated, setInputValidated] = useState<boolean>(false);
 
     let [filter, setFilter] = useState<{
         ethernet: boolean,
@@ -263,7 +262,7 @@ function App() {
     const generateReport = async () => {
         try {
             timerStartTime.current = Date.now();
-            await API.generateReport(`${reportFolder}${reportFileName}.txt`, firstReportGeneration.current);
+            await API.generateReport(`${reportFolder}${reportFileName}.csv`, firstReportGeneration.current);
             if (firstReportGeneration.current)
                 firstReportGeneration.current = false;
             setFeedbackMessage({
@@ -334,7 +333,7 @@ function App() {
     }
 
     const startSniffing = async () => {
-        if (currentInterface === null || sniffingStatus !== SniffingStatus.Inactive) return;
+        if (currentInterface === "" || !reportFolder || sniffingStatus !== SniffingStatus.Inactive) return;
 
         try {
             await API.startSniffing();
@@ -379,7 +378,7 @@ function App() {
     }
 
     const resumeSniffing = async () => {
-        if (currentInterface === null || sniffingStatus !== SniffingStatus.Paused) return;
+        if (currentInterface === "" || !reportFolder || sniffingStatus !== SniffingStatus.Paused) return;
 
         try {
             await API.startSniffing();
@@ -423,8 +422,8 @@ function App() {
                 {/* Interface selection */}
 
                 <Grid xs={12} item={true}>
-                    <InterfaceInput currentInterface={currentInterface} interfaces={interfaces}
-                                    selectInterface={selectInterface} sniffingStatus={sniffingStatus}/>
+                    <InterfaceInput currentInterface={currentInterface} selectInterface={selectInterface}
+                                    validated={inputValidated} interfaces={interfaces} sniffingStatus={sniffingStatus}/>
                 </Grid>
 
                 {/* Time interval selection */}
@@ -438,7 +437,7 @@ function App() {
 
                 <Grid xs={6} item={true}>
                     <ReportFolderInput setReportFolder={setReportFolder} sniffingStatus={sniffingStatus}
-                                       reportFolder={reportFolder}/>
+                                       reportFolder={reportFolder} validated={inputValidated}/>
                 </Grid>
                 <Grid xs={3} item={true}>
                     <ReportNameInput setReportFileName={setReportFileName} sniffingStatus={sniffingStatus}
@@ -451,8 +450,8 @@ function App() {
                     <FormControl className={"container-center"}>
                         {
                             sniffingStatus !== SniffingStatus.Paused &&
-                            <ToggleButton toggleFunction={startStopSniffing}
-                                          disabled={currentInterface === "" || actionLoading.length > 0}
+                            <ToggleButton toggleFunction={startStopSniffing} setInputValidated={setInputValidated}
+                                          disabled={currentInterface === "" || !reportFolder || actionLoading.length > 0}
                                           loading={actionLoading === "start" || actionLoading === "stop"}
                                           condition={sniffingStatus === SniffingStatus.Active}
                                           textTrue={"Stop Sniffing"} textFalse={"Start Sniffing"}
@@ -461,8 +460,8 @@ function App() {
                         }
                         {
                             sniffingStatus !== SniffingStatus.Inactive &&
-                            <ToggleButton toggleFunction={pauseResumeSniffing}
-                                          disabled={currentInterface === "" || actionLoading.length > 0}
+                            <ToggleButton toggleFunction={pauseResumeSniffing} setInputValidated={null}
+                                          disabled={currentInterface === "" || !reportFolder || actionLoading.length > 0}
                                           loading={actionLoading === "pause" || actionLoading === "resume"}
                                           condition={sniffingStatus === SniffingStatus.Active}
                                           textTrue={"Pause Sniffing"} textFalse={"Resume Sniffing"}

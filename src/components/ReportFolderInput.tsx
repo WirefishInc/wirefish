@@ -24,38 +24,44 @@ const selectDirectory = async (originalDirectory: string | null) => {
 type ReportFolderInputProps = {
     reportFolder: string,
     setReportFolder: Function,
-    sniffingStatus: SniffingStatus
+    sniffingStatus: SniffingStatus,
+    validated: boolean
 }
 
 const ReportFolderInput = ({
                                reportFolder,
                                setReportFolder,
-                               sniffingStatus
+                               sniffingStatus,
+                               validated
                            }: ReportFolderInputProps) => {
 
     let [selectingFolder, setSelectingFolder] = useState(false);
     const setReportFolderWrapper = async () => {
-        setSelectingFolder(true);
-        const folder = await selectDirectory(reportFolder);
-        // @ts-ignore
-        const separator = window.__TAURI__.path.sep;
-        const extraSeparator = folder && folder.endsWith(separator) ? "" : separator;
-        setReportFolder(folder + extraSeparator);
-        setSelectingFolder(false);
+        if(!selectingFolder) {
+            setSelectingFolder(true);
+            // @ts-ignore
+            const separator = window.__TAURI__.path.sep;
+            let folder = await selectDirectory(reportFolder);
+            if (folder && !folder.endsWith(separator))
+                folder += separator;
+            setReportFolder(folder);
+            setSelectingFolder(false);
+        }
     }
 
+    const reportFolderError = validated && reportFolder.length < 1;
     return (
-        <FormControl error={reportFolder.length < 1} variant="standard" sx={{mt: 3, width: "100%"}}>
+        <FormControl error={reportFolderError} variant="standard" sx={{mt: 3, width: "100%"}}>
             <TextField
                 label="Report folder"
                 value={reportFolder}
-                error={reportFolder.length < 1}
+                error={reportFolderError}
                 disabled={sniffingStatus !== SniffingStatus.Inactive || selectingFolder}
-                onChange={setReportFolderWrapper}
                 onClick={setReportFolderWrapper}
+                onChange={setReportFolderWrapper}
             />
             {
-                reportFolder.length < 1 &&
+                reportFolderError &&
                 <FormHelperText id="component-error-text">
                     Please provide a folder
                 </FormHelperText>
