@@ -63,6 +63,8 @@ pub fn write_report(output_path: &str, data: &mut HashMap<SourceDestination, Pac
     Ok(true)
 }
 
+/// Returns (Source IP, Destination IP, Source Port, Destination Port, and Protocols) contained in a packet
+
 pub mod data {
     use std::collections::HashSet;
     use chrono::{DateTime, Local};

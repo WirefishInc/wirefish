@@ -1,3 +1,29 @@
+//! Retrieve packets filtered by their attributes
+//! 
+//! Available filters
+//! - By Protocol
+//!     - UNKNOWN
+//!     - ETHERNET
+//!     - IPV4
+//!     - IPV6
+//!     - ARP
+//!     - ICMP
+//!     - ICMPV6
+//!     - TCP
+//!     - UDP
+//!     - TLS
+//!     - DNS
+//!     - HTTP
+//! - By Attributes
+//!     - SOURCE MAC
+//!     - DESTINATION MAC
+//!     - SOURCE IP
+//!     - DESTINATION IP
+//!     - SOURCE PORT
+//!     - DESTINATION PORT
+//! - By Type
+//!     - MALFORMED
+
 use crate::{SniffingError, SniffingState};
 use log::{info, warn};
 use sniffer_parser::serializable_packet::util::{
@@ -36,6 +62,7 @@ mod FilterNamesValues {
     pub const DST_PORT: &str = "dst_port";
 }
 
+/// List of all the collected packets and additional data structures to speed up the filtering process
 #[derive(Debug)]
 pub struct PacketsCollection {
     pub packets: Vec<Arc<ParsedPacket>>,
@@ -91,6 +118,7 @@ impl PacketsCollection {
         }
     }
 
+    /// Empty the data structures
     pub fn clear(&mut self) {
         self.source_ip_index.clear();
         self.dest_ip_index.clear();
@@ -121,6 +149,7 @@ fn get_slice(packets: &Vec<Arc<ParsedPacket>>, start: usize, end: usize) -> &[Ar
     }
 }
 
+/// Returns a slice of the collected packets opnionally applying the selected filters
 #[tauri::command]
 pub fn get_packets<'a>(
     start: usize,
@@ -336,6 +365,7 @@ fn merge_filter_type_arrays<'a>(
     result
 }
 
+/// Filter collected packets by protocol type 
 pub fn apply_layer_type_filter(
     name: &str,
     packet: &Arc<ParsedPacket>,
@@ -365,6 +395,7 @@ pub fn apply_layer_type_filter(
     };
 }
 
+/// Filter collected packets by packet attribute
 pub fn apply_specific_filter<'a>(
     name: &'a str,
     value: &'a str,
@@ -444,6 +475,7 @@ pub fn apply_specific_filter<'a>(
     };
 }
 
+/// Filter collected packets by Soure IP address
 pub fn filter_by_src_ip<'a>(
     index: &'a BTreeMap<String, Vec<Arc<ParsedPacket>>>,
     end: usize,
@@ -480,6 +512,7 @@ pub fn filter_by_src_ip<'a>(
     }
 }
 
+/// Filter collected packets by destination IP address
 pub fn filter_by_dst_ip<'a>(
     index: &'a BTreeMap<String, Vec<Arc<ParsedPacket>>>,
     end: usize,
@@ -516,6 +549,7 @@ pub fn filter_by_dst_ip<'a>(
     }
 }
 
+/// Filter collected packets by source MAC address
 pub fn filter_by_src_mac<'a>(
     index: &'a BTreeMap<String, Vec<Arc<ParsedPacket>>>,
     end: usize,
@@ -552,6 +586,7 @@ pub fn filter_by_src_mac<'a>(
     }
 }
 
+/// Filter collected packets by destination MAC address
 pub fn filter_by_dst_mac<'a>(
     index: &'a BTreeMap<String, Vec<Arc<ParsedPacket>>>,
     end: usize,
@@ -588,6 +623,7 @@ pub fn filter_by_dst_mac<'a>(
     }
 }
 
+/// Filter collected packets by source Port
 pub fn filter_by_src_port<'a>(
     index: &'a BTreeMap<String, Vec<Arc<ParsedPacket>>>,
     end: usize,
@@ -624,6 +660,7 @@ pub fn filter_by_src_port<'a>(
     }
 }
 
+/// Filter collected packets by destination Port
 pub fn filter_by_dst_port<'a>(
     index: &'a BTreeMap<String, Vec<Arc<ParsedPacket>>>,
     end: usize,

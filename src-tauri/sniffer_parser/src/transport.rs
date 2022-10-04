@@ -1,3 +1,5 @@
+//! UDP, TCP, ICMP, and ICMPv6 Packet parsing
+
 use pnet::packet::icmp::{echo_reply, echo_request, IcmpPacket, IcmpTypes};
 use pnet::packet::icmpv6::Icmpv6Packet;
 use pnet::packet::ip::{IpNextHeaderProtocol, IpNextHeaderProtocols};
@@ -17,6 +19,7 @@ const FIN_BIT_SHIFT: usize = 0;
 
 use super::*;
 
+/// Build a UDP packet from a network-layer packet, save it in a Parsed Packet
 pub fn handle_udp_packet(
     source: IpAddr,
     destination: IpAddr,
@@ -56,6 +59,7 @@ pub fn handle_udp_packet(
     }
 }
 
+/// Build a TCP packet from a network-layer packet, save it in a Parsed Packet
 pub fn handle_tcp_packet(
     source: IpAddr,
     destination: IpAddr,
@@ -97,6 +101,7 @@ pub fn handle_tcp_packet(
     }
 }
 
+/// Build a Transport-layer packet from a network-layer packet, save it in a Parsed Packet
 pub fn handle_transport_protocol(
     source: IpAddr,
     destination: IpAddr,
@@ -129,6 +134,7 @@ pub fn handle_transport_protocol(
     };
 }
 
+/// Build a ICMP packet from a network-layer packet, save it in a Parsed Packet
 pub fn handle_icmp_packet(
     source: IpAddr,
     destination: IpAddr,
@@ -192,6 +198,7 @@ pub fn handle_icmp_packet(
     }
 }
 
+/// Build a ICMPv6 packet from a network-layer packet, save it in a Parsed Packet
 pub fn handle_icmpv6_packet(
     source: IpAddr,
     destination: IpAddr,

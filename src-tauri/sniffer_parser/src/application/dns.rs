@@ -1,3 +1,5 @@
+//! DNS Packet parsing
+
 use dns_parser::Packet as DnsPacket;
 use log::debug;
 use std::net::IpAddr;
@@ -6,6 +8,7 @@ use crate::serializable_packet::{
     application::SerializableDnsPacket, ParsedPacket, SerializablePacket,
 };
 
+/// Build a DNS packet from a transport-layer packet, save it in a Parsed Packet
 pub fn handle_dns_packet(
     source_ip: IpAddr,
     source_port: u16,
