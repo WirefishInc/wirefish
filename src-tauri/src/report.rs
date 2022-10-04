@@ -67,6 +67,7 @@ use std::ffi::OsStr;
 /// The hashmap is consumed and its content is written in the csv file indicated by the path.
 /// If the first_generation attribute it's true any file corresponding to the provided path will
 /// be deleted and a new file will be generated with a header containing the name of the fields.pub fn write_report(output_path: &str, data: &mut HashMap<SourceDestination, PacketExchange>, first_generation: bool) -> Result<bool, io::Error> {
+pub fn write_report(output_path: &str, data: &mut HashMap<SourceDestination, PacketExchange>, first_generation: bool) -> Result<bool, io::Error> {\
     let path = Path::new(&output_path);
     let mut file_exists = path.is_file();
     let file_extension = path.extension();
