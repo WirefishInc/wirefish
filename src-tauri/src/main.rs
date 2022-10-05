@@ -10,6 +10,7 @@ use dotenv;
 use env_logger::Builder;
 use log::{error, info};
 use serde::Serialize;
+use sniffer_parser::HeaderLength;
 use sniffer_parser::serializable_packet::util::{
     contains_arp, contains_dns, contains_ethernet, contains_http, contains_icmp, contains_icmp6,
     contains_ipv4, contains_ipv6, contains_malformed, contains_tcp, contains_tls, contains_udp,
@@ -36,8 +37,10 @@ use std::sync::{Arc, Mutex};
 
 use sniffer_parser::{
     cleanup_sniffing_state, parse_ethernet_frame,
-    serializable_packet::{ParsedPacket, SerializablePacket},
+    serializable_packet::{SerializablePacket},
 };
+
+use crate::report::get_sender_receiver;
 
 const CONFIG: Config = Config {
     write_buffer_size: 16384,
@@ -178,8 +181,8 @@ fn start_sniffing(
     } 
     info!("[{}] Sniffing started", interface_name);
 
-    let sniffer = sniffers.get_mut(interface_name);
-    if sniffer.is_none() || sniffer.unwrap().0.send(()).is_err() {
+    let _sniffer = sniffers.get_mut(interface_name);
+    // if sniffer.is_none() || sniffer.unwrap().0.send(()).is_err() {
         // Create a new channel, dealing with layer 2 packets
         let (_, mut interface_channel) = match datalink::channel(interface, CONFIG) {
             Ok(Ethernet(tx, rx)) => Ok((tx, rx)),
@@ -221,7 +224,7 @@ fn start_sniffing(
                         if let SerializablePacket::EthernetPacket(link_packet) =
                             new_packet.get_link_layer_packet().unwrap()
                         {
-                            transmitted_bytes = link_packet.payload.len(); // TODO: Add ethernet header size
+                            transmitted_bytes = link_packet.payload.len() + HeaderLength::ETHERNET;
                             protocols.push(link_packet.ethertype.clone());
                         }
 
@@ -375,61 +378,9 @@ fn start_sniffing(
                 }
             }
         });
-    }
+    // }
 
     Ok(())
-}
-
-fn get_sender_receiver(packet: &ParsedPacket) -> (SourceDestination, Vec<String>) {
-    let mut network_source = String::from("-");
-    let mut network_destination = String::from("-");
-    let mut transport_source = String::from("-");
-    let mut transport_destination = String::from("-");
-    let mut protocols = Vec::new();
-    let network_packet_wrapper = packet.get_network_layer_packet();
-    if network_packet_wrapper.is_some() {
-        match network_packet_wrapper.unwrap() {
-            SerializablePacket::ArpPacket(network_packet) => {
-                network_source = network_packet.sender_proto_addr.to_string();
-                network_destination = network_packet.target_proto_addr.to_string();
-            }
-            SerializablePacket::Ipv4Packet(network_packet) => {
-                network_source = network_packet.source.to_string();
-                network_destination = network_packet.destination.to_string();
-            }
-            SerializablePacket::Ipv6Packet(network_packet) => {
-                network_source = network_packet.source.to_string();
-                network_destination = network_packet.destination.to_string();
-            }
-            _ => {}
-        }
-    }
-    let transport_packet_wrapper = packet.get_transport_layer_packet();
-    if transport_packet_wrapper.is_some() {
-        match transport_packet_wrapper.unwrap() {
-            SerializablePacket::TcpPacket(transport_packet) => {
-                transport_source = transport_packet.source.to_string();
-                transport_destination = transport_packet.destination.to_string();
-                protocols.push("TCP".to_owned());
-            }
-            SerializablePacket::UdpPacket(transport_packet) => {
-                transport_source = transport_packet.source.to_string();
-                transport_destination = transport_packet.destination.to_string();
-                protocols.push("UDP".to_owned());
-            }
-            _ => {}
-        }
-    }
-
-    (
-        SourceDestination::new(
-            network_source,
-            network_destination,
-            transport_source,
-            transport_destination,
-        ),
-        protocols,
-    )
 }
 
 #[tauri::command]

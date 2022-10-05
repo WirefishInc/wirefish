@@ -531,7 +531,6 @@ impl CertificateRequestMessage {
     }
 }
 
-// TODO: CertificateStatusMessage
 #[derive(Serialize, Debug, Clone)]
 pub struct CertificateStatusMessage {
     pub status_type: String,

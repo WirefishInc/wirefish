@@ -59,9 +59,11 @@
     },
     "windows": [
       {
-        "resizable": false,
+        "fullscreen": false,
+        "height": 600,
+        "resizable": true,
         "title": "Wirefish",
-        "maximized": true
+        "width": 800
       }
     ]
   }

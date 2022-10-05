@@ -17,6 +17,11 @@ use serializable_packet::ParsedPacket;
 use serializable_packet::SerializableEthernetPacket;
 use serializable_packet::SerializablePacket;
 
+#[allow(non_snake_case)]
+pub mod HeaderLength {
+    pub const ETHERNET: usize = 14;
+}
+
 pub fn cleanup_sniffing_state() {
     ACTIVE_HTTP_PARSERS.with(|parsers| parsers.borrow_mut().clear());
     ACTIVE_TLS_PARSERS.with(|parsers| parsers.borrow_mut().clear());
