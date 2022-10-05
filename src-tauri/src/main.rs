@@ -178,8 +178,8 @@ fn start_sniffing(
     } 
     info!("[{}] Sniffing started", interface_name);
 
-    let sniffer = sniffers.get_mut(interface_name);
-    if sniffer.is_none() || sniffer.unwrap().0.send(()).is_err() {
+    let _sniffer = sniffers.get_mut(interface_name);
+    // if sniffer.is_none() || sniffer.unwrap().0.send(()).is_err() {
         // Create a new channel, dealing with layer 2 packets
         let (_, mut interface_channel) = match datalink::channel(interface, CONFIG) {
             Ok(Ethernet(tx, rx)) => Ok((tx, rx)),
@@ -375,7 +375,7 @@ fn start_sniffing(
                 }
             }
         });
-    }
+    // }
 
     Ok(())
 }
