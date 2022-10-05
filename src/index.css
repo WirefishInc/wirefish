@@ -89,12 +89,12 @@ td.index {
 
 div.inner-acc {
     width: 100%;
-    background-color: rgb(40,40,40);
+    background-color: rgb(40, 40, 40);
 }
 
 div.d-inner-acc {
     width: 100%;
-    background-color: rgb(87,87,87)
+    background-color: rgb(87, 87, 87)
 }
 
 li.break {
@@ -106,11 +106,11 @@ label.text-field {
 }
 
 table.ascii {
-   margin-left: 100px;
+    margin-left: 100px;
 }
 
 div.paper {
-    background-color: rgb(40,40,40) ;
+    background-color: rgb(40, 40, 40);
     margin: 20px;
 }
 
@@ -124,7 +124,7 @@ div.modal {
     margin: 6%;
     overflow: scroll;
     display: block;
-    background-color: rgb(100,100,100);
+    background-color: rgb(100, 100, 100);
 }
 
 div.header {
@@ -147,12 +147,11 @@ div.title {
 }
 
 div.viewer {
-    background-color: rgb(30,30,30);
+    background-color: rgb(30, 30, 30);
 }
 
 div.grid {
     margin-top: 5px;
-    margin-bottom: 5px;
     height: 370px;
 }
 
@@ -163,6 +162,7 @@ div.row {
 div.tip {
     font-style: italic;
     color: rgb(165, 165, 165);
+    text-align: right;
 }
 
 div.head {
@@ -172,4 +172,16 @@ div.head {
 
 div.MuiTablePagination-root.css-9477tm-MuiTablePagination-root > div > p {
     display: none;
+}
+
+div.MuiTablePagination-root.css-9477tm-MuiTablePagination-root > div {
+    margin-right: 650px;
+}
+
+div.pageButtons {
+    border: none;
+}
+
+div.footer {
+    border-bottom: solid grey 2px;
 }

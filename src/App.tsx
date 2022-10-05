@@ -513,29 +513,26 @@ function App() {
                                   setMakeRequest(true)
                                   setPageState(newPage + 1)
                               }}
-                              components={{
-                                  Footer: () =>
-                                      <>
-                                          <GridFooterContainer >
-                                                <Grid style={{marginLeft: "10px", marginRight: "auto"}} item>
-                                                  <span style={{fontWeight: "bold"}}>Total number of packets: </span> {packetCount / 2}  {/* TODO: because of STRICT MODE */}
-                                                </Grid>
-                                                
-                                                <Grid item className='tip' style={{marginLeft: "auto", marginRight: "auto"}}>
-                                                  Double click on a packet to view details
-                                                </Grid>
 
-                                                <Grid item style={{marginLeft: "auto", minWidth: "70px"}}>
-                                                    {(pageState - 1) * 100}-{(pageState - 1) * 100 + 100}
-                                                </Grid>
-                                              <GridFooter sx={{
-                                                  border: 'none', // To delete double border.
-                                              }}/>
-                                          </GridFooterContainer>
-                                      </>
-                              }
-                              }
                     />
+                </Grid>
+
+                <Grid container spacing={2} className={"container-main footer"}>
+                    <Grid xs={4} item
+                          style={{paddingTop: "0px", textAlign: "left"}}>
+                        <span
+                            style={{fontWeight: "bold"}}>Total number of packets: </span> {packetCount / 2} {/* TODO: because of STRICT MODE */}
+                    </Grid>
+
+                    <Grid xs={4} item
+                          style={{paddingTop: "0px", textAlign: "center"}}>
+                        <span>{(pageState - 1) * 100} - {(pageState - 1) * 100 + 99}</span>
+                    </Grid>
+
+                    <Grid xs={4} item className='tip'
+                          style={{paddingTop: "0px"}}>
+                        Double click on a packet to view details
+                    </Grid>
                 </Grid>
 
 
