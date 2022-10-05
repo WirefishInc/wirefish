@@ -92,12 +92,15 @@ impl PacketsCollection {
     }
 
     pub fn clear(&mut self) {
+        self.packets.clear();
+
         self.source_ip_index.clear();
         self.dest_ip_index.clear();
         self.source_port_index.clear();
         self.dest_port_index.clear();
         self.source_mac_index.clear();
         self.dest_mac_index.clear();
+        
         self.ethernet_packets.clear();
         self.malformed_packets.clear();
         self.unknown_packets.clear();
@@ -141,8 +144,8 @@ pub fn get_packets<'a>(
     match &result {
         Ok(packets) => {
             info!(
-                "Received getPackets request ({}-{}); Len: {}, Type Filters: {:?} Strong Filters: {:?}",
-                start, end, packets.len(), filters_type, filters_value
+                "Received getPackets request ({}-{}); Len: {}, Type Filters: {:?} Strong Filters: {:?} Ids: {:?}",
+                start, end, packets.len(), filters_type, filters_value, packets.iter().map(|x| x.get_id()).collect::<Vec<usize>>()
             );
         },
         _ => ()

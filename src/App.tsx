@@ -402,6 +402,7 @@ function App() {
         if (sniffingStatus === SniffingStatus.Inactive) {
             setCapturedPackets([]);
             setPacketCount(0);
+            setPageState(1);
             setMakeRequest(true);
             await startSniffing();
         } else if (sniffingStatus === SniffingStatus.Active) await stopSniffing();
@@ -502,7 +503,7 @@ function App() {
                                   setSelectedPacket(ev.row)
                                   handleOpen();
                               }}
-                              rowCount={capturedPackets.length + (pageState * 100)} // TODO: because of STRICT MODE
+                              rowCount={capturedPackets.length + (pageState * 100)}
                               rowsPerPageOptions={[100]}
                               pageSize={100}
                               pagination
@@ -516,12 +517,16 @@ function App() {
                                   Footer: () =>
                                       <>
                                           <GridFooterContainer >
-                                                <Grid style={{marginLeft: "10px"}} item>
-                                                  <span style={{fontWeight: "bold"}}>Total number of packets: </span> {packetCount / 2}
+                                                <Grid style={{marginLeft: "10px", marginRight: "auto"}} item>
+                                                  <span style={{fontWeight: "bold"}}>Total number of packets: </span> {packetCount / 2}  {/* TODO: because of STRICT MODE */}
                                                 </Grid>
                                                 
-                                                <Grid item className='tip'>
+                                                <Grid item className='tip' style={{marginLeft: "auto", marginRight: "auto"}}>
                                                   Double click on a packet to view details
+                                                </Grid>
+
+                                                <Grid item style={{marginLeft: "auto", minWidth: "70px"}}>
+                                                    {(pageState - 1) * 100}-{(pageState - 1) * 100 + 100}
                                                 </Grid>
                                               <GridFooter sx={{
                                                   border: 'none', // To delete double border.

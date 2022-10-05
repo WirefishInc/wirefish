@@ -1,3 +1,5 @@
+use sniffer_parser::serializable_packet::{ParsedPacket, SerializablePacket};
+
 use self::data::{SourceDestination, PacketExchange};
 use std::io::{self, Write, BufWriter};
 use std::fs::{self, OpenOptions};
@@ -61,6 +63,58 @@ pub fn write_report(output_path: &str, data: &mut HashMap<SourceDestination, Pac
     }
 
     Ok(true)
+}
+
+pub fn get_sender_receiver(packet: &ParsedPacket) -> (SourceDestination, Vec<String>) {
+    let mut network_source = String::from("-");
+    let mut network_destination = String::from("-");
+    let mut transport_source = String::from("-");
+    let mut transport_destination = String::from("-");
+    let mut protocols = Vec::new();
+    let network_packet_wrapper = packet.get_network_layer_packet();
+    if network_packet_wrapper.is_some() {
+        match network_packet_wrapper.unwrap() {
+            SerializablePacket::ArpPacket(network_packet) => {
+                network_source = network_packet.sender_proto_addr.to_string();
+                network_destination = network_packet.target_proto_addr.to_string();
+            }
+            SerializablePacket::Ipv4Packet(network_packet) => {
+                network_source = network_packet.source.to_string();
+                network_destination = network_packet.destination.to_string();
+            }
+            SerializablePacket::Ipv6Packet(network_packet) => {
+                network_source = network_packet.source.to_string();
+                network_destination = network_packet.destination.to_string();
+            }
+            _ => {}
+        }
+    }
+    let transport_packet_wrapper = packet.get_transport_layer_packet();
+    if transport_packet_wrapper.is_some() {
+        match transport_packet_wrapper.unwrap() {
+            SerializablePacket::TcpPacket(transport_packet) => {
+                transport_source = transport_packet.source.to_string();
+                transport_destination = transport_packet.destination.to_string();
+                protocols.push("TCP".to_owned());
+            }
+            SerializablePacket::UdpPacket(transport_packet) => {
+                transport_source = transport_packet.source.to_string();
+                transport_destination = transport_packet.destination.to_string();
+                protocols.push("UDP".to_owned());
+            }
+            _ => {}
+        }
+    }
+
+    (
+        SourceDestination::new(
+            network_source,
+            network_destination,
+            transport_source,
+            transport_destination,
+        ),
+        protocols,
+    )
 }
 
 pub mod data {

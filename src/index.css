@@ -156,18 +156,11 @@ div.grid {
     height: 370px;
 }
 
-/*
-img.image {
-    todo
-}
-*/
-
 div.row {
     cursor: pointer;
 }
 
 div.tip {
-    margin-left: 5px;
     font-style: italic;
     color: rgb(165, 165, 165);
 }
@@ -175,4 +168,8 @@ div.tip {
 div.head {
     width: 100%;
     margin-bottom: 2px;
+}
+
+div.MuiTablePagination-root.css-9477tm-MuiTablePagination-root > div > p {
+    display: none;
 }
