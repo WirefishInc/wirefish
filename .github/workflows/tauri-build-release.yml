@@ -27,7 +27,18 @@ jobs:
         if: matrix.platform == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev webkit2gtk-4.0 libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libgtk-3-dev webkit2gtk-4.0 libappindicator3-dev librsvg2-dev patchelf libpcap-dev
+
+      - name: Install dependencies (windows only)
+        if: matrix.platform == 'windows-latest'
+        run: |
+          chocolatey install winpcap -y
+          echo "WinPcap installed"
+          (new-object System.Net.WebClient).DownloadFile('https://www.winpcap.org/install/bin/WpdPack_4_1_2.zip','WpdPack_4_1_2.zip')
+          7z x WpdPack_4_1_2.zip
+          echo "LIB=$env:GITHUB_WORKSPACE\WpdPack\Lib\x64\" >> $env:GITHUB_ENV
+          echo "WinPcap Developers Pack installed"
+
       - name: Install app dependencies and build web
         run: yarn && yarn build
 
