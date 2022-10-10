@@ -1,4 +1,9 @@
-use sniffer_parser::serializable_packet::{ParsedPacket, SerializablePacket};
+use sniffer_parser::serializable_packet::{ParsedPacket};
+use sniffer_parser::serializable_packet::util::{
+    contains_arp, contains_dns, contains_http, contains_icmp, contains_icmp6,
+    contains_ipv4, contains_ipv6, contains_tcp, contains_tls, contains_udp,
+    get_dest_ip, get_dest_port, get_source_ip, get_source_port
+};
 
 use self::data::{SourceDestination, PacketExchange};
 use std::io::{self, Write, BufWriter};
@@ -9,6 +14,7 @@ use std::ffi::OsStr;
 
 /// Appends data to a report file, creates the file if it doesn't exist
 pub fn write_report(output_path: &str, data: &mut HashMap<SourceDestination, PacketExchange>, first_generation: bool) -> Result<bool, io::Error> {
+
     let path = Path::new(&output_path);
     let mut file_exists = path.is_file();
     let file_extension = path.extension();
@@ -59,51 +65,44 @@ pub fn write_report(output_path: &str, data: &mut HashMap<SourceDestination, Pac
         for (source_destination, exchange) in data_pairs {
             writer.write_all((source_destination.to_string() + "," + &exchange.to_string() + "\n").as_bytes())?
         }
-        writer.write_all(b"\n")?;
     }
 
     Ok(true)
 }
 
 pub fn get_sender_receiver(packet: &ParsedPacket) -> (SourceDestination, Vec<String>) {
-    let mut network_source = String::from("-");
-    let mut network_destination = String::from("-");
-    let mut transport_source = String::from("-");
-    let mut transport_destination = String::from("-");
+    let network_source = get_source_ip(packet).unwrap_or(String::from("-"));
+    let network_destination = get_dest_ip(packet).unwrap_or(String::from("-"));
+    let transport_source = get_source_port(packet).unwrap_or(String::from("-"));
+    let transport_destination = get_dest_port(packet).unwrap_or(String::from("-"));
     let mut protocols = Vec::new();
-    let network_packet_wrapper = packet.get_network_layer_packet();
-    if network_packet_wrapper.is_some() {
-        match network_packet_wrapper.unwrap() {
-            SerializablePacket::ArpPacket(network_packet) => {
-                network_source = network_packet.sender_proto_addr.to_string();
-                network_destination = network_packet.target_proto_addr.to_string();
-            }
-            SerializablePacket::Ipv4Packet(network_packet) => {
-                network_source = network_packet.source.to_string();
-                network_destination = network_packet.destination.to_string();
-            }
-            SerializablePacket::Ipv6Packet(network_packet) => {
-                network_source = network_packet.source.to_string();
-                network_destination = network_packet.destination.to_string();
-            }
-            _ => {}
-        }
+
+    if contains_ipv4(packet) {
+        protocols.push(String::from("IPv4"));
+    } else if contains_ipv6(packet) {
+        protocols.push(String::from("IPv6"));
+    } else if contains_arp(packet) {
+        protocols.push(String::from("ARP"));
     }
-    let transport_packet_wrapper = packet.get_transport_layer_packet();
-    if transport_packet_wrapper.is_some() {
-        match transport_packet_wrapper.unwrap() {
-            SerializablePacket::TcpPacket(transport_packet) => {
-                transport_source = transport_packet.source.to_string();
-                transport_destination = transport_packet.destination.to_string();
-                protocols.push("TCP".to_owned());
-            }
-            SerializablePacket::UdpPacket(transport_packet) => {
-                transport_source = transport_packet.source.to_string();
-                transport_destination = transport_packet.destination.to_string();
-                protocols.push("UDP".to_owned());
-            }
-            _ => {}
-        }
+
+    if contains_icmp(packet) {
+        protocols.push(String::from("ICMP"));
+    } else if contains_icmp6(packet) {
+        protocols.push(String::from("ICMPv6"));
+    }
+
+    if contains_tcp(packet) {
+        protocols.push(String::from("TCP"));
+    } else if contains_udp(packet) {
+        protocols.push(String::from("UDP"));
+    }
+
+    if contains_dns(packet) {
+        protocols.push(String::from("DNS"));
+    } else if contains_http(packet) {
+        protocols.push(String::from("HTTP"));
+    } else if contains_tls(packet) {
+        protocols.push(String::from("TLS"));
     }
 
     (
@@ -188,7 +187,6 @@ pub mod data {
             let protocols = if protocols_set.len() == 0 {
                 "-".to_owned()
             } else {
-                protocols_set.sort();
                 protocols_set.join(";")
             };
 

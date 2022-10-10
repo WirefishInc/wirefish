@@ -220,12 +220,11 @@ fn start_sniffing(
                         let now = Local::now();
                         let sender_receiver = get_sender_receiver(&new_packet);
                         let mut transmitted_bytes = 0;
-                        let mut protocols: Vec<String> = sender_receiver.1;
+                        let protocols: Vec<String> = sender_receiver.1;
                         if let SerializablePacket::EthernetPacket(link_packet) =
                             new_packet.get_link_layer_packet().unwrap()
                         {
                             transmitted_bytes = link_packet.payload.len() + HeaderLength::ETHERNET;
-                            protocols.push(link_packet.ethertype.clone());
                         }
 
                         let mut packets_collection = packets.lock().unwrap();
