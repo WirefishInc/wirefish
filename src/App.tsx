@@ -267,14 +267,14 @@ function App() {
                 firstReportGeneration.current = false;
             setFeedbackMessage({
                 isError: false,
-                duration: 5000,
+                duration: 4500,
                 text: "Report generated"
             });
         } catch (exception: any) {
             setFeedbackMessage({
                 isError: true,
                 duration: 8000,
-                text: exception.error
+                text: exception.error || exception.description
             });
         }
     }
