@@ -185,3 +185,7 @@ div.pageButtons {
 div.footer {
     border-bottom: solid grey 2px;
 }
+
+span.MuiLinearProgress-bar.MuiLinearProgress-barColorPrimary {
+    transition: transform 1s linear;
+}
