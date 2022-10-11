@@ -11,7 +11,12 @@ const ArrayFields: FC<ArrayProps> = ({array}) => {
     return (
         <>
             <table>
-                {array.map((el) => <tr>- {el}</tr>)}
+                <tbody>
+                {array.map((el, i) =>
+                    <tr key={i}>
+                        <th>- {el}</th>
+                    </tr>)}
+                </tbody>
             </table>
         </>
     )

@@ -2,7 +2,7 @@ import {FC} from "react";
 import {Grid} from "@mui/material";
 
 function payloadToHex(payload: number[]) {
-    return payload.reverse().map((el: number) => el.toString(16)).map((el) => el.toUpperCase());
+    return payload.map((el: number) => el.toString(16)).map((el) => el.toUpperCase());
 }
 
 function hexToAscii(byte: number) {
@@ -55,7 +55,7 @@ const HewViewer: FC<HewViewerProps> = ({payload, over, setOver}) => {
     if (payload.length === 0)
         return null;
 
-    let hex_payload = payloadToHex(payload);
+    let hex_payload = payloadToHex(payload).reverse();
     let ascii_payload = payload.map((el) => hexToAscii(el));
 
     let hew_rows = [];
@@ -75,7 +75,7 @@ const HewViewer: FC<HewViewerProps> = ({payload, over, setOver}) => {
                 <table>
                     <tbody>
                     {hew_rows.map((r, i) =>
-                        <tr>
+                        <tr key={i}>
                             {<td className={"index"}>{"0x" + (i * 16).toString(16).toUpperCase()}</td>}
                             {<td className={"index"}>|</td>}
                             <Row row={r} i={i} over={over} setOver={setOver}/>
@@ -88,7 +88,7 @@ const HewViewer: FC<HewViewerProps> = ({payload, over, setOver}) => {
                 <table>
                     <tbody>
                     {ascii_rows.map((r, i) =>
-                        <tr>
+                        <tr key={i}>
                             <Row row={r} i={i} over={over} setOver={setOver}/>
                         </tr>
                     )}
