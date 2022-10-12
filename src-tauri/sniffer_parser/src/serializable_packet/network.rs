@@ -1,3 +1,5 @@
+//! Network level Packets Representation
+
 use std::net::{Ipv4Addr, Ipv6Addr};
 
 use pnet::packet::Packet;
@@ -8,7 +10,6 @@ use pnet::util::MacAddr;
 use serde::Serialize;
 
 /// ARP Packet Representation
-
 #[derive(Serialize, Debug, Clone)]
 pub struct SerializableArpPacket {
     pub hardware_type: String,
@@ -45,7 +46,6 @@ impl<'a> From<&ArpPacket<'a>> for SerializableArpPacket {
 }
 
 /// IPv6 Packet Representation
-
 #[derive(Serialize, Debug, Clone)]
 pub struct SerializableIpv6Packet {
     pub version: u8,
@@ -80,7 +80,6 @@ impl<'a> From<&Ipv6Packet<'a>> for SerializableIpv6Packet {
 }
 
 /// IPv4 Packet Representation
-
 #[derive(Serialize, Debug, Clone)]
 pub struct SerializableIpv4Packet {
     pub version: u8,

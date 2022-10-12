@@ -1,3 +1,5 @@
+//! Application layer Packet parsing
+
 use std::{cell::RefCell, collections::HashMap, net::IpAddr};
 
 use crate::serializable_packet::ParsedPacket;
@@ -17,6 +19,7 @@ thread_local!(
     > = RefCell::new(HashMap::new());
 );
 
+/// IANA Well Known TCP/UDP Ports
 #[allow(non_snake_case)]
 mod WellKnownPorts {
     pub const HTTP_PORT: u16 = 80;
@@ -26,6 +29,7 @@ mod WellKnownPorts {
 
 // HTTP ----------------------------------------------------------------------------------------------------------------
 
+/// HTTP Types of Content Encoding
 #[allow(non_snake_case)]
 mod ContentEncoding {
     pub const GZIP: &str = "gzip";
@@ -33,6 +37,7 @@ mod ContentEncoding {
     pub const DEFLATE: &str = "deflate";
 }
 
+/// HTTP String representation for Header names
 #[allow(non_snake_case)]
 mod HeaderNamesValues {
     pub const CONTENT_ENCODING: &str = "Content-Encoding";
@@ -42,11 +47,13 @@ mod HeaderNamesValues {
     pub const CHUNKED: &str = "chunked";
 }
 
+/// HTTP Types of packets
 pub enum HttpPacketType {
     Request,
     Response,
 }
 
+/// Build an application-layer packet from a transport-layer one, save it in a Parsed Packet
 pub fn handle_application_protocol(
     source_ip: IpAddr,
     source_port: u16,

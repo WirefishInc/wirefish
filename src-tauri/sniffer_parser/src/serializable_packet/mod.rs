@@ -1,3 +1,12 @@
+//! Generic parsed packet representation
+//!
+//! A parsed packet contains the packet representation at each level of the TCP/IP stack (except physical):
+//! - link_layer_packet
+//! - network_layer_packet
+//! - transport_layer_packet
+//! - application_layer_packet
+//!
+
 pub mod application;
 pub mod network;
 pub mod transport;
@@ -18,6 +27,7 @@ use self::transport::{
     SerializableIcmpv6Packet, SerializableTcpPacket, SerializableUdpPacket,
 };
 
+/// Data structure containing representations of the packet at each TCP/IP layer
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ParsedPacket {
@@ -39,34 +49,42 @@ impl ParsedPacket {
         }
     }
 
+    /// Get packet unique Identifier
     pub fn get_id(&self) -> usize {
         self.id
     }
 
+    /// Get link layer packet representation
     pub fn get_link_layer_packet(&self) -> Option<&SerializablePacket> {
         self.link_layer_packet.as_ref()
     }
 
+    /// Get network layer packet representation
     pub fn get_network_layer_packet(&self) -> Option<&SerializablePacket> {
         self.network_layer_packet.as_ref()
     }
 
+    /// Get transport layer packet representation
     pub fn get_transport_layer_packet(&self) -> Option<&SerializablePacket> {
         self.transport_layer_packet.as_ref()
     }
 
+    /// Get application layer packet representation
     pub fn get_application_layer_packet(&self) -> Option<&SerializablePacket> {
         self.application_layer_packet.as_ref()
     }
 
+    /// Set link layer packet representation
     pub fn set_link_layer_packet(&mut self, link_layer_packet: Option<SerializablePacket>) {
         self.link_layer_packet = link_layer_packet;
     }
 
+    /// Set network layer packet representation
     pub fn set_network_layer_packet(&mut self, network_layer_packet: Option<SerializablePacket>) {
         self.network_layer_packet = network_layer_packet;
     }
 
+    /// Set transport layer packet representation
     pub fn set_transport_layer_packet(
         &mut self,
         transport_layer_packet: Option<SerializablePacket>,
@@ -74,6 +92,7 @@ impl ParsedPacket {
         self.transport_layer_packet = transport_layer_packet;
     }
 
+    /// Set application layer packet representation
     pub fn set_application_layer_packet(
         &mut self,
         application_layer_packet: Option<SerializablePacket>,
@@ -82,6 +101,7 @@ impl ParsedPacket {
     }
 }
 
+/// All possible packet serialization options
 #[derive(Serialize, Debug, Clone)]
 #[serde(tag = "type", content = "packet")]
 pub enum SerializablePacket {

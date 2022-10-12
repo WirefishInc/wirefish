@@ -1,5 +1,8 @@
+//! Utility functions to retrieve specific fields of packets
+
 use super::{ParsedPacket, SerializablePacket};
 
+/// Get Source MAC address (Link layer sender)
 pub fn get_source_mac(packet: &ParsedPacket) -> Option<String> {
     if let Some(SerializablePacket::EthernetPacket(ethernet_packet)) =
         packet.get_link_layer_packet()
@@ -10,6 +13,7 @@ pub fn get_source_mac(packet: &ParsedPacket) -> Option<String> {
     return None;
 }
 
+/// Get Destination MAC address (Link layer receiver)
 pub fn get_dest_mac(packet: &ParsedPacket) -> Option<String> {
     if let Some(SerializablePacket::EthernetPacket(ethernet_packet)) =
         packet.get_link_layer_packet()
@@ -20,6 +24,7 @@ pub fn get_dest_mac(packet: &ParsedPacket) -> Option<String> {
     return None;
 }
 
+/// Get Source IP address (Network layer sender)
 pub fn get_source_ip(packet: &ParsedPacket) -> Option<String> {
     return match packet.get_network_layer_packet() {
         Some(SerializablePacket::ArpPacket(network_packet)) => {
@@ -35,6 +40,7 @@ pub fn get_source_ip(packet: &ParsedPacket) -> Option<String> {
     };
 }
 
+/// Get Destination IP address (Network layer receiver)
 pub fn get_dest_ip(packet: &ParsedPacket) -> Option<String> {
     return match packet.get_network_layer_packet() {
         Some(SerializablePacket::ArpPacket(network_packet)) => {
@@ -50,6 +56,7 @@ pub fn get_dest_ip(packet: &ParsedPacket) -> Option<String> {
     };
 }
 
+/// Get Source Port (Transport layer sender)
 pub fn get_source_port(packet: &ParsedPacket) -> Option<String> {
     return match packet.get_transport_layer_packet() {
         Some(SerializablePacket::TcpPacket(transport_packet)) => {
@@ -62,6 +69,7 @@ pub fn get_source_port(packet: &ParsedPacket) -> Option<String> {
     };
 }
 
+/// Get Destination Port (Transport layer receiver)
 pub fn get_dest_port(packet: &ParsedPacket) -> Option<String> {
     return match packet.get_transport_layer_packet() {
         Some(SerializablePacket::TcpPacket(transport_packet)) => {
@@ -74,6 +82,7 @@ pub fn get_dest_port(packet: &ParsedPacket) -> Option<String> {
     };
 }
 
+/// Check if packet type is unknown
 pub fn contains_unknokn(packet: &ParsedPacket) -> bool {
     if let Some(SerializablePacket::UnknownPacket(_)) = packet.get_link_layer_packet() {
         return true;
@@ -82,6 +91,7 @@ pub fn contains_unknokn(packet: &ParsedPacket) -> bool {
     return false;
 }
 
+/// Check if packet content is malformed
 pub fn contains_malformed(packet: &ParsedPacket) -> bool {
     if let Some(SerializablePacket::MalformedPacket(_)) = packet.get_link_layer_packet() {
         return true;
@@ -102,6 +112,7 @@ pub fn contains_malformed(packet: &ParsedPacket) -> bool {
     return false;
 }
 
+/// Check if packet contains the Ethernet Protocol
 pub fn contains_ethernet(packet: &ParsedPacket) -> bool {
     if let Some(SerializablePacket::EthernetPacket(_)) = packet.get_link_layer_packet() {
         return true;
@@ -110,6 +121,7 @@ pub fn contains_ethernet(packet: &ParsedPacket) -> bool {
     return false;
 }
 
+/// Check if packet contains TCP (Transport Layer protocol)
 pub fn contains_tcp(packet: &ParsedPacket) -> bool {
     if let Some(SerializablePacket::TcpPacket(_)) = packet.get_transport_layer_packet() {
         return true;
@@ -118,6 +130,7 @@ pub fn contains_tcp(packet: &ParsedPacket) -> bool {
     return false;
 }
 
+/// Check if packet contains UDP (Transport Layer protocol)
 pub fn contains_udp(packet: &ParsedPacket) -> bool {
     if let Some(SerializablePacket::UdpPacket(_)) = packet.get_transport_layer_packet() {
         return true;
@@ -126,6 +139,7 @@ pub fn contains_udp(packet: &ParsedPacket) -> bool {
     return false;
 }
 
+/// Check if packet contains ICMPv4
 pub fn contains_icmp(packet: &ParsedPacket) -> bool {
     if let Some(SerializablePacket::IcmpPacket(_))
     | Some(SerializablePacket::EchoReplyPacket(_))
@@ -137,6 +151,7 @@ pub fn contains_icmp(packet: &ParsedPacket) -> bool {
     return false;
 }
 
+/// Check if packet contains ICMPv6
 pub fn contains_icmp6(packet: &ParsedPacket) -> bool {
     if let Some(SerializablePacket::Icmpv6Packet(_)) = packet.get_transport_layer_packet() {
         return true;
@@ -145,6 +160,7 @@ pub fn contains_icmp6(packet: &ParsedPacket) -> bool {
     return false;
 }
 
+/// Check if packet contains ARP
 pub fn contains_arp(packet: &ParsedPacket) -> bool {
     if let Some(SerializablePacket::ArpPacket(_)) = packet.get_network_layer_packet() {
         return true;
@@ -153,6 +169,7 @@ pub fn contains_arp(packet: &ParsedPacket) -> bool {
     return false;
 }
 
+/// Check if packet contains IPv6 protocol (Network layer)
 pub fn contains_ipv6(packet: &ParsedPacket) -> bool {
     if let Some(SerializablePacket::Ipv6Packet(_)) = packet.get_network_layer_packet() {
         return true;
@@ -161,6 +178,7 @@ pub fn contains_ipv6(packet: &ParsedPacket) -> bool {
     return false;
 }
 
+/// Check if packet contains IPv4 protocol (Network layer)
 pub fn contains_ipv4(packet: &ParsedPacket) -> bool {
     if let Some(SerializablePacket::Ipv4Packet(_)) = packet.get_network_layer_packet() {
         return true;
@@ -169,6 +187,7 @@ pub fn contains_ipv4(packet: &ParsedPacket) -> bool {
     return false;
 }
 
+/// Check if packet contains TLS protocol (Application layer)
 pub fn contains_tls(packet: &ParsedPacket) -> bool {
     if let Some(SerializablePacket::TlsPacket(_)) = packet.get_application_layer_packet() {
         return true;
@@ -177,6 +196,7 @@ pub fn contains_tls(packet: &ParsedPacket) -> bool {
     return false;
 }
 
+/// Check if packet contains DNS protocol (Application layer)
 pub fn contains_dns(packet: &ParsedPacket) -> bool {
     if let Some(SerializablePacket::DnsPacket(_)) = packet.get_application_layer_packet() {
         return true;
@@ -185,6 +205,7 @@ pub fn contains_dns(packet: &ParsedPacket) -> bool {
     return false;
 }
 
+/// Check if packet contains HTTP protocol (Application layer)
 pub fn contains_http(packet: &ParsedPacket) -> bool {
     if let Some(SerializablePacket::HttpRequestPacket(_))
     | Some(SerializablePacket::HttpResponsePacket(_)) = packet.get_application_layer_packet()

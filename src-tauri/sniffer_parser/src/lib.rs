@@ -1,3 +1,8 @@
+//! Packet Parsing library from Ethernet frame to Application-layer representation
+//!
+//! This library parses an Ethernet frame extracting all fields and data from it
+//! and represents the parsed packet data at the different levels of the TCP/IP stack
+
 mod application;
 mod network;
 mod transport;
@@ -17,11 +22,13 @@ use serializable_packet::ParsedPacket;
 use serializable_packet::SerializableEthernetPacket;
 use serializable_packet::SerializablePacket;
 
+/// Delete active parsers
 pub fn cleanup_sniffing_state() {
     ACTIVE_HTTP_PARSERS.with(|parsers| parsers.borrow_mut().clear());
     ACTIVE_TLS_PARSERS.with(|parsers| parsers.borrow_mut().clear());
 }
 
+/// Parse ethernet frame obtaining the packet link-layer and network-layer representations
 pub fn parse_ethernet_frame(ethernet: &EthernetPacket, id: usize) -> ParsedPacket {
     let mut parsed_packet = ParsedPacket::new(id);
 

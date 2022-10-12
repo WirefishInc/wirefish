@@ -1,3 +1,5 @@
+//! Application level Packets Representation
+
 use std::{
     net::{Ipv4Addr, Ipv6Addr},
     str::from_utf8,
@@ -17,6 +19,7 @@ use tls_parser::{
 };
 use x509_parser::{parse_x509_certificate, prelude::X509Certificate};
 
+/// HTTP Body content
 #[derive(Serialize, Debug, Clone)]
 #[serde(tag = "type", content = "content")]
 pub enum HttpContentType {
@@ -32,7 +35,6 @@ pub enum HttpContentType {
 }
 
 /// HTTP Request Packet Representation
-
 #[derive(Serialize, Debug, Clone)]
 pub struct SerializableHttpRequestPacket {
     pub method: String,
@@ -66,7 +68,6 @@ impl<'a, 'b> SerializableHttpRequestPacket {
 }
 
 /// HTTP Response Packet Representation
-
 #[derive(Serialize, Debug, Clone)]
 pub struct SerializableHttpResponsePacket {
     pub version: u8,
@@ -99,8 +100,7 @@ impl<'a, 'b> SerializableHttpResponsePacket {
     }
 }
 
-/// TLS Packet Representation
-
+/// TLS Malformed Packet Representation
 #[derive(Serialize, Debug, Clone)]
 #[serde(tag = "type", content = "error")]
 pub enum TlsMalformedError {
@@ -108,6 +108,7 @@ pub enum TlsMalformedError {
     UnknownRecord(String),
 }
 
+/// TLS Packet Representation
 #[derive(Serialize, Debug, Clone)]
 pub struct SerializableTlsPacket {
     pub version: String,
@@ -116,18 +117,22 @@ pub struct SerializableTlsPacket {
 }
 
 impl SerializableTlsPacket {
+    /// Set the transported TLS version
     pub fn set_version(&mut self, version: TlsVersion) {
         self.version = format!("{}", version);
     }
 
+    /// Set the transported TLS message
     pub fn set_messages(&mut self, messages: Vec<CustomTlsMessage>) {
         self.messages = messages;
     }
 
+    /// Set the TLS packet length
     pub fn set_length(&mut self, length: u16) {
         self.length = length;
     }
 
+    /// Check if TLS packet is not initialized
     pub fn is_default(&self) -> bool {
         self.length == 0 && self.messages.is_empty() && self.version == "".to_owned()
     }
@@ -143,6 +148,7 @@ impl Default for SerializableTlsPacket {
     }
 }
 
+/// Types of TLS Messages
 #[derive(Serialize, Debug, Clone)]
 #[serde(tag = "type")]
 pub enum CustomTlsMessage {
@@ -156,6 +162,7 @@ pub enum CustomTlsMessage {
     Malformed(CustomMalformedMessage),
 }
 
+/// Types of TLS Handshake Messages
 #[derive(Serialize, Debug, Clone)]
 #[serde(tag = "subType", content = "content")]
 pub enum CustomHandshakeMessage {
@@ -178,6 +185,7 @@ pub enum CustomHandshakeMessage {
     ServerKeyExchange(ServerKeyExchangeMessage),
 }
 
+/// TLS Alert Message
 #[derive(Serialize, Debug, Clone)]
 pub struct CustomAlertMessage {
     pub severity: String,
@@ -193,6 +201,7 @@ impl CustomAlertMessage {
     }
 }
 
+/// TLS Heartbeat Message
 #[derive(Serialize, Debug, Clone)]
 pub struct CustomHeartbeatMessage {
     pub heartbeat_type: String,
@@ -210,6 +219,7 @@ impl CustomHeartbeatMessage {
     }
 }
 
+/// TLS Client Hello Message
 #[derive(Serialize, Debug, Clone)]
 pub struct ClientHelloMessage {
     pub version: String,
@@ -238,6 +248,7 @@ impl ClientHelloMessage {
     }
 }
 
+/// Get custom TLS extension contained in TLS packet
 pub(crate) fn parse_custom_tls_extensions(exts: Vec<TlsExtension>) -> Vec<String> {
     let mut new_extensions = vec![];
 
@@ -420,6 +431,7 @@ fn parse_signature_algorithm(data: &u16) -> String {
     .to_owned()
 }
 
+/// TLS Server Hello Message
 #[derive(Serialize, Debug, Clone)]
 pub struct ServerHelloMessage {
     pub version: String,
@@ -448,6 +460,7 @@ impl ServerHelloMessage {
     }
 }
 
+/// TLS Certificate details
 #[derive(Serialize, Debug, Clone)]
 pub struct Certificate {
     pub signature_algorithm: String,
@@ -489,6 +502,7 @@ impl Certificate {
     }
 }
 
+/// TLS Certificate Message: list of certificates
 #[derive(Serialize, Debug, Clone)]
 pub struct CertificateMessage {
     pub certificates: Vec<Certificate>,
@@ -514,6 +528,7 @@ impl CertificateMessage {
     }
 }
 
+/// TLS Certificate Revocation Request: list hash algorithms
 #[derive(Serialize, Debug, Clone)]
 pub struct CertificateRequestMessage {
     pub sig_hash_algos: Vec<u16>,
@@ -531,6 +546,7 @@ impl CertificateRequestMessage {
     }
 }
 
+/// TLS Certificate Status Message
 // TODO: CertificateStatusMessage
 #[derive(Serialize, Debug, Clone)]
 pub struct CertificateStatusMessage {
@@ -550,6 +566,7 @@ impl CertificateStatusMessage {
     }
 }
 
+/// TLS Certificate Verify Message
 #[derive(Serialize, Debug, Clone)]
 pub struct CertificateVerifyMessage {
     pub data: Vec<u8>,
@@ -563,6 +580,7 @@ impl CertificateVerifyMessage {
     }
 }
 
+/// TLS Client Parameters: Cipher algorithm for key exchange
 #[derive(Serialize, Debug, Clone)]
 #[serde(tag = "type", content = "parameters")]
 pub enum ClientParameters {
@@ -572,6 +590,7 @@ pub enum ClientParameters {
     Unknown(Vec<u8>),
 }
 
+/// Client Parameters for TLS Elliptic-Curve Diffie-Hellman
 #[derive(Serialize, Debug, Clone)]
 pub struct ClientEcdhParameters {
     pub point: Vec<u8>,
@@ -585,6 +604,7 @@ impl ClientEcdhParameters {
     }
 }
 
+/// TLS Client Key Exchange Message with parameters
 #[derive(Serialize, Debug, Clone)]
 pub struct ClientKeyExchangeMessage {
     pub parameters: ClientParameters,
@@ -620,6 +640,7 @@ impl ClientKeyExchangeMessage {
     }
 }
 
+/// TLS Finished Message
 #[derive(Serialize, Debug, Clone)]
 pub struct FinishedMessage {
     pub data: Vec<u8>,
@@ -633,6 +654,7 @@ impl FinishedMessage {
     }
 }
 
+/// TLS Hello Retry Request Message
 #[derive(Serialize, Debug, Clone)]
 pub struct HelloRetryRequestMessage {
     pub cipher: String,
@@ -653,6 +675,7 @@ impl HelloRetryRequestMessage {
     }
 }
 
+/// TLS New Session ticket Message
 #[derive(Serialize, Debug, Clone)]
 pub struct NewSessionTicketMessage {
     pub ticket: Vec<u8>,
@@ -668,6 +691,7 @@ impl NewSessionTicketMessage {
     }
 }
 
+/// TLS New Protocol Message
 #[derive(Serialize, Debug, Clone)]
 pub struct NextProtocolMessage {
     pub selected_protocol: Vec<u8>,
@@ -683,6 +707,7 @@ impl NextProtocolMessage {
     }
 }
 
+/// TLS Server Done message
 #[derive(Serialize, Debug, Clone)]
 pub struct ServerDoneMessage {
     pub data: Vec<u8>,
@@ -696,6 +721,7 @@ impl ServerDoneMessage {
     }
 }
 
+/// TLS Server Hello V13Draft18 Message
 #[derive(Serialize, Debug, Clone)]
 pub struct ServerHelloV13Draft18Message {
     pub version: String,
@@ -718,6 +744,7 @@ impl ServerHelloV13Draft18Message {
     }
 }
 
+/// TLS Server Parameters: cipher algorithm
 #[derive(Serialize, Debug, Clone)]
 #[serde(tag = "type", content = "parameters")]
 pub enum ServerParameters {
@@ -727,6 +754,7 @@ pub enum ServerParameters {
     Unknown(Vec<u8>),
 }
 
+/// TLS Server Parameters for Elliptic Curve Diffie-Hellman
 #[derive(Serialize, Debug, Clone)]
 pub struct ServerEcdhParameters {
     pub public_point: Vec<u8>,
@@ -742,6 +770,7 @@ impl ServerEcdhParameters {
     }
 }
 
+/// TLS Server Parameters for Diffie-Hellman
 #[derive(Serialize, Debug, Clone)]
 pub struct ServerDhParameters {
     pub prime_modulus: Vec<u8>,
@@ -759,6 +788,7 @@ impl ServerDhParameters {
     }
 }
 
+/// TLS Custom Elliptic Curve Content
 #[derive(Serialize, Debug, Clone)]
 #[serde(tag = "type", content = "content")]
 pub enum CustomEcContent {
@@ -766,6 +796,7 @@ pub enum CustomEcContent {
     NamedGroup(CustomNamedGroup),
 }
 
+/// TLS Custom Named Group
 #[derive(Serialize, Debug, Clone)]
 pub struct CustomNamedGroup {
     pub group: String,
@@ -779,6 +810,7 @@ impl CustomNamedGroup {
     }
 }
 
+/// TLS Custom Explicit Prime
 #[derive(Serialize, Debug, Clone)]
 pub struct CustomExplicitPrime {
     pub prime_p: Vec<u8>,
@@ -800,6 +832,7 @@ impl CustomExplicitPrime {
     }
 }
 
+/// TLS Server Elliptic Curve Parameters
 #[derive(Serialize, Debug, Clone)]
 pub struct ServerEcParameters {
     pub ec_type: String,
@@ -822,6 +855,7 @@ impl ServerEcParameters {
     }
 }
 
+/// TLS Server Key Exchange Message with parameters
 #[derive(Serialize, Debug, Clone)]
 pub struct ServerKeyExchangeMessage {
     pub parameters: ServerParameters,
@@ -853,6 +887,7 @@ impl ServerKeyExchangeMessage {
     }
 }
 
+/// TLS Custom Encrypted Message
 #[derive(Serialize, Debug, Clone)]
 pub struct CustomEncryptedMessage {
     pub version: String,
@@ -870,6 +905,7 @@ impl CustomEncryptedMessage {
     }
 }
 
+/// TLS Application Data Message
 #[derive(Serialize, Debug, Clone)]
 pub struct CustomApplicationDataMessage {
     pub data: Vec<u8>,
@@ -883,6 +919,7 @@ impl CustomApplicationDataMessage {
     }
 }
 
+/// TLS Malformed Data Message
 #[derive(Serialize, Debug, Clone)]
 pub struct CustomMalformedMessage {
     pub version: String,
@@ -913,8 +950,7 @@ impl CustomMalformedMessage {
     }
 }
 
-/// DNS Packet Rapresentation
-
+/// DNS Packet Representation
 #[derive(Serialize, Debug, Clone)]
 pub struct SerializableDnsPacket {
     pub header: CustomDnsHeader,
@@ -952,6 +988,7 @@ impl<'a> From<&DnsPacket<'a>> for SerializableDnsPacket {
     }
 }
 
+/// DNS Query request
 #[derive(Serialize, Debug, Clone)]
 pub struct CustomQuestion {
     pub query_name: String,
@@ -971,6 +1008,7 @@ impl From<&Question<'_>> for CustomQuestion {
     }
 }
 
+/// DNS Header
 #[derive(Serialize, Debug, Clone)]
 pub struct CustomDnsHeader {
     pub id: u16,
@@ -1010,6 +1048,7 @@ impl From<&DnsHeader> for CustomDnsHeader {
     }
 }
 
+/// DNS Resource Record
 #[derive(Serialize, Debug, Clone)]
 pub struct CustomResourceRecord {
     pub name: String,
@@ -1031,6 +1070,7 @@ impl From<&ResourceRecord<'_>> for CustomResourceRecord {
     }
 }
 
+/// DNS Resource Data
 #[derive(Serialize, Debug, Clone)]
 #[serde(tag = "type")]
 pub enum CustomResourceData {
@@ -1092,33 +1132,44 @@ impl From<&RData<'_>> for CustomResourceData {
     }
 }
 
+/// DNS Resource Data of type A (IPv4)
 #[derive(Serialize, Debug, Clone)]
 pub struct A {
     pub address: Ipv4Addr,
 }
 
+/// DNS Resource Data of type AAAA (IPv6)
 #[derive(Serialize, Debug, Clone)]
 pub struct Aaaa {
     pub address: Ipv6Addr,
 }
+
+/// DNS Resource Data of type Cname
 #[derive(Serialize, Debug, Clone)]
 pub struct Cname {
     pub name: String,
 }
+
+/// DNS Resource Data of type MX
 #[derive(Serialize, Debug, Clone)]
 pub struct Mx {
     pub preference: u16,
     pub exchange: String,
 }
+
+/// DNS Resource Data of type NS
 #[derive(Serialize, Debug, Clone)]
 pub struct Ns {
     pub name: String,
 }
+
+/// DNS Resource Data of type PTR
 #[derive(Serialize, Debug, Clone)]
 pub struct Ptr {
     pub name: String,
 }
 
+/// DNS Resource Data of type SOA
 #[derive(Serialize, Debug, Clone)]
 pub struct Soa {
     pub primary_ns: String,
@@ -1130,6 +1181,7 @@ pub struct Soa {
     pub minimum_ttl: u32,
 }
 
+/// DNS Resource Data of type SRV
 #[derive(Serialize, Debug, Clone)]
 pub struct Srv {
     pub priority: u16,
@@ -1138,11 +1190,13 @@ pub struct Srv {
     pub target: String,
 }
 
+/// DNS Resource Data of type TXT
 #[derive(Serialize, Debug, Clone)]
 pub struct Txt {
     pub data: Vec<u8>,
 }
 
+/// DNS Unknown Resource Data
 #[derive(Serialize, Debug, Clone)]
 pub struct Unknown {
     pub data: Vec<u8>,
