@@ -55,7 +55,7 @@ const HewViewer: FC<HewViewerProps> = ({payload, over, setOver}) => {
     if (payload.length === 0)
         return null;
 
-    let hex_payload = payloadToHex(payload).reverse();
+    let hex_payload = payloadToHex(payload);
     let ascii_payload = payload.map((el) => hexToAscii(el));
 
     let hew_rows = [];
