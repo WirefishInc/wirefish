@@ -2,7 +2,7 @@ import {FC} from "react";
 import {Grid} from "@mui/material";
 
 function payloadToHex(payload: number[]) {
-    return payload.map((el: number) => el.toString(16)).map((el) => el.toUpperCase());
+    return payload.map((el: number) => el.toString(16).toUpperCase());
 }
 
 function hexToAscii(byte: number) {
