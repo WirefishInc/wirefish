@@ -1,3 +1,5 @@
+//! IPv4, IPv6, and ARP Packet parsing
+
 use pnet::packet::arp::ArpPacket;
 use pnet::packet::ipv4::Ipv4Packet;
 use pnet::packet::ipv6::Ipv6Packet;
@@ -10,6 +12,7 @@ use crate::serializable_packet::network::{
 };
 use crate::transport::*;
 
+/// Build a IPv4 packet from a data-link packet, save it in a Parsed Packet
 pub fn handle_ipv4_packet(packet: &[u8], parsed_packet: &mut ParsedPacket) {
     let header = Ipv4Packet::new(packet);
     if let Some(header) = header {
@@ -31,6 +34,7 @@ pub fn handle_ipv4_packet(packet: &[u8], parsed_packet: &mut ParsedPacket) {
     }
 }
 
+/// Build a IPv6 packet from a data-link packet, save it in a Parsed Packet
 pub fn handle_ipv6_packet(packet: &[u8], parsed_packet: &mut ParsedPacket) {
     let header = Ipv6Packet::new(packet);
     if let Some(header) = header {
@@ -52,6 +56,7 @@ pub fn handle_ipv6_packet(packet: &[u8], parsed_packet: &mut ParsedPacket) {
     }
 }
 
+/// Build a ARP packet from a data-link packet, save it in a Parsed Packet
 pub fn handle_arp_packet(
     packet: &[u8],
     source: MacAddr,

@@ -1,10 +1,65 @@
+//! This crate allows the generation of a periodic report in .csv format
+//! The report highlights the the first and last timestamp, the amount of traffic,
+//! and the protocols of data exchange for all connections identified
+//! by (Source IP, Destination IP, Source Port, Destination Port)
+//!
+//! The following example describes how to use the defined data structures and generate a report:
+//!
+//! ```
+//! use report::{
+//!    data::{PacketExchange, SourceDestination},
+//!    write_report
+//! };
+//! use chrono::Local;
+//!
+//! fn main() {
+//!
+//!     // Create a hashmap to hold all packet exchanges
+//!     let exchanged_packets = HashMap::<SourceDestination, PacketExchange>::new();
+//!
+//!     // Create Sender-Receiver pair
+//!     let source_destination = SourceDestination::new(
+//!         network_source,
+//!         network_destination,
+//!         transport_source,
+//!         transport_destination
+//!     );
+//!
+//!     // Insert a packet in the hashmap
+//!     let now = Local::now();
+//!     let transmitted_bytes = 1024;
+//!     let mut protocol = vec![String::from("IPv4"), String::from("UDP")];
+//!     exchanged_packets
+//!         .entry(source_destination)
+//!         .and_modify(|exchange| {
+//!             // Update data about exchanged packets
+//!             exchange.add_packet(protocols.clone(), transmitted_bytes, now)
+//!         })
+//!         // Create a new Packet Exchange if none was found
+//!         .or_insert(PacketExchange::new(protocols, transmitted_bytes, now));
+//!
+//!     // Generate report
+//!     let report_path = "./path/to/report.csv";
+//!     let mut first_generation = true; // Only the first time, this adds the csv header
+//!     write_report(report_path, exchanged_packets, first_generation);
+//!
+//!     // From the second time onwards
+//!     first_generation = false;
+//!
+//!     // .. Add packets exchange ..
+//!     write_report(report_path, exchanged_packets, first_generation);
+//!
+//!     // .. Add packets exchange ..
+//!     write_report(report_path, exchanged_packets, first_generation);
+//! }
+//! ```
+
 use sniffer_parser::serializable_packet::{ParsedPacket};
 use sniffer_parser::serializable_packet::util::{
     contains_arp, contains_dns, contains_http, contains_icmp, contains_icmp6,
     contains_ipv4, contains_ipv6, contains_tcp, contains_tls, contains_udp,
     get_dest_ip, get_dest_port, get_source_ip, get_source_port
 };
-
 use self::data::{SourceDestination, PacketExchange};
 use std::io::{self, Write, BufWriter};
 use std::fs::{self, OpenOptions};
@@ -13,6 +68,11 @@ use std::path::Path;
 use std::ffi::OsStr;
 
 /// Appends data to a report file, creates the file if it doesn't exist
+///
+/// The file and the directory path to it are created if they do not exist.
+/// The hashmap is consumed and its content is written in the csv file indicated by the path.
+/// If the first_generation attribute it's true any file corresponding to the provided path will
+/// be deleted and a new file will be generated with a header containing the name of the fields.pub fn write_report(output_path: &str, data: &mut HashMap<SourceDestination, PacketExchange>, first_generation: bool) -> Result<bool, io::Error> {
 pub fn write_report(output_path: &str, data: &mut HashMap<SourceDestination, PacketExchange>, first_generation: bool) -> Result<bool, io::Error> {
 
     let path = Path::new(&output_path);
@@ -70,6 +130,7 @@ pub fn write_report(output_path: &str, data: &mut HashMap<SourceDestination, Pac
     Ok(true)
 }
 
+/// Returns (Source IP, Destination IP, Source Port, Destination Port, and Protocols) contained in a packet
 pub fn get_sender_receiver(packet: &ParsedPacket) -> (SourceDestination, Vec<String>) {
     let network_source = get_source_ip(packet).unwrap_or(String::from("-"));
     let network_destination = get_dest_ip(packet).unwrap_or(String::from("-"));
@@ -116,11 +177,13 @@ pub fn get_sender_receiver(packet: &ParsedPacket) -> (SourceDestination, Vec<Str
     )
 }
 
+/// Data structures used to write a report
 pub mod data {
     use std::collections::HashSet;
     use chrono::{DateTime, Local};
     use std::cmp;
 
+    /// Ip addresses and port numbers of source and destination of a packet exchange
     #[derive(PartialEq, Eq, Hash, Debug)]
     pub struct SourceDestination {
         pub ip_source: String,
@@ -129,6 +192,8 @@ pub mod data {
         pub port_destination: String,
     }
 
+    /// Data structure describing the list of protocols, total bytes, and timestamps of the
+    /// first and last packet exchange in a connection
     #[derive(Debug)]
     pub struct PacketExchange {
         protocols: HashSet<String>,
@@ -169,6 +234,9 @@ pub mod data {
             }
         }
 
+        /// Merge two packet exchanges together: unite the protocol vectors, sum the transmitted
+        /// bytes and set the first_exchange to the oldest timestamp and set last_exchange to the
+        /// newest timestamp
         pub fn add_packet(&mut self, protocols: Vec<String>, transmitted_bytes: usize, exchange_time: DateTime<Local>) {
             for protocol in protocols {
                 self.protocols.insert(protocol);

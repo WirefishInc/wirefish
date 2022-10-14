@@ -1,3 +1,5 @@
+//! HTTP Packet parsing
+
 use std::{io::Read, net::IpAddr};
 
 use encoding_rs::Encoding;
@@ -18,6 +20,7 @@ use crate::{
 
 use super::{ContentEncoding, HeaderNamesValues};
 
+/// Errors occurring during the parsing of HTTP data
 #[derive(Debug)]
 enum HttpParsingError {
     TransferEncodingMalformed(String),
@@ -28,6 +31,7 @@ enum HttpParsingError {
 
 type Result<T> = std::result::Result<T, HttpParsingError>;
 
+/// Build a HTTP request/response packet from a data-link packet, save it in a Parsed Packet
 pub fn handle_http_packet(
     source_ip: IpAddr,
     source_port: u16,

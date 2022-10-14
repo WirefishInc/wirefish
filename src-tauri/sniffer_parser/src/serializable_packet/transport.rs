@@ -1,3 +1,5 @@
+//! Transport level Packets Representation
+
 use pnet::packet::Packet;
 use pnet::packet::icmp::echo_reply::EchoReplyPacket;
 use pnet::packet::icmp::echo_request::EchoRequestPacket;
@@ -8,7 +10,6 @@ use pnet::packet::udp::UdpPacket;
 use serde::Serialize;
 
 /// TCP Packet Representation
-
 #[derive(Serialize, Debug, Clone)]
 pub struct SerializableTcpPacket {
     pub source: u16,
@@ -45,7 +46,6 @@ impl<'a> From<&TcpPacket<'a>> for SerializableTcpPacket {
 }
 
 /// UDP Packet Representation
-
 #[derive(Serialize, Debug, Clone)]
 pub struct SerializableUdpPacket {
     pub source: u16,
@@ -66,7 +66,6 @@ impl<'a> From<&UdpPacket<'a>> for SerializableUdpPacket {
 }
 
 /// ICMPv6 Packet Representation
-
 #[derive(Serialize, Debug, Clone)]
 pub struct SerializableIcmpv6Packet {
     pub icmpv6_type: String,
@@ -86,6 +85,7 @@ impl<'a> From<&Icmpv6Packet<'a>> for SerializableIcmpv6Packet {
     }
 }
 
+/// Get ICMPv6 Message Type
 pub fn icmpv6_type_to_string(icmp_type: Icmpv6Type) -> String {
     return match icmp_type {
         Icmpv6Types::DestinationUnreachable => format!("DestinationUnreachable ({})", icmp_type.0),
@@ -104,7 +104,6 @@ pub fn icmpv6_type_to_string(icmp_type: Icmpv6Type) -> String {
 }
 
 /// ICMP Packet Representation
-
 #[derive(Serialize, Debug, Clone)]
 pub struct SerializableIcmpPacket {
     pub icmp_type: String,
@@ -124,6 +123,7 @@ impl<'a> From<&IcmpPacket<'a>> for SerializableIcmpPacket {
     }
 }
 
+/// Get ICMPv4 Message Type
 pub fn icmp_type_to_string(icmp_type: IcmpType) -> String {
     return match icmp_type {
         IcmpTypes::EchoReply => format!("EchoReply ({})", icmp_type.0),
@@ -147,7 +147,6 @@ pub fn icmp_type_to_string(icmp_type: IcmpType) -> String {
 }
 
 /// ICMP Echo Reply Packet Representation
-
 #[derive(Serialize, Debug, Clone)]
 pub struct SerializableEchoReplyPacket {
     pub icmp_type: u8,
@@ -172,7 +171,6 @@ impl<'a> From<&EchoReplyPacket<'a>> for SerializableEchoReplyPacket {
 }
 
 /// ICMP Echo Request Packet Representation
-
 #[derive(Serialize, Debug, Clone)]
 pub struct SerializableEchoRequestPacket {
     pub icmp_type: u8,

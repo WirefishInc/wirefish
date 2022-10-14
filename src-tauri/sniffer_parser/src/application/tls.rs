@@ -1,3 +1,5 @@
+//! TLS Packet parsing
+
 use std::net::IpAddr;
 
 use log::debug;
@@ -13,6 +15,7 @@ use crate::serializable_packet::ParsedPacket;
 use crate::serializable_packet::SerializablePacket;
 use crate::ACTIVE_TLS_PARSERS;
 
+/// Build a TLS packet from a transport-layer packet, save it in a Parsed Packet
 pub fn handle_tls_packet(
     source_ip: IpAddr,
     source_port: u16,

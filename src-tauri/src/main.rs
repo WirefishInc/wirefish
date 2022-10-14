@@ -1,3 +1,33 @@
+//! Packet sniffing application built with Tauri
+//! 
+//! Functionalities 
+//! - List all available network interfaces
+//! - Select a network interface
+//! - Start the sniffing process
+//! - Stop the sniffing process
+//! - Pause the sniffing process
+//! - Resume the sniffing process
+//! - Generate a .csv report of the collected data
+//! 
+//! Errors
+//! These are the errors that can occur during the sniffing process, grouped by the action that can cause them:
+//! 
+//! - Select interface
+//!     - Inexistent
+//! - Start sniffing
+//!     - Without prior selection of the interface
+//!     - (?) Unhandled channel type
+//!     - (?) Failed channel creation
+//!     - Empty interface
+//! - Re-Start sniffing
+//!     - Same interface
+//!     - Another interface never selected
+//!     - Another interface selected previously
+//! - Stop Sniffing
+//!     - Sniffing process wasn't started
+//! - Generate report
+//!     - Generation failed (Permission denied)
+
 extern crate pnet;
 extern crate sniffer_parser;
 extern crate sudo;
@@ -53,6 +83,7 @@ const CONFIG: Config = Config {
     promiscuous: true,
 };
 
+/// Errors that can occur during the sniffing process
 #[derive(Serialize, Debug)]
 #[serde(tag = "type", content = "description")]
 pub enum SniffingError {
@@ -67,6 +98,11 @@ pub enum SniffingError {
     UnknownFilterType(String),
 }
 
+
+/// Sniffing channel and data collected by the sniffing process
+/// 
+/// This `struct` is instanciated only once at application startup
+/// And its later shared with all actions handled by the application
 pub struct SniffingState {
     sniffers: Arc<Mutex<HashMap<String, (Sender<()>, Receiver<SniffingError>)>>>,
     exchanged_packets: Arc<Mutex<HashMap<SourceDestination, PacketExchange>>>,
@@ -85,6 +121,7 @@ impl SniffingState {
     }
 }
 
+/// Informations about the selected network interface
 struct SniffingInfo {
     interface_name: Option<String>,
     interface: Option<NetworkInterface>,
@@ -99,6 +136,7 @@ impl SniffingInfo {
     }
 }
 
+/// Returns the list of all available network interfaces
 #[tauri::command]
 fn get_interfaces_list() -> Vec<String> {
     let interfaces = datalink::interfaces()
@@ -116,6 +154,7 @@ fn get_interfaces_list() -> Vec<String> {
     interfaces
 }
 
+/// Selection of a network interface among all the available ones
 #[tauri::command]
 fn select_interface(
     state: tauri::State<SniffingState>,
@@ -153,8 +192,8 @@ fn select_interface(
     Ok(())
 }
 
+/// Instantiates a new thread that will execute the sniffing process
 #[tauri::command]
-/// is_resume: true => resume sniffing process, false: start new sniffing process
 fn start_sniffing(
     is_resume: bool,
     state: tauri::State<SniffingState>,
@@ -383,7 +422,7 @@ fn start_sniffing(
 }
 
 #[tauri::command]
-/// stop: true => terminate sniffing process, false: pause sniffing process
+/// Terminates (stop: true) or Pauses (stop: false) the sniffing process
 fn stop_sniffing(state: tauri::State<SniffingState>, stop: bool) -> Result<(), SniffingError> {
     let sniffing_state = state.info.lock().unwrap();
     let mut sniffers = state.sniffers.lock().unwrap();
@@ -421,6 +460,7 @@ fn stop_sniffing(state: tauri::State<SniffingState>, stop: bool) -> Result<(), S
     Ok(())
 }
 
+/// Produces or updates a .csv report with the data collected since the last report generation
 #[tauri::command]
 fn generate_report(
     state: tauri::State<SniffingState>,
@@ -466,19 +506,3 @@ fn main() {
         .run(tauri::generate_context!())
         .expect("Error while running tauri application");
 }
-
-// - Select interface
-//   - Inexistent
-// - Start sniffing
-//   - Without prior selection of the interface
-//   - (?) Unhandled channel type
-//   - (?) Failed channel creation
-//   - Empty interface
-// - Re-Start sniffing
-//   - Same interface
-//   - Another interface never selected
-//   - Another interface selected previously
-// - Stop Sniffing
-//   - Without prior starting of the process
-// - Generate report
-//   - Generation failed
