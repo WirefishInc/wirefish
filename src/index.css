@@ -68,7 +68,7 @@ input.filename-input {
 td.hex {
     padding: 5px;
     cursor: pointer;
-    font-size: 15px;
+    font-size: 12px;
 }
 
 td.active {
@@ -84,17 +84,18 @@ p.title {
 
 td.index {
     font-weight: bold;
-    padding-right: 20px;
+    font-size: 12px;
+    padding-right: 5px;
 }
 
 div.inner-acc {
     width: 100%;
-    background-color: rgb(40,40,40);
+    background-color: rgb(40, 40, 40);
 }
 
 div.d-inner-acc {
     width: 100%;
-    background-color: rgb(87,87,87)
+    background-color: rgb(87, 87, 87)
 }
 
 li.break {
@@ -105,12 +106,8 @@ label.text-field {
     margin-top: 10px;
 }
 
-table.ascii {
-   margin-left: 100px;
-}
-
 div.paper {
-    background-color: rgb(40,40,40) ;
+    background-color: rgb(40, 40, 40);
     margin: 20px;
 }
 
@@ -124,7 +121,7 @@ div.modal {
     margin: 6%;
     overflow: scroll;
     display: block;
-    background-color: rgb(100,100,100);
+    background-color: rgb(100, 100, 100);
 }
 
 div.header {
@@ -147,32 +144,49 @@ div.title {
 }
 
 div.viewer {
-    background-color: rgb(30,30,30);
+    margin-top: 10px;
+    padding: 10px;
+    width: 93%;
+    margin-left: 40px;
+    background-color: rgb(30, 30, 30);
 }
 
 div.grid {
     margin-top: 5px;
-    margin-bottom: 5px;
     height: 370px;
 }
-
-/*
-img.image {
-    todo
-}
-*/
 
 div.row {
     cursor: pointer;
 }
 
 div.tip {
-    margin-left: 5px;
     font-style: italic;
     color: rgb(165, 165, 165);
+    text-align: right;
 }
 
 div.head {
     width: 100%;
     margin-bottom: 2px;
+}
+
+div.MuiTablePagination-root.css-9477tm-MuiTablePagination-root > div > p {
+    display: none;
+}
+
+div.MuiTablePagination-root.css-9477tm-MuiTablePagination-root > div {
+    margin-right: 650px;
+}
+
+div.pageButtons {
+    border: none;
+}
+
+div.footer {
+    border-bottom: solid grey 2px;
+}
+
+span.MuiLinearProgress-bar.MuiLinearProgress-barColorPrimary {
+    transition: transform 1s linear;
 }

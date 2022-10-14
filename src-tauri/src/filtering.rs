@@ -25,7 +25,7 @@
 //!     - MALFORMED
 
 use crate::{SniffingError, SniffingState};
-use log::{info, warn};
+use log::{info, warn, debug};
 use sniffer_parser::serializable_packet::util::{
     contains_arp, contains_dns, contains_ethernet, contains_http, contains_icmp, contains_icmp6,
     contains_ipv4, contains_ipv6, contains_malformed, contains_tcp, contains_tls, contains_udp,
@@ -120,12 +120,15 @@ impl PacketsCollection {
 
     /// Empty the data structures
     pub fn clear(&mut self) {
+        self.packets.clear();
+
         self.source_ip_index.clear();
         self.dest_ip_index.clear();
         self.source_port_index.clear();
         self.dest_port_index.clear();
         self.source_mac_index.clear();
         self.dest_mac_index.clear();
+        
         self.ethernet_packets.clear();
         self.malformed_packets.clear();
         self.unknown_packets.clear();
@@ -173,6 +176,8 @@ pub fn get_packets<'a>(
                 "Received getPackets request ({}-{}); Len: {}, Type Filters: {:?} Strong Filters: {:?}",
                 start, end, packets.len(), filters_type, filters_value
             );
+
+            debug!("Requested packets ids: {:?}", packets.iter().map(|x| x.get_id()).collect::<Vec<usize>>())
         },
         _ => ()
     }

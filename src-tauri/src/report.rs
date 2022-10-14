@@ -54,6 +54,12 @@
 //! }
 //! ```
 
+use sniffer_parser::serializable_packet::{ParsedPacket};
+use sniffer_parser::serializable_packet::util::{
+    contains_arp, contains_dns, contains_http, contains_icmp, contains_icmp6,
+    contains_ipv4, contains_ipv6, contains_tcp, contains_tls, contains_udp,
+    get_dest_ip, get_dest_port, get_source_ip, get_source_port
+};
 use self::data::{SourceDestination, PacketExchange};
 use std::io::{self, Write, BufWriter};
 use std::fs::{self, OpenOptions};
@@ -67,7 +73,8 @@ use std::ffi::OsStr;
 /// The hashmap is consumed and its content is written in the csv file indicated by the path.
 /// If the first_generation attribute it's true any file corresponding to the provided path will
 /// be deleted and a new file will be generated with a header containing the name of the fields.pub fn write_report(output_path: &str, data: &mut HashMap<SourceDestination, PacketExchange>, first_generation: bool) -> Result<bool, io::Error> {
-pub fn write_report(output_path: &str, data: &mut HashMap<SourceDestination, PacketExchange>, first_generation: bool) -> Result<bool, io::Error> {\
+pub fn write_report(output_path: &str, data: &mut HashMap<SourceDestination, PacketExchange>, first_generation: bool) -> Result<bool, io::Error> {
+
     let path = Path::new(&output_path);
     let mut file_exists = path.is_file();
     let file_extension = path.extension();
@@ -118,15 +125,57 @@ pub fn write_report(output_path: &str, data: &mut HashMap<SourceDestination, Pac
         for (source_destination, exchange) in data_pairs {
             writer.write_all((source_destination.to_string() + "," + &exchange.to_string() + "\n").as_bytes())?
         }
-        writer.write_all(b"\n")?;
     }
 
     Ok(true)
 }
 
 /// Returns (Source IP, Destination IP, Source Port, Destination Port, and Protocols) contained in a packet
+pub fn get_sender_receiver(packet: &ParsedPacket) -> (SourceDestination, Vec<String>) {
+    let network_source = get_source_ip(packet).unwrap_or(String::from("-"));
+    let network_destination = get_dest_ip(packet).unwrap_or(String::from("-"));
+    let transport_source = get_source_port(packet).unwrap_or(String::from("-"));
+    let transport_destination = get_dest_port(packet).unwrap_or(String::from("-"));
+    let mut protocols = Vec::new();
 
+    if contains_ipv4(packet) {
+        protocols.push(String::from("IPv4"));
+    } else if contains_ipv6(packet) {
+        protocols.push(String::from("IPv6"));
+    } else if contains_arp(packet) {
+        protocols.push(String::from("ARP"));
+    }
 
+    if contains_icmp(packet) {
+        protocols.push(String::from("ICMP"));
+    } else if contains_icmp6(packet) {
+        protocols.push(String::from("ICMPv6"));
+    }
+
+    if contains_tcp(packet) {
+        protocols.push(String::from("TCP"));
+    } else if contains_udp(packet) {
+        protocols.push(String::from("UDP"));
+    }
+
+    if contains_dns(packet) {
+        protocols.push(String::from("DNS"));
+    } else if contains_http(packet) {
+        protocols.push(String::from("HTTP"));
+    } else if contains_tls(packet) {
+        protocols.push(String::from("TLS"));
+    }
+
+    (
+        SourceDestination::new(
+            network_source,
+            network_destination,
+            transport_source,
+            transport_destination,
+        ),
+        protocols,
+    )
+}
 
 /// Data structures used to write a report
 pub mod data {
@@ -206,7 +255,6 @@ pub mod data {
             let protocols = if protocols_set.len() == 0 {
                 "-".to_owned()
             } else {
-                protocols_set.sort();
                 protocols_set.join(";")
             };
 

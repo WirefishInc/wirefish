@@ -15,7 +15,7 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {Pause, PlayArrow, RestartAlt, Stop} from '@mui/icons-material';
-import {DataGrid, GridColDef, GridFooter, GridFooterContainer} from '@mui/x-data-grid';
+import {DataGrid, GridColDef} from '@mui/x-data-grid';
 import './index.css';
 import API from './API';
 import {SniffingStatus, GeneralPacket, FeedbackMessage} from "./types/sniffing";
@@ -127,7 +127,6 @@ function App() {
     let [srcPortForm, setSrcPortForm] = useState<string>("");
     let [dstPortForm, setDstPortForm] = useState<string>("");
     let [makeRequest, setMakeRequest] = useState<boolean>(true);
-    let [infoForm, setInfoForm] = useState<string>("");
     let [inputValidated, setInputValidated] = useState<boolean>(false);
 
     let [filter, setFilter] = useState<{
@@ -237,6 +236,7 @@ function App() {
         if (makeRequest)
             fetchData()
 
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pageState, packetCount, makeRequest,
         filter.dns,
         filter.arp,
@@ -267,14 +267,14 @@ function App() {
                 firstReportGeneration.current = false;
             setFeedbackMessage({
                 isError: false,
-                duration: 5000,
+                duration: 4500,
                 text: "Report generated"
             });
         } catch (exception: any) {
             setFeedbackMessage({
                 isError: true,
                 duration: 8000,
-                text: exception.error
+                text: exception.error || exception.description
             });
         }
     }
@@ -402,6 +402,7 @@ function App() {
         if (sniffingStatus === SniffingStatus.Inactive) {
             setCapturedPackets([]);
             setPacketCount(0);
+            setPageState(1);
             setMakeRequest(true);
             await startSniffing();
         } else if (sniffingStatus === SniffingStatus.Active) await stopSniffing();
@@ -502,7 +503,7 @@ function App() {
                                   setSelectedPacket(ev.row)
                                   handleOpen();
                               }}
-                              rowCount={capturedPackets.length + (pageState * 100)} // TODO: because of STRICT MODE
+                              rowCount={capturedPackets.length + (pageState * 100)}
                               rowsPerPageOptions={[100]}
                               pageSize={100}
                               pagination
@@ -512,25 +513,26 @@ function App() {
                                   setMakeRequest(true)
                                   setPageState(newPage + 1)
                               }}
-                              components={{
-                                  Footer: () =>
-                                      <>
-                                          <GridFooterContainer >
-                                                <Grid style={{marginLeft: "10px"}} item>
-                                                  <span style={{fontWeight: "bold"}}>Total number of packets: </span> {packetCount / 2}
-                                                </Grid>
-                                                
-                                                <Grid item className='tip'>
-                                                  Double click on a packet to view details
-                                                </Grid>
-                                              <GridFooter sx={{
-                                                  border: 'none', // To delete double border.
-                                              }}/>
-                                          </GridFooterContainer>
-                                      </>
-                              }
-                              }
+
                     />
+                </Grid>
+
+                <Grid container spacing={2} className={"container-main footer"}>
+                    <Grid xs={4} item
+                          style={{paddingTop: "0px", textAlign: "left"}}>
+                        <span
+                            style={{fontWeight: "bold"}}>Total number of packets: </span> {packetCount / 2} {/* TODO: because of STRICT MODE */}
+                    </Grid>
+
+                    <Grid xs={4} item
+                          style={{paddingTop: "0px", textAlign: "center"}}>
+                        <span>{(pageState - 1) * 100} - {(pageState - 1) * 100 + 99}</span>
+                    </Grid>
+
+                    <Grid xs={4} item className='tip'
+                          style={{paddingTop: "0px"}}>
+                        Double click on a packet to view details
+                    </Grid>
                 </Grid>
 
 

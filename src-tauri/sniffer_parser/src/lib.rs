@@ -22,6 +22,12 @@ use serializable_packet::ParsedPacket;
 use serializable_packet::SerializableEthernetPacket;
 use serializable_packet::SerializablePacket;
 
+/// Ethernet Header Length
+#[allow(non_snake_case)]
+pub mod HeaderLength {
+    pub const ETHERNET: usize = 14;
+}
+
 /// Delete active parsers
 pub fn cleanup_sniffing_state() {
     ACTIVE_HTTP_PARSERS.with(|parsers| parsers.borrow_mut().clear());

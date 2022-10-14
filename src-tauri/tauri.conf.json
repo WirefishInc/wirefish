@@ -33,7 +33,7 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.tauri.dev",
+      "identifier": "com.wirefish.dev",
       "longDescription": "",
       "macOS": {
         "entitlements": null,
@@ -59,9 +59,11 @@
     },
     "windows": [
       {
-        "resizable": false,
+        "fullscreen": false,
+        "height": 600,
+        "resizable": true,
         "title": "Wirefish",
-        "maximized": true
+        "width": 800
       }
     ]
   }
