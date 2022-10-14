@@ -251,7 +251,7 @@ pub mod data {
         fn to_string(&self) -> String {
             let first_exchange = self.first_exchange.format("%Y-%m-%d %H:%M:%S").to_string();
             let last_exchange = self.last_exchange.format("%Y-%m-%d %H:%M:%S").to_string();
-            let mut protocols_set = self.protocols.clone().into_iter().collect::<Vec<String>>();
+            let protocols_set = self.protocols.clone().into_iter().collect::<Vec<String>>();
             let protocols = if protocols_set.len() == 0 {
                 "-".to_owned()
             } else {
