@@ -2,7 +2,7 @@ import {FC} from "react";
 import {Grid} from "@mui/material";
 
 function payloadToHex(payload: number[]) {
-    return payload.reverse().map((el: number) => el.toString(16)).map((el) => el.toUpperCase());
+    return payload.map((el: number) => el.toString(16).toUpperCase());
 }
 
 function hexToAscii(byte: number) {
@@ -70,34 +70,30 @@ const HewViewer: FC<HewViewerProps> = ({payload, over, setOver}) => {
     }
 
     return (
-        <Grid container spacing={2} className={"container-main"}>
-            <Grid xs={12} item={true}>
-                <Grid container spacing={2} className={"container-main viewer"}>
-                    <Grid item xs={6}>
-                        <table>
-                            <tbody>
-                            {hew_rows.map((r, i) =>
-                                <tr>
-                                    {<td className={"index"}>{"0x" + (i * 16).toString(16).toUpperCase()}</td>}
-                                    {<td className={"index"}>|</td>}
-                                    <Row row={r} i={i} over={over} setOver={setOver}/>
-                                </tr>
-                            )}
-                            </tbody>
-                        </table>
-                    </Grid>
-                    <Grid item xs={6}>
-                        <table className={"ascii"}>
-                            <tbody>
-                            {ascii_rows.map((r, i) =>
-                                <tr>
-                                    <Row row={r} i={i} over={over} setOver={setOver}/>
-                                </tr>
-                            )}
-                            </tbody>
-                        </table>
-                    </Grid>
-                </Grid>
+        <Grid container className={"container-main viewer"}>
+            <Grid item xs={7}>
+                <table>
+                    <tbody>
+                    {hew_rows.map((r, i) =>
+                        <tr key={i}>
+                            {<td className={"index"}>{"0x" + (i * 16).toString(16).toUpperCase()}</td>}
+                            {<td className={"index"}>|</td>}
+                            <Row row={r} i={i} over={over} setOver={setOver}/>
+                        </tr>
+                    )}
+                    </tbody>
+                </table>
+            </Grid>
+            <Grid item xs={5}>
+                <table>
+                    <tbody>
+                    {ascii_rows.map((r, i) =>
+                        <tr key={i}>
+                            <Row row={r} i={i} over={over} setOver={setOver}/>
+                        </tr>
+                    )}
+                    </tbody>
+                </table>
             </Grid>
         </Grid>
     )

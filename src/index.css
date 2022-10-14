@@ -68,7 +68,7 @@ input.filename-input {
 td.hex {
     padding: 5px;
     cursor: pointer;
-    font-size: 15px;
+    font-size: 12px;
 }
 
 td.active {
@@ -84,7 +84,8 @@ p.title {
 
 td.index {
     font-weight: bold;
-    padding-right: 20px;
+    font-size: 12px;
+    padding-right: 5px;
 }
 
 div.inner-acc {
@@ -103,10 +104,6 @@ li.break {
 
 label.text-field {
     margin-top: 10px;
-}
-
-table.ascii {
-    margin-left: 100px;
 }
 
 div.paper {
@@ -147,6 +144,10 @@ div.title {
 }
 
 div.viewer {
+    margin-top: 10px;
+    padding: 10px;
+    width: 93%;
+    margin-left: 40px;
     background-color: rgb(30, 30, 30);
 }
 
