@@ -82,7 +82,6 @@ const Filters: FC<FiltersProps> = ({
                                               label={enabled ? "Disable Filters" : "Enable Filters"}
                                               onChange={(event: any) => {
                                                   setPageState(1)
-                                                  setPageState(1)
                                                   setMakeRequest(true)
                                                   setEnabled(event.target.checked);
                                               }}
@@ -186,6 +185,32 @@ const Filters: FC<FiltersProps> = ({
                                     }
                                     label="ARP"
                                 />
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox disabled={!enabled} checked={filter.icmpv6} onChange={(ev) => {
+                                            setPageState(1)
+                                            setMakeRequest(true)
+                                            if (ev.target.checked)
+                                                setFilter((f: any) => Object.assign({}, f, {icmpv6: true}));
+                                            else
+                                                setFilter((f: any) => Object.assign({}, f, {icmpv6: false}));
+                                        }} name="icmpv6"/>
+                                    }
+                                    label="ICMPv6"
+                                />
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox disabled={!enabled} checked={filter.icmp} onChange={(ev) => {
+                                            setPageState(1)
+                                            setMakeRequest(true)
+                                            if (ev.target.checked)
+                                                setFilter((f: any) => Object.assign({}, f, {icmp: true}));
+                                            else
+                                                setFilter((f: any) => Object.assign({}, f, {icmp: false}));
+                                        }} name="icmp"/>
+                                    }
+                                    label="ICMP"
+                                />
                             </FormGroup>
                         </FormControl>
 
@@ -219,32 +244,6 @@ const Filters: FC<FiltersProps> = ({
                                         }} name="udp"/>
                                     }
                                     label="UDP"
-                                />
-                                <FormControlLabel
-                                    control={
-                                        <Checkbox disabled={!enabled} checked={filter.icmpv6} onChange={(ev) => {
-                                            setPageState(1)
-                                            setMakeRequest(true)
-                                            if (ev.target.checked)
-                                                setFilter((f: any) => Object.assign({}, f, {icmpv6: true}));
-                                            else
-                                                setFilter((f: any) => Object.assign({}, f, {icmpv6: false}));
-                                        }} name="icmpv6"/>
-                                    }
-                                    label="ICMPv6"
-                                />
-                                <FormControlLabel
-                                    control={
-                                        <Checkbox disabled={!enabled} checked={filter.icmp} onChange={(ev) => {
-                                            setPageState(1)
-                                            setMakeRequest(true)
-                                            if (ev.target.checked)
-                                                setFilter((f: any) => Object.assign({}, f, {icmp: true}));
-                                            else
-                                                setFilter((f: any) => Object.assign({}, f, {icmp: false}));
-                                        }} name="icmp"/>
-                                    }
-                                    label="ICMP"
                                 />
                             </FormGroup>
                         </FormControl>
@@ -308,6 +307,10 @@ const Filters: FC<FiltersProps> = ({
                                                                      onChange={(s) => {
                                                                          if (s.target.value === "") {
                                                                              setIpSrcInputError(false);
+                                                                             setMakeRequest(true);
+                                                                             setPageState(1);
+                                                                             setMakeRequest(true);
+                                                                             setSrcIpForm(s.target.value)
                                                                          } else {
                                                                              if (ValidateIPaddress(s.target.value)) {
                                                                                  setIpSrcInputError(false);
@@ -332,6 +335,8 @@ const Filters: FC<FiltersProps> = ({
                                                                      onChange={(s) => {
                                                                          if (s.target.value === "") {
                                                                              setIpDstInputError(false);
+                                                                             setMakeRequest(true);
+                                                                             setDstIpForm(s.target.value)
                                                                          } else {
                                                                              if (ValidateIPaddress(s.target.value)) {
                                                                                  setIpDstInputError(false);
@@ -358,6 +363,8 @@ const Filters: FC<FiltersProps> = ({
                                                                      onChange={(s) => {
                                                                          if (s.target.value === "") {
                                                                              setMacSrcInputError(false);
+                                                                             setMakeRequest(true);
+                                                                             setSrcMacForm(s.target.value)
                                                                          } else {
                                                                              if (ValidateMacAddress(s.target.value)) {
                                                                                  setMacSrcInputError(false);
@@ -384,6 +391,8 @@ const Filters: FC<FiltersProps> = ({
                                                                      onChange={(s) => {
                                                                          if (s.target.value === "") {
                                                                              setMacDstInputError(false);
+                                                                             setMakeRequest(true);
+                                                                             setDstMacForm(s.target.value)
                                                                          } else {
                                                                              if (ValidateMacAddress(s.target.value)) {
                                                                                  setMacDstInputError(false);
@@ -413,6 +422,8 @@ const Filters: FC<FiltersProps> = ({
                                                                      onChange={(s) => {
                                                                          if (s.target.value === "") {
                                                                              setPortSrcInputError(false);
+                                                                             setMakeRequest(true);
+                                                                             setSrcPortForm(s.target.value)
                                                                          } else {
                                                                              if (ValidatePortAddress(s.target.value)) {
                                                                                  setPortSrcInputError(false);
@@ -439,6 +450,8 @@ const Filters: FC<FiltersProps> = ({
                                                                      onChange={(s) => {
                                                                          if (s.target.value === "") {
                                                                              setPortDstInputError(false);
+                                                                             setMakeRequest(true);
+                                                                             setDstPortForm(s.target.value)
                                                                          } else {
                                                                              if (ValidatePortAddress(s.target.value)) {
                                                                                  setPortDstInputError(false);
