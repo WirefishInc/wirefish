@@ -2,4 +2,6 @@
 # will have compiled files and executables
 /target/
 /sniffer_parser/target/
+logs/
+report/
 *.txt

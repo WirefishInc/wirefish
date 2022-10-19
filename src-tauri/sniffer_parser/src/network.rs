@@ -151,10 +151,7 @@ pub mod tests {
                     new_arp_packet.target_proto_addr,
                     arp_packet.get_target_proto_addr()
                 );
-                assert_eq!(
-                    new_arp_packet.length,
-                    arp_packet.payload().len()
-                );
+                assert_eq!(new_arp_packet.length, arp_packet.payload().len());
             }
             _ => unreachable!(),
         }
@@ -210,10 +207,7 @@ pub mod tests {
                 assert_eq!(new_ip_packet.checksum, ip_packet.get_checksum());
                 assert_eq!(new_ip_packet.source, ip_packet.get_source());
                 assert_eq!(new_ip_packet.destination, ip_packet.get_destination());
-                assert_eq!(
-                    new_ip_packet.length,
-                    ip_packet.payload().len()
-                );
+                assert_eq!(new_ip_packet.length, ip_packet.payload().len());
             }
             _ => unreachable!(),
         }

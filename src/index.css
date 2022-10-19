@@ -171,11 +171,11 @@ div.head {
     margin-bottom: 2px;
 }
 
-div.MuiTablePagination-root.css-9477tm-MuiTablePagination-root > div > p {
+.MuiTablePagination-toolbar > p {
     display: none;
 }
 
-div.MuiTablePagination-root.css-9477tm-MuiTablePagination-root > div {
+.MuiTablePagination-toolbar {
     margin-right: 650px;
 }
 

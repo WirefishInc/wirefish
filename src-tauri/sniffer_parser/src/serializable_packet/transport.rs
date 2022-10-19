@@ -1,12 +1,12 @@
 //! Transport level Packets Representation
 
-use pnet::packet::Packet;
 use pnet::packet::icmp::echo_reply::EchoReplyPacket;
 use pnet::packet::icmp::echo_request::EchoRequestPacket;
 use pnet::packet::icmp::{IcmpPacket, IcmpType, IcmpTypes};
 use pnet::packet::icmpv6::{Icmpv6Packet, Icmpv6Type, Icmpv6Types};
 use pnet::packet::tcp::TcpPacket;
 use pnet::packet::udp::UdpPacket;
+use pnet::packet::Packet;
 use serde::Serialize;
 
 /// TCP Packet Representation

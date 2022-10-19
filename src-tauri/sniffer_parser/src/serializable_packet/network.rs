@@ -2,10 +2,10 @@
 
 use std::net::{Ipv4Addr, Ipv6Addr};
 
-use pnet::packet::Packet;
 use pnet::packet::arp::{ArpOperations, ArpPacket};
 use pnet::packet::ipv4::Ipv4Packet;
 use pnet::packet::ipv6::Ipv6Packet;
+use pnet::packet::Packet;
 use pnet::util::MacAddr;
 use serde::Serialize;
 

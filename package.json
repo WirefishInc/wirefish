@@ -20,6 +20,7 @@
     "ip-validator": "^0.0.1",
     "is-mac-address": "^1.0.4",
     "pako": "^2.0.4",
+    "prettier": "^2.7.1",
     "react": "^18.2.0",
     "react-bootstrap": "^2.4.0",
     "react-dom": "^18.2.0",
