@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["ARP",""],["DNS",""],["DST_IP",""],["DST_MAC",""],["DST_PORT",""],["ETHERNET",""],["HTTP",""],["ICMP",""],["ICMPV6",""],["IPV4",""],["IPV6",""],["MALFORMED",""],["SRC_IP",""],["SRC_MAC",""],["SRC_PORT",""],["TCP",""],["TLS",""],["UDP",""],["UNKNOWN",""]]});
