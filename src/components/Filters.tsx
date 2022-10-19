@@ -6,7 +6,7 @@ import {
     FormControl,
     FormControlLabel,
     FormGroup,
-    FormLabel, Grid, Switch, TextField
+    FormLabel, Grid, TextField
 } from "@mui/material";
 import Box from "@mui/material/Box";
 import {FilterList} from "@mui/icons-material";
