@@ -274,7 +274,7 @@ fn parse_messages(messages: Vec<TlsMessage>, custom_messages: &mut Vec<CustomTls
                 }
                 TlsMessageHandshake::Finished(msg) => {
                     custom_messages.push(CustomTlsMessage::Handshake(
-                        CustomHandshakeMessage::CertificateVerify(CertificateVerifyMessage::new(
+                        CustomHandshakeMessage::Finished(FinishedMessage::new(
                             msg,
                         )),
                     ));

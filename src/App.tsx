@@ -119,7 +119,6 @@ function App() {
     let [secondsToReportGeneration, setSecondsToReportGeneration] = useState<number>(REPORT_GENERATION_SECONDS);
     let firstReportGeneration = useRef<boolean>(true);
     let timerStartTime = useRef<number>(0);
-    let [filterEnabled, setFilterEnabled] = useState<boolean>(false);
     let [srcIpForm, setSrcIpForm] = useState<string>("");
     let [dstIpForm, setDstIpForm] = useState<string>("");
     let [srcMacForm, setSrcMacForm] = useState<string>("");
@@ -191,26 +190,25 @@ function App() {
                 let filter_name: any[] = [];
                 let filter_value: any[] = [];
 
-                if (filterEnabled) {
-                    for (let key in filter) {
-                        // @ts-ignore
-                        if (filter[key])
-                            filter_name.push(key)
-                    }
-
-                    if (srcIpForm !== "")
-                        filter_value.push(["src_ip", srcIpForm])
-                    if (dstIpForm !== "")
-                        filter_value.push(["dst_ip", dstIpForm])
-                    if (srcMacForm !== "")
-                        filter_value.push(["src_mac", srcMacForm])
-                    if (dstMacForm !== "")
-                        filter_value.push(["dst_mac", dstMacForm])
-                    if (srcPortForm !== "")
-                        filter_value.push(["src_port", srcPortForm])
-                    if (dstPortForm !== "")
-                        filter_value.push(["dst_port", dstPortForm])
+                for (let key in filter) {
+                    // @ts-ignore
+                    if (filter[key])
+                        filter_name.push(key)
                 }
+
+                if (srcIpForm !== "")
+                    filter_value.push(["src_ip", srcIpForm])
+                if (dstIpForm !== "")
+                    filter_value.push(["dst_ip", dstIpForm])
+                if (srcMacForm !== "")
+                    filter_value.push(["src_mac", srcMacForm])
+                if (dstMacForm !== "")
+                    filter_value.push(["dst_mac", dstMacForm])
+                if (srcPortForm !== "")
+                    filter_value.push(["src_port", srcPortForm])
+                if (dstPortForm !== "")
+                    filter_value.push(["dst_port", dstPortForm])
+
 
                 let response: any[] = await API.getPackets(
                     (pageState - 1) * 100,
@@ -256,8 +254,7 @@ function App() {
         srcMacForm,
         dstMacForm,
         srcPortForm,
-        dstPortForm,
-        filterEnabled])
+        dstPortForm])
 
     const generateReport = async () => {
         try {
@@ -488,7 +485,6 @@ function App() {
                          setSrcIpForm={setSrcIpForm} setDstIpForm={setDstIpForm}
                          setSrcMacForm={setSrcMacForm} setDstMacForm={setDstMacForm}
                          setSrcPortForm={setSrcPortForm} setDstPortForm={setDstPortForm}
-                         enabled={filterEnabled} setEnabled={setFilterEnabled}
                          setMakeRequest={setMakeRequest} setPageState={setPageState}
                 />
 

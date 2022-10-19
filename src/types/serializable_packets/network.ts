@@ -66,7 +66,10 @@ export class ArpPacket implements SerializableNetworkLayerPacket {
     }
 
     getInfo(): string {
-        return "Who has "+this.target_proto_addr+"?";
+        if (this.operation === "ARP Request (1)")
+            return `Who has ${this.target_proto_addr}? Tell ${this.sender_proto_addr}`;
+
+        return `${this.target_proto_addr} is at ${this.sender_hw_addr}`;
     }
 
     getType(): string {

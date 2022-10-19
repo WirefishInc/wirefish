@@ -124,7 +124,7 @@ export class CustomEncryptedMessage implements CustomTlsMessages {
         this.data = data;
         this.version = version;
         this.message_type = message_type;
-        this.type = "Encrypted"
+        this.type = `Encrypted ${message_type}`
     }
 
     toDisplay(): any {
@@ -174,7 +174,7 @@ export class CustomMalformedMessage implements CustomTlsMessages {
         this.error_type = error_type.type;
         this.error = error_type.error;
         this.data = data;
-        this.type = "TLS Malformed"
+        this.type = `TLS Malformed ${error_type.type}`
     }
 
     getType(): string {
