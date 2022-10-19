@@ -28,6 +28,11 @@
 //! - Generate report
 //!     - Generation failed (Permission denied)
 
+#![cfg_attr(
+    all(not(debug_assertions), target_os = "windows"),
+    windows_subsystem = "windows"
+)]
+
 extern crate pnet;
 extern crate sniffer_parser;
 extern crate sudo;
