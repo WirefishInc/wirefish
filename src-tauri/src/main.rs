@@ -42,7 +42,6 @@ mod filtering;
 mod report;
 
 use dotenv;
-use env_logger::Builder;
 use log::{error, info};
 use serde::Serialize;
 use sniffer_parser::HeaderLength;
@@ -52,7 +51,7 @@ use sniffer_parser::serializable_packet::util::{
     contains_unknokn, get_dest_ip, get_dest_mac, get_dest_port, get_source_ip, get_source_mac,
     get_source_port,
 };
-use std::io::Write;
+use tauri_plugin_log::{LoggerBuilder, LogTarget};
 
 use pnet::datalink::Channel::Ethernet;
 use pnet::datalink::{self, ChannelType, Config, NetworkInterface};
@@ -486,19 +485,22 @@ fn main() {
         // sudo::escalate_if_needed();
     }
 
-    let mut builder = Builder::from_default_env();
-    builder
-        .format(|buf, r| {
-            writeln!(
-                buf,
-                "[{}] {}",
-                buf.default_styled_level(r.level()),
-                r.args()
-            )
-        })
-        .init();
-
     tauri::Builder::default()
+        .plugin(LoggerBuilder::default()
+            .format(move |out, message, record| {
+                out.finish(format_args!(
+                    "{}[{}] {}",
+                    Local::now().format(format!("[%Y-%m-%d][%H:%M:%S]").as_str()),
+                    record.level(),
+                    message
+                ))
+            })
+            .targets([
+                LogTarget::Folder("./logs".into()),
+                LogTarget::LogDir,
+                LogTarget::Stdout,
+            ]).build()
+        )
         .manage(SniffingState::new())
         .invoke_handler(tauri::generate_handler![
             start_sniffing,
