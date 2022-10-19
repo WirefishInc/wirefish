@@ -54,18 +54,18 @@
 //! }
 //! ```
 
-use sniffer_parser::serializable_packet::{ParsedPacket};
+use self::data::{PacketExchange, SourceDestination};
 use sniffer_parser::serializable_packet::util::{
-    contains_arp, contains_dns, contains_http, contains_icmp, contains_icmp6,
-    contains_ipv4, contains_ipv6, contains_tcp, contains_tls, contains_udp,
-    get_dest_ip, get_dest_port, get_source_ip, get_source_port
+    contains_arp, contains_dns, contains_http, contains_icmp, contains_icmp6, contains_ipv4,
+    contains_ipv6, contains_tcp, contains_tls, contains_udp, get_dest_ip, get_dest_port,
+    get_source_ip, get_source_port,
 };
-use self::data::{SourceDestination, PacketExchange};
-use std::io::{self, Write, BufWriter};
-use std::fs::{self, OpenOptions};
+use sniffer_parser::serializable_packet::ParsedPacket;
 use std::collections::HashMap;
-use std::path::Path;
 use std::ffi::OsStr;
+use std::fs::{self, OpenOptions};
+use std::io::{self, BufWriter, Write};
+use std::path::Path;
 
 /// Appends data to a report file, creates the file if it doesn't exist
 ///
@@ -73,15 +73,21 @@ use std::ffi::OsStr;
 /// The hashmap is consumed and its content is written in the csv file indicated by the path.
 /// If the first_generation attribute it's true any file corresponding to the provided path will
 /// be deleted and a new file will be generated with a header containing the name of the fields.pub fn write_report(output_path: &str, data: &mut HashMap<SourceDestination, PacketExchange>, first_generation: bool) -> Result<bool, io::Error> {
-pub fn write_report(output_path: &str, data: &mut HashMap<SourceDestination, PacketExchange>, first_generation: bool) -> Result<bool, io::Error> {
-
+pub fn write_report(
+    output_path: &str,
+    data: &mut HashMap<SourceDestination, PacketExchange>,
+    first_generation: bool,
+) -> Result<bool, io::Error> {
     let path = Path::new(&output_path);
     let mut file_exists = path.is_file();
     let file_extension = path.extension();
 
     // Check file extension is .csv
     if file_extension.is_none() || file_extension.and_then(OsStr::to_str).unwrap() != "csv" {
-        return Err(io::Error::new(io::ErrorKind::InvalidInput, "Provide a .csv file"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Provide a .csv file",
+        ));
     }
 
     if !file_exists {
@@ -113,7 +119,7 @@ pub fn write_report(output_path: &str, data: &mut HashMap<SourceDestination, Pac
             "First Data Exchange",
             "Last Data Exchange",
             "Bytes Exchanged",
-            "Protocols"
+            "Protocols",
         ];
         writer.write_all((headers.join(",") + "\n").as_bytes())?;
     }
@@ -123,7 +129,9 @@ pub fn write_report(output_path: &str, data: &mut HashMap<SourceDestination, Pac
     if data_pairs.peek().is_some() {
         // Write packets exchange data
         for (source_destination, exchange) in data_pairs {
-            writer.write_all((source_destination.to_string() + "," + &exchange.to_string() + "\n").as_bytes())?
+            writer.write_all(
+                (source_destination.to_string() + "," + &exchange.to_string() + "\n").as_bytes(),
+            )?
         }
     }
 
@@ -179,9 +187,9 @@ pub fn get_sender_receiver(packet: &ParsedPacket) -> (SourceDestination, Vec<Str
 
 /// Data structures used to write a report
 pub mod data {
-    use std::collections::HashSet;
     use chrono::{DateTime, Local};
     use std::cmp;
+    use std::collections::HashSet;
 
     /// Ip addresses and port numbers of source and destination of a packet exchange
     #[derive(PartialEq, Eq, Hash, Debug)]
@@ -203,7 +211,12 @@ pub mod data {
     }
 
     impl SourceDestination {
-        pub fn new(ip_source: String, ip_destination: String, port_source: String, port_destination: String) -> Self {
+        pub fn new(
+            ip_source: String,
+            ip_destination: String,
+            port_source: String,
+            port_destination: String,
+        ) -> Self {
             SourceDestination {
                 ip_source,
                 ip_destination,
@@ -219,13 +232,18 @@ pub mod data {
                 self.ip_source.clone(),
                 self.ip_destination.clone(),
                 self.port_source.clone(),
-                self.port_destination.clone()
-            ].join(",")
+                self.port_destination.clone(),
+            ]
+            .join(",")
         }
     }
 
     impl PacketExchange {
-        pub fn new(protocols: Vec<String>, transmitted_bytes: usize, exchange_time: DateTime<Local>) -> Self {
+        pub fn new(
+            protocols: Vec<String>,
+            transmitted_bytes: usize,
+            exchange_time: DateTime<Local>,
+        ) -> Self {
             PacketExchange {
                 protocols: HashSet::from_iter(protocols.into_iter()),
                 first_exchange: exchange_time,
@@ -237,7 +255,12 @@ pub mod data {
         /// Merge two packet exchanges together: unite the protocol vectors, sum the transmitted
         /// bytes and set the first_exchange to the oldest timestamp and set last_exchange to the
         /// newest timestamp
-        pub fn add_packet(&mut self, protocols: Vec<String>, transmitted_bytes: usize, exchange_time: DateTime<Local>) {
+        pub fn add_packet(
+            &mut self,
+            protocols: Vec<String>,
+            transmitted_bytes: usize,
+            exchange_time: DateTime<Local>,
+        ) {
             for protocol in protocols {
                 self.protocols.insert(protocol);
             }
@@ -262,23 +285,24 @@ pub mod data {
                 first_exchange,
                 last_exchange,
                 self.transmitted_bytes.to_string(),
-                protocols
-            ].join(",")
+                protocols,
+            ]
+            .join(",")
         }
     }
 
     #[cfg(test)]
     mod tests {
-        use super::{SourceDestination, PacketExchange};
+        use super::{PacketExchange, SourceDestination};
+        use chrono::{Duration, Local};
         use std::collections::HashSet;
-        use chrono::{Local, Duration};
 
         #[test]
         fn empty_packet_exchange() {
             let now = Local::now();
             let protocol = String::from("TCP");
             let protocols = HashSet::from([protocol.clone()]);
-            let exchange = PacketExchange::new(vec!(protocol), 0, now);
+            let exchange = PacketExchange::new(vec![protocol], 0, now);
             assert_eq!(exchange.protocols, protocols);
             assert_eq!(exchange.transmitted_bytes, 0);
             assert_eq!(exchange.first_exchange, now);
@@ -291,7 +315,7 @@ pub mod data {
             let protocol = String::from("UDP");
             let protocols = HashSet::from([protocol.clone()]);
             let bytes = 100;
-            let exchange = PacketExchange::new(vec!(protocol), bytes, now);
+            let exchange = PacketExchange::new(vec![protocol], bytes, now);
             assert_eq!(exchange.protocols, protocols);
             assert_eq!(exchange.transmitted_bytes, bytes);
             assert_eq!(exchange.first_exchange, now);
@@ -304,9 +328,9 @@ pub mod data {
             let protocol = String::from("UDP");
             let bytes_1 = 100;
             let bytes_2 = 300;
-            let mut exchange = PacketExchange::new(vec!(protocol.clone()), bytes_1, now);
+            let mut exchange = PacketExchange::new(vec![protocol.clone()], bytes_1, now);
             let protocols = HashSet::from([protocol.clone()]);
-            exchange.add_packet(vec!(protocol), bytes_2, now);
+            exchange.add_packet(vec![protocol], bytes_2, now);
             assert_eq!(exchange.protocols, protocols);
             assert_eq!(exchange.transmitted_bytes, bytes_1 + bytes_2);
             assert_eq!(exchange.first_exchange, now);
@@ -319,9 +343,9 @@ pub mod data {
             let protocol = String::from("UDP");
             let bytes_1 = 100;
             let bytes_2 = 2100;
-            let mut exchange = PacketExchange::new(vec!(protocol.clone()), bytes_1, now);
+            let mut exchange = PacketExchange::new(vec![protocol.clone()], bytes_1, now);
             let protocols = HashSet::from([protocol.clone()]);
-            exchange.add_packet(vec!(protocol), bytes_2, now);
+            exchange.add_packet(vec![protocol], bytes_2, now);
             assert_eq!(exchange.protocols, protocols);
             assert_eq!(exchange.transmitted_bytes, bytes_1 + bytes_2);
             assert_eq!(exchange.first_exchange, now);
@@ -336,8 +360,8 @@ pub mod data {
             let bytes_1 = 100;
             let bytes_2 = 300;
             let protocols = HashSet::from([protocol_1.clone(), protocol_2.clone()]);
-            let mut exchange = PacketExchange::new(vec!(protocol_1), bytes_1, now);
-            exchange.add_packet(vec!(protocol_2), bytes_2, now);
+            let mut exchange = PacketExchange::new(vec![protocol_1], bytes_1, now);
+            exchange.add_packet(vec![protocol_2], bytes_2, now);
             assert_eq!(exchange.protocols, protocols);
             assert_eq!(exchange.transmitted_bytes, bytes_1 + bytes_2);
             assert_eq!(exchange.first_exchange, now);
@@ -352,8 +376,8 @@ pub mod data {
             let bytes_1 = 100;
             let bytes_2 = 300;
             let protocols = HashSet::from([protocol_1.clone(), protocol_2.clone()]);
-            let mut exchange = PacketExchange::new(vec!(protocol_1), bytes_1, now);
-            exchange.add_packet(vec!(protocol_2), bytes_2, now);
+            let mut exchange = PacketExchange::new(vec![protocol_1], bytes_1, now);
+            exchange.add_packet(vec![protocol_2], bytes_2, now);
             assert_eq!(exchange.protocols, protocols);
             assert_eq!(exchange.transmitted_bytes, bytes_1 + bytes_2);
             assert_eq!(exchange.first_exchange, now);
@@ -369,8 +393,8 @@ pub mod data {
             let bytes_1 = 100;
             let bytes_2 = 300;
             let protocols = HashSet::from([protocol_1.clone(), protocol_2.clone()]);
-            let mut exchange = PacketExchange::new(vec!(protocol_1), bytes_1, now);
-            exchange.add_packet(vec!(protocol_2), bytes_2, future);
+            let mut exchange = PacketExchange::new(vec![protocol_1], bytes_1, now);
+            exchange.add_packet(vec![protocol_2], bytes_2, future);
             assert_eq!(exchange.protocols, protocols);
             assert_eq!(exchange.transmitted_bytes, bytes_1 + bytes_2);
             assert_eq!(exchange.first_exchange, now);
@@ -386,8 +410,8 @@ pub mod data {
             let bytes_1 = 100;
             let bytes_2 = 300;
             let protocols = HashSet::from([protocol_1.clone(), protocol_2.clone()]);
-            let mut exchange = PacketExchange::new(vec!(protocol_1), bytes_1, now);
-            exchange.add_packet(vec!(protocol_2), bytes_2, past);
+            let mut exchange = PacketExchange::new(vec![protocol_1], bytes_1, now);
+            exchange.add_packet(vec![protocol_2], bytes_2, past);
             assert_eq!(exchange.protocols, protocols);
             assert_eq!(exchange.transmitted_bytes, bytes_1 + bytes_2);
             assert_eq!(exchange.first_exchange, past);
@@ -400,7 +424,12 @@ pub mod data {
             let ip_destination = String::from("2.2.2.2");
             let port_source = String::from("23");
             let port_destination = String::from("40");
-            let source_destination = SourceDestination::new(ip_source.clone(), ip_destination.clone(), port_source.clone(), port_destination.clone());
+            let source_destination = SourceDestination::new(
+                ip_source.clone(),
+                ip_destination.clone(),
+                port_source.clone(),
+                port_destination.clone(),
+            );
             assert_eq!(source_destination.ip_source, ip_source);
             assert_eq!(source_destination.ip_destination, ip_destination);
             assert_eq!(source_destination.port_source, port_source);
@@ -413,7 +442,12 @@ pub mod data {
             let ip_destination = String::from("a:b:c:d:e:f:0:1");
             let port_source = String::from("100");
             let port_destination = String::from("200");
-            let source_destination = SourceDestination::new(ip_source.clone(), ip_destination.clone(), port_source.clone(), port_destination.clone());
+            let source_destination = SourceDestination::new(
+                ip_source.clone(),
+                ip_destination.clone(),
+                port_source.clone(),
+                port_destination.clone(),
+            );
             assert_eq!(source_destination.ip_source, ip_source);
             assert_eq!(source_destination.ip_destination, ip_destination);
             assert_eq!(source_destination.port_source, port_source);

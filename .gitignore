@@ -26,4 +26,3 @@ yarn-error.log*
 
 .idea
 Cargo.lock
-logs/

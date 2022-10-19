@@ -174,7 +174,7 @@ pub fn handle_tls_packet(
                                         "TLS Length Error: {}:{} > {}:{}; Length: {}",
                                         source_ip, source_port, dest_ip, dest_port, current_payload.len()
                                     );
-        
+
                                     custom_messages.push(CustomTlsMessage::Malformed(
                                         CustomMalformedMessage::new(
                                             Some(record.version),
@@ -274,9 +274,7 @@ fn parse_messages(messages: Vec<TlsMessage>, custom_messages: &mut Vec<CustomTls
                 }
                 TlsMessageHandshake::Finished(msg) => {
                     custom_messages.push(CustomTlsMessage::Handshake(
-                        CustomHandshakeMessage::Finished(FinishedMessage::new(
-                            msg,
-                        )),
+                        CustomHandshakeMessage::Finished(FinishedMessage::new(msg)),
                     ));
                 }
                 TlsMessageHandshake::HelloRequest => {
@@ -363,8 +361,8 @@ mod tests {
 
     use crate::serializable_packet::{
         application::{
-            ClientParameters, CustomEcContent, CustomHandshakeMessage, CustomTlsMessage,
-            ServerParameters, TlsMalformedError, parse_custom_tls_extensions,
+            parse_custom_tls_extensions, ClientParameters, CustomEcContent, CustomHandshakeMessage,
+            CustomTlsMessage, ServerParameters, TlsMalformedError,
         },
         ParsedPacket, SerializablePacket,
     };
@@ -499,15 +497,9 @@ mod tests {
 
     const ALERT: &[u8] = &[0x15, 0x03, 0x01, 0x00, 0x02, 0x02, 0x46];
 
-    const UNKNOWN_RECORD : &[u8] = &[
-        0x63, 0x0e, 0x00, 0x00, 0x03, 0x0f, 0xf8, 0xec,     
-    ];
+    const UNKNOWN_RECORD: &[u8] = &[0x63, 0x0e, 0x00, 0x00, 0x03, 0x0f, 0xf8, 0xec];
 
-    const TOO_LARGE_RECORD : &[u8] = &[
-        0x17, 0x03, 0x03, 0x40, 0x11, 0x0f, 0xf8, 0xec,     
-    ];
-          
-      
+    const TOO_LARGE_RECORD: &[u8] = &[0x17, 0x03, 0x03, 0x40, 0x11, 0x0f, 0xf8, 0xec];
 
     #[test]
     fn valid_server_hello_tls_packet() {
@@ -919,19 +911,18 @@ mod tests {
                         assert_eq!(new_message.version, "Unknown");
                         assert_eq!(new_message.message_type, "Unknown");
                         assert_eq!(new_message.data, UNKNOWN_RECORD);
-                        
+
                         match &new_message.error_type {
                             TlsMalformedError::UnknownRecord(str) => {
                                 assert_eq!(str, "Unknown record type");
-                            },
-                            _ => unreachable!()
+                            }
+                            _ => unreachable!(),
                         }
-
-                    },
-                    _ => unreachable!()
+                    }
+                    _ => unreachable!(),
                 }
-            },
-            _ => unreachable!()
+            }
+            _ => unreachable!(),
         }
     }
 
@@ -958,19 +949,18 @@ mod tests {
                         assert_eq!(new_message.version, "Tls12");
                         assert_eq!(new_message.message_type, "ApplicationData");
                         assert_eq!(new_message.data, TOO_LARGE_RECORD);
-                        
+
                         match &new_message.error_type {
                             TlsMalformedError::LengthTooLarge(str) => {
                                 assert_eq!(str, "Max Record size exceeded (RFC8446 5.1)");
-                            },
-                            _ => unreachable!()
+                            }
+                            _ => unreachable!(),
                         }
-
-                    },
-                    _ => unreachable!()
+                    }
+                    _ => unreachable!(),
                 }
-            },
-            _ => unreachable!()
+            }
+            _ => unreachable!(),
         }
     }
 }

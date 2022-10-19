@@ -1,5 +1,5 @@
 //! Retrieve packets filtered by their attributes
-//! 
+//!
 //! Available filters
 //! - By Protocol
 //!     - UNKNOWN
@@ -25,7 +25,7 @@
 //!     - MALFORMED
 
 use crate::{SniffingError, SniffingState};
-use log::{info, warn, debug};
+use log::{debug, info, warn};
 use sniffer_parser::serializable_packet::util::{
     contains_arp, contains_dns, contains_ethernet, contains_http, contains_icmp, contains_icmp6,
     contains_ipv4, contains_ipv6, contains_malformed, contains_tcp, contains_tls, contains_udp,
@@ -128,7 +128,7 @@ impl PacketsCollection {
         self.dest_port_index.clear();
         self.source_mac_index.clear();
         self.dest_mac_index.clear();
-        
+
         self.ethernet_packets.clear();
         self.malformed_packets.clear();
         self.unknown_packets.clear();
@@ -177,9 +177,12 @@ pub fn get_packets<'a>(
                 start, end, packets.len(), filters_type, filters_value
             );
 
-            debug!("Requested packets ids: {:?}", packets.iter().map(|x| x.get_id()).collect::<Vec<usize>>())
-        },
-        _ => ()
+            debug!(
+                "Requested packets ids: {:?}",
+                packets.iter().map(|x| x.get_id()).collect::<Vec<usize>>()
+            )
+        }
+        _ => (),
     }
 
     result
@@ -304,7 +307,7 @@ fn get_bounded_type_filter_index_iter<'a>(
                 "Unknown filter type: {}",
                 index_name
             )))
-        },
+        }
     }
 }
 
@@ -370,7 +373,7 @@ fn merge_filter_type_arrays<'a>(
     result
 }
 
-/// Filter collected packets by protocol type 
+/// Filter collected packets by protocol type
 pub fn apply_layer_type_filter(
     name: &str,
     packet: &Arc<ParsedPacket>,
@@ -394,9 +397,9 @@ pub fn apply_layer_type_filter(
             warn!("Unknown filter type: {}", name);
             Err(SniffingError::UnknownFilterType(format!(
                 "Unknown filter type: {}",
-            name
+                name
             )))
-        },
+        }
     };
 }
 
@@ -476,7 +479,7 @@ pub fn apply_specific_filter<'a>(
                 "Unknown filter type: {}",
                 name
             )))
-        },
+        }
     };
 }
 
