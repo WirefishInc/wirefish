@@ -1,0 +1,26 @@
+name: "Create Documentation"
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Release"]
+    types:
+      - completed
+jobs:
+  documentation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Rust setup
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Create and push new docs
+        working-directory: ./src-tauri
+        run: |
+          cargo doc --no-deps -p sniffer_parser
+          rm -rf ../docs
+          echo "<meta http-equiv=\"refresh\" content=\"0; url=wirefish\">" > target/doc/index.html
+          cp -r target/doc ../docs
