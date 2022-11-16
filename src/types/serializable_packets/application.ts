@@ -467,10 +467,19 @@ export class DnsPacket implements SerializableApplicationLayerPacket {
     }
 
     getInfo(): string {
-        if (this.header.query)
-            return "Standard query 0x" + this.header.id.toString(16)
+        if (this.header.query) {
+            let questions_name : String = "[";
+
+            for (let i = 0; i < this.questions.length; i++)
+                questions_name += this.questions[i].query_name +",";
+
+            questions_name = questions_name.substring(0, questions_name.length - 1);
+            questions_name += "]";
+
+            return "Standard query (0x" + this.header.id.toString(16) + ") " + questions_name;
+        }
         else
-            return "Standard query response 0x" + this.header.id.toString(16)
+            return "Standard query response (0x" + this.header.id.toString(16) + ")"
     }
 
     getType(): string {
