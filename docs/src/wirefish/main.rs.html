@@ -518,6 +518,13 @@
 <span id="518">518</span>
 <span id="519">519</span>
 <span id="520">520</span>
+<span id="521">521</span>
+<span id="522">522</span>
+<span id="523">523</span>
+<span id="524">524</span>
+<span id="525">525</span>
+<span id="526">526</span>
+<span id="527">527</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Packet sniffing application built with Tauri
 //!
 //! Functionalities
@@ -571,6 +578,7 @@
     get_source_port,
 };
 <span class="kw">use </span>sniffer_parser::HeaderLength;
+<span class="kw">use </span>tauri_plugin_log::fern::colors::{ColoredLevelConfig, Color};
 <span class="kw">use </span>tauri_plugin_log::{LogTarget, LoggerBuilder};
 
 <span class="kw">use </span>pnet::datalink::Channel::Ethernet;
@@ -1015,13 +1023,19 @@
                     out.finish(<span class="macro">format_args!</span>(
                         <span class="string">&quot;{}[{}] {}&quot;</span>,
                         Local::now().format(<span class="macro">format!</span>(<span class="string">&quot;[%Y-%m-%d][%H:%M:%S]&quot;</span>).as_str()),
-                        record.level(),
+                        ColoredLevelConfig::default()
+                            .debug(Color::Blue)
+                            .info(Color::Green)
+                            .color(record.level()),
                         message
                     ))
                 })
+                .level(log::LevelFilter::Warn)
+                .level_for(<span class="string">&quot;wirefish&quot;</span>, log::LevelFilter::Info)
+                .level_for(<span class="string">&quot;sniffer_parser&quot;</span>, log::LevelFilter::Debug)
                 .targets([
-                    LogTarget::Folder(<span class="string">&quot;./logs&quot;</span>.into()),
-                    LogTarget::LogDir,
+                    <span class="comment">// LogTarget::Folder(&quot;./logs&quot;.into()),
+                    </span>LogTarget::LogDir,
                     LogTarget::Stdout,
                 ])
                 .build(),

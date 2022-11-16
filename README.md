@@ -4,8 +4,9 @@
 
 [![status](https://img.shields.io/badge/status-stable-blue.svg)](https://github.com/stefanodevenuto/poc-sniffer/tree/main)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opencollective.com/tauri)
-[![docs](https://img.shields.io/static/v1?label=docs)](https://github.com/stefanodevenuto/poc-sniffer/actions?query=workflow%3Apages-build-deployment+is%3Asuccess)
-
+![build](https://github.com/stefanodevenuto/poc-sniffer/actions/workflows/tauri-build-release.yml/badge.svg)
+![docs](https://github.com/stefanodevenuto/poc-sniffer/actions/workflows/create-docs.yml/badge.svg)
+    
 A _blazingly fast_ multiplatform packet sniffer built with Tauri!
 </div>
 
