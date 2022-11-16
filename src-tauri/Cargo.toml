@@ -30,6 +30,7 @@ sudo = "0.6.0"
 [dependencies.tauri-plugin-log]
 git = "https://github.com/tauri-apps/tauri-plugin-log"
 branch = "dev"
+features = ["colored"]
 
 [features]
 # by default Tauri runs in production mode

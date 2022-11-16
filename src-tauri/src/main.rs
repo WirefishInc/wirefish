@@ -51,6 +51,7 @@ use sniffer_parser::serializable_packet::util::{
     get_source_port,
 };
 use sniffer_parser::HeaderLength;
+use tauri_plugin_log::fern::colors::{ColoredLevelConfig, Color};
 use tauri_plugin_log::{LogTarget, LoggerBuilder};
 
 use pnet::datalink::Channel::Ethernet;
@@ -495,12 +496,18 @@ fn main() {
                     out.finish(format_args!(
                         "{}[{}] {}",
                         Local::now().format(format!("[%Y-%m-%d][%H:%M:%S]").as_str()),
-                        record.level(),
+                        ColoredLevelConfig::default()
+                            .debug(Color::Blue)
+                            .info(Color::Green)
+                            .color(record.level()),
                         message
                     ))
                 })
+                .level(log::LevelFilter::Warn)
+                .level_for("wirefish", log::LevelFilter::Info)
+                .level_for("sniffer_parser", log::LevelFilter::Debug)
                 .targets([
-                    LogTarget::Folder("./logs".into()),
+                    // LogTarget::Folder("./logs".into()),
                     LogTarget::LogDir,
                     LogTarget::Stdout,
                 ])
