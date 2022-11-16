@@ -517,7 +517,7 @@ function App() {
                     <Grid xs={4} item
                           style={{paddingTop: "0px", textAlign: "left"}}>
                         <span
-                            style={{fontWeight: "bold"}}>Total number of packets: </span> {packetCount / 2} {/* TODO: because of STRICT MODE */}
+                            style={{fontWeight: "bold"}}>Total number of packets: </span> {packetCount} {/* TODO: because of STRICT MODE */}
                     </Grid>
 
                     <Grid xs={4} item

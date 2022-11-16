@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["handle_tls_packet","Build a TLS packet from a transport-layer packet, save it in a Parsed Packet"]]};

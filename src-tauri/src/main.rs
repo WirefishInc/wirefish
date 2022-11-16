@@ -127,6 +127,7 @@ impl SniffingState {
 struct SniffingInfo {
     interface_name: Option<String>,
     interface: Option<NetworkInterface>,
+    counter: usize,
 }
 
 impl SniffingInfo {
@@ -134,6 +135,7 @@ impl SniffingInfo {
         SniffingInfo {
             interface_name: None,
             interface: None,
+            counter: 0,
         }
     }
 }
@@ -245,16 +247,18 @@ fn start_sniffing(
 
     let exchanged_packets = Arc::clone(&state.exchanged_packets);
     let packets = Arc::clone(&state.packets);
+    let info = Arc::clone(&state.info);
 
     std::thread::spawn(move || {
-        let mut counter_id = 0;
-
+        // let mut counter_id = 0;
         loop {
             match interface_channel.next() {
                 Ok(packet) if receive_stop.try_recv().is_err() => {
                     let ethernet_packet = EthernetPacket::new(packet).unwrap();
-                    let new_packet = parse_ethernet_frame(&ethernet_packet, counter_id);
-                    counter_id += 1;
+
+                    let mut info = info.lock().unwrap();
+                    let new_packet = parse_ethernet_frame(&ethernet_packet, info.counter);
+                    info.counter += 1;
 
                     /* Save packet in HashMap */
                     let now = Local::now();
@@ -425,9 +429,15 @@ fn start_sniffing(
 #[tauri::command]
 /// Terminates (stop: true) or Pauses (stop: false) the sniffing process
 fn stop_sniffing(state: tauri::State<SniffingState>, stop: bool) -> Result<(), SniffingError> {
-    let sniffing_state = state.info.lock().unwrap();
+    let mut sniffing_state = state.info.lock().unwrap();
     let mut sniffers = state.sniffers.lock().unwrap();
 
+    if stop {
+        let mut exchanged_packets = state.exchanged_packets.lock().unwrap();
+        std::mem::take(&mut *exchanged_packets);
+        sniffing_state.counter = 0;
+    }
+    
     let interface_name = sniffing_state.interface_name.as_ref().ok_or(
         SniffingError::StopSniffingWithoutPriorStart(
             "Stop sniffing without prior starting of the process".to_owned(),
@@ -450,10 +460,6 @@ fn stop_sniffing(state: tauri::State<SniffingState>, stop: bool) -> Result<(), S
         }
     }
 
-    if stop {
-        let mut exchanged_packets = state.exchanged_packets.lock().unwrap();
-        std::mem::take(&mut *exchanged_packets);
-    }
     cleanup_sniffing_state();
 
     info!("[{}] Sniffing stopped", interface_name);
