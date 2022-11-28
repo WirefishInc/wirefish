@@ -1,6 +1,6 @@
 # Wirefish
 <div align="center">
-<img src=".github/logo.png" height=300 alt="Tauri" />
+<img src=".github/logo.png" height=300 alt="Wirefish" />
 
 [![status](https://img.shields.io/badge/status-stable-blue.svg)](https://github.com/stefanodevenuto/poc-sniffer/tree/main)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opencollective.com/tauri)
@@ -8,13 +8,21 @@
 ![docs](https://github.com/stefanodevenuto/poc-sniffer/actions/workflows/create-docs.yml/badge.svg)
     
 A _blazingly fast_ multiplatform packet sniffer built with Tauri!
+
+---
+<br>
+<img src=".github/images/generic.png" height=300 alt="Main page" />
+<br><br>
+<img src=".github/images/specific_packet.png" height=300 alt="TLS Packet" />
+
+
 </div>
 
 ## Installation
 1. Properly install all the needed [dependencies](#dependencies)
 2. Download the latest [release](https://github.com/stefanodevenuto/poc-sniffer/releases) of the intended OS and follow the installation wizard
 
-If you prefer building from source code, clone the repo and run `npm run tauri build`
+If you prefer building from source code, you must install all the Tauri's dependencies, clone the repo and run `npm run tauri build`
 
 ## Features
 + **Interception**: sets the network adapter in promiscuous mode and reconstructs all the info related to the collected packets. For now, the list of fully parsed packets is:
@@ -25,7 +33,12 @@ If you prefer building from source code, clone the repo and run `npm run tauri b
     - HTTP, DNS, TLS
 
     The interception can be paused, in order to be subsequently resumed, or stopped.
-+ **Filtering**: the collected packets can be filtered out by means of _packet type_ (eg. IPv4, TCP, ...) or _packet inner fields_ (eg. Source IP, Destination MAC, ...) 
+
+    <img src=".github/images/tls_scroll.gif" height=300 alt="TLS Packet" />
+
++ **Filtering**: the collected packets can be filtered out by means of _packet type_ (eg. IPv4, TCP, ...) or _packet inner fields_ (eg. Source IP, Destination MAC, ...)
+<img src=".github/images/filters2.gif" height=300 alt="Filters" />
+
 + **Report generation**: a textual representation describing a synthesis of the observed events is provided. For each of the network address/port pairs that have been observed, it lists the protocols that was transported, the cumulated number of bytes transmitted, the timestamp of the first and last occurrence of information exchange, all in CSV format. For instance:
     ```csv
     Source IP,Destination IP,Source Port,Destination Port,First Data Exchange,Last Data Exchange,Bytes Exchanged,Protocols
