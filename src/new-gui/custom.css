@@ -1,0 +1,238 @@
+@import url('https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,400;0,700;1,400&display=swap');
+
+.background {
+    background: #1E1E1E;
+    padding: 2%;
+}
+
+.session {
+    position: relative;
+    width: 511px;
+    height: 93px;
+    background: #242E3D;
+    border-radius: 10px;
+    margin-top: 10px;
+}
+
+.icon-background-csv {
+    position: absolute;
+    width: 69px;
+    height: 69px;
+    left: 17px;
+    top: 11px;
+    background: rgba(242, 153, 74, 0.2);
+    border-radius: 50px;
+}
+
+.icon-background-no-csv {
+    position: absolute;
+    width: 69px;
+    height: 69px;
+    left: 17px;
+    top: 11px;
+    background: rgba(154, 255, 118, 0.2);
+    border-radius: 50px;
+}
+
+.icon-container {
+    width: 35px;
+    height: 35px;
+    text-align: center;
+}
+
+.icon {
+    position: relative;
+    left: 50%;
+    top: 50%;
+    width: 30px;
+    height: 35px;
+}
+
+
+.info-container {
+    position: absolute;
+    width: 394px;
+    height: 88px;
+    left: 111px;
+    top: 0px;
+}
+
+.session-name {
+    position: relative;
+    font-family: 'Source Code Pro';
+    font-weight: 700;
+    font-size: 20px;
+    display: flex;
+    font-weight: bold;
+}
+
+.csv {
+    color: #F39C12;
+}
+
+.no-csv {
+    color: #9AFF76;
+}
+
+.session-info {
+    margin-top: 5px;
+    position: relative;
+    font-family: 'Source Code Pro';
+    font-style: italic;
+    font-size: 15px;
+    display: flex;
+    color: #FFFFFF;
+}
+
+.session-date {
+    position: absolute;
+    left: 275px;
+    top: 0px;
+    font-family: 'Source Code Pro';
+    font-style: italic;
+    font-size: 15px;
+    color: #747272;
+}
+
+.select {
+    width: 100%;
+    background-color: white;
+    border-radius: 8px;
+}
+
+.start-button {
+    width: 45;
+    height: 45;
+    background: #141A27;
+    border-radius: 16px;
+}
+
+.play-container {
+    width: 180px;
+    height: 57px;
+    background: #141A27;
+    border-radius: 16px;
+    cursor: pointer;
+}
+
+.start-background {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    width: 45px;
+    height: 45px;
+    left: 10px;
+    top: 6px;
+    background: rgba(154, 255, 118, 0.2);
+    border-radius: 50px;
+}
+
+.play-icon {
+    background: #9AFF76;
+    border-radius: 20px;
+}
+
+.span-new {
+    font-family: 'Source Code Pro';
+    font-style: normal;
+    font-size: 14px;
+    display: flex;
+    color: #9AFF76;
+    padding-top: 20px;
+}
+
+.switch {
+    font-family: 'Source Code Pro';
+    font-style: normal;
+    font-size: 18px;
+    color: grey;
+}
+
+.dash {
+    background: #242E3D !important;
+    border-radius: 20px !important;
+    padding-left: 4% !important;
+    width: 709 !important;
+
+}
+
+.input {
+    width: 90%;
+}
+
+.settingsBg {
+    width: 709px;
+    height: 487px;
+    background: #242E3D !important;
+    border-radius: 20px;
+}
+
+.settingText {
+    font-family: 'Source Code Pro';
+    font-style: normal;
+    font-weight: 700;
+    font-size: 20px;
+    line-height: 25px;
+    display: flex;
+    align-items: center;
+    color: #9AFF76;
+    margin-left: 5%;
+}
+
+.settingUnderText {
+    font-family: 'Source Code Pro';
+    font-style: normal;
+    font-size: 18px;
+    line-height: 25px;
+    display: flex;
+    align-items: center;
+    color: white;
+    margin-left: 5%;
+}
+
+.columns {
+    margin-left: 10%;
+    color: white;
+}
+
+.mgt {
+    margin-top: 5%;
+}
+
+.colorBtn {
+    position: relative;
+    width: 25px;
+    height: 25px;
+}
+
+.colorSettings {
+    margin-top: 5%;
+    margin-left: 10%;
+}
+
+.picker {
+    position: absolute;
+    display: block;
+}
+
+.MuiInputAdornment-root p{
+    color: #9AFF76;
+    font-size: 16px;
+    opacity: 50%;
+}
+
+.MuiInput-underline::before {
+    border-bottom-color: #9AFF76 !important;
+    opacity: 50%;
+}
+
+.MuiInput-underline::after {
+    border-bottom-color: #9AFF76 !important;
+    opacity: 50%;
+}
+
+.MuiInput-root {
+    color: white !important;
+}
